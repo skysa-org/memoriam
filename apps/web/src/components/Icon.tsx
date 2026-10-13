@@ -32,6 +32,7 @@ const PATHS = {
 	hint: 'M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z',
 	download: 'M12 4v11M7 10l5 5 5-5M5 20h14',
 	upload: 'M12 20V9M7 14l5-5 5 5M5 4h14',
+	sync: 'M19.5 10A8 8 0 0 0 5 7.5M4 4v4h4M4.5 14A8 8 0 0 0 19 16.5M20 20v-4h-4',
 	folder: 'M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z',
 	more: 'M5 12h.01M12 12h.01M19 12h.01',
 	/** A rosette on two ribbons: a badge earned. */

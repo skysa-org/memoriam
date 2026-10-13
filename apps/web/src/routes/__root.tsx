@@ -7,6 +7,7 @@ import { ErrorScreen } from '../components/ErrorScreen.js';
 import { NavBar } from '../components/NavBar.js';
 import { NoticesProvider } from '../components/Notices.js';
 import { StorageKeeper } from '../components/StorageKeeper.js';
+import { SyncKeeper } from '../components/SyncKeeper.js';
 import { UpdatePrompt } from '../components/UpdatePrompt.js';
 import { InstallBanner } from '../install/InstallBanner.js';
 
@@ -26,6 +27,7 @@ const RootLayout = () => (
 				<UpdatePrompt />
 				<BadgeKeeper />
 				<StorageKeeper />
+				<SyncKeeper />
 				<AppCommands />
 			</div>
 		</NoticesProvider>

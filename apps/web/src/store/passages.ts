@@ -364,7 +364,7 @@ export const updatePassage = (
 		const taken = namesIn(await rowsOf(db, connectionId), details.collection, id);
 		const name = basename(row.path);
 		const keepsName = !retitled && !taken.some((each) => foldName(each) === foldName(name));
-		const next = rowFor(
+		const written = rowFor(
 			{
 				...row,
 				path: moved
@@ -375,6 +375,10 @@ export const updatePassage = (
 			},
 			row
 		);
+		// A move alone owes the remote a move and no write, and a row is dirty
+		// only while a write is owed: the store clears the flag when one lands,
+		// and nothing else does. So the file the same is the flag the same.
+		const next = written.source === row.source ? { ...written, dirty: row.dirty } : written;
 		await ensureCollections(db, [details.collection], connectionId, now);
 		await db.notes.put(next);
 		if (next.path !== row.path) await queueMove(db, next, row.path);

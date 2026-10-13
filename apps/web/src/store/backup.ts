@@ -1,6 +1,7 @@
 import { daysBetween, isHidden, localDay } from '@memoriam/core';
 import { useLiveQuery } from 'dexie-react-hooks';
 
+import { boundConnection } from './connection.js';
 import { db as defaultDb, isLive, LOCAL_CONNECTION_ID, type MemoriamDatabase } from './db.js';
 import { getPreference, setPreference } from './prefs.js';
 
@@ -8,7 +9,8 @@ import { getPreference, setPreference } from './prefs.js';
  * When to remind the user to export a backup (docs/ARCHITECTURE.md §8,
  * "Keeping data"). Until sync, the library is only in this browser, which may
  * lose it: so once a week, if anything has changed since the last backup,
- * Today says so. "Not now" puts it off for a few days.
+ * Today says so. "Not now" puts it off for a few days. A library that syncs is
+ * kept in the user's own storage as well, and is not reminded.
  */
 
 /** When the library was last exported from this device, in epoch milliseconds. */
@@ -30,6 +32,8 @@ export interface BackupState {
 	readonly since?: number;
 	/** The last write to any file: an edit, an import, a day's practice. */
 	readonly changedAt?: number;
+	/** The library syncs with a storage provider. */
+	readonly synced?: true;
 }
 
 export type BackupReminder =
@@ -40,8 +44,8 @@ export type BackupReminder =
 
 /** Whether to remind the user to back up, and how to say it; none if not. */
 export const backupReminder = (state: BackupState, now: number): BackupReminder | undefined => {
-	const { exportedAt, snoozedUntil, since, changedAt } = state;
-	if (since === undefined || changedAt === undefined) return undefined;
+	const { exportedAt, snoozedUntil, since, changedAt, synced } = state;
+	if (synced === true || since === undefined || changedAt === undefined) return undefined;
 	if (snoozedUntil !== undefined && now < snoozedUntil) return undefined;
 	const today = localDay(new Date(now));
 	if (exportedAt === undefined) {
@@ -67,7 +71,9 @@ export const backupState = async (
 	const passages = rows.filter((row) => !isHidden(row.path));
 	const exportedAt = await timeOf(db, EXPORTED_KEY);
 	const snoozedUntil = await timeOf(db, SNOOZED_KEY);
+	const synced = (await boundConnection(db)) !== undefined;
 	return {
+		...(synced ? { synced } : {}),
 		...(exportedAt === undefined ? {} : { exportedAt }),
 		...(snoozedUntil === undefined ? {} : { snoozedUntil }),
 		...(passages.length === 0
