@@ -9,6 +9,7 @@ import {
 	snoozeBackup,
 	SNOOZED_KEY,
 } from '../src/store/backup.js';
+import { bindLibrary } from '../src/store/connection.js';
 import { createDatabase, type MemoriamDatabase } from '../src/store/db.js';
 import { rowFor } from '../src/store/passages.js';
 import { getPreference } from '../src/store/prefs.js';
@@ -50,6 +51,12 @@ describe('backupReminder', () => {
 		expect(backupReminder({ ...state, snoozedUntil: NOW + 1 }, NOW)).toBeUndefined();
 		expect(backupReminder({ ...state, snoozedUntil: NOW }, NOW)).toEqual({ kind: 'never' });
 	});
+
+	it('keeps quiet while the library syncs', () => {
+		expect(
+			backupReminder({ since: ago(60), changedAt: ago(1), synced: true }, NOW)
+		).toBeUndefined();
+	});
 });
 
 describe('the backup store', () => {
@@ -82,6 +89,8 @@ describe('the backup store', () => {
 			row('.memoriam/activity-2026.md', ago(40), ago(1)),
 		]);
 		expect(await backupState(db)).toEqual({ since: ago(30), changedAt: ago(1) });
+		await bindLibrary(db, { connectionId: 'c1', provider: 'dropbox' });
+		expect(await backupState(db)).toMatchObject({ synced: true });
 	});
 
 	it('notes an export, which ends any putting off', async () => {

@@ -455,7 +455,8 @@ modifier, so they never collide with typing during practice.
   - **The backup reminder** (`store/backup.ts`) shows on Today a week after the first passage if
     no backup has been made here. After that, it shows a week after the last export, but only if
     any file has changed since; a day's practice changes the activity file. "Not now" puts it off
-    for three days. An export from anywhere notes the day.
+    for three days. An export from anywhere notes the day. A library that syncs is not reminded:
+    it is kept in the user's own storage as well.
 
 ## 9. Security
 
@@ -463,8 +464,11 @@ The Content-Security-Policy in `apps/web/public/_headers`, checked by `tests/csp
 - `script-src 'self'`, and no inline script, `eval` or `new Function` in the shell. This is a hard
   requirement. Once sync arrives, the shell holds a long-lived credential in IndexedDB, as
   skysa-notes does.
-- `connect-src 'self'`: nothing leaves the device until sync arrives. Each provider's hosts are
-  added with its adapter.
+- `connect-src`: this origin, which serves the API, and the hosts of the storage providers the
+  browser syncs with directly, as skysa-notes lists them. These are `*.dropboxapi.com`;
+  `graph.microsoft.com` and the hosts OneDrive serves file bytes from (`*.files.1drv.com`,
+  `my.microsoftpersonalcontent.com`, `*.sharepoint.com`); and `www.googleapis.com`. Nothing else
+  leaves the device.
 - `src/jitless.ts` stops zod probing for `new Function`.
 
 ## 10. Sync (Phase 2)
@@ -580,6 +584,11 @@ suite (`apps/web/tests/syncStore.test.ts`). Where it differs:
   only its progress (`sameApartFromProgress`). Otherwise the time moves forward, as skysa-notes'
   `editedAt` moves it.
 - **Practice** queues one write, like any edit, marked as lazy ("Push timing", below).
+- **Dirty means a write is owed.** The store clears the flag when a write lands, and nothing else
+  does. So a passage moved without a change to its file, to another collection or by a
+  collection's rename, keeps the flag it had, and owes only the move. Marked dirty, it stayed dirty
+  for good. The other device's next edit then made a conflict copy of the old words, and a delete
+  there left it here, cut loose from the remote (found by the soak, S6).
 
 **The sync client** (S4: `apps/web/src/api/client.ts`, `store/credentials.ts`,
 `sync/{tokens,providers,scheduler,account,runtime}.ts`) is skysa-notes' client, ported. Where it
@@ -653,10 +662,78 @@ any of them out. The one Worker serves the app as well, so `/api` and the app sh
 - **Tests** run the real drizzle D1 driver over Node's `node:sqlite`, as skysa-notes' do. A
   contract test checks that the server's answers parse with the web client's own schemas.
 
+**Connecting** (S6) is a section of Settings (`components/SyncSettings.tsx`):
+- **Unbound**, it offers each provider the server has set up (`/config`) and this build can sync
+  with. Choosing one writes the credential down, then leaves for the provider's consent screen.
+- **The way back.** The server's callback sends the browser to the path the app started from, with
+  the outcome in the query (`?connect=ok`). It never sees the hash, which is where the app keeps
+  its place. So `main.tsx` reads the outcome out of the real query before the router is made, puts
+  the address back without it, and opens Settings (`sync/connectReturn.ts`). Settings says the
+  outcome once.
+- **Keeping the binding in step** (`components/SyncKeeper.tsx`, in the root layout). Once a page
+  load, it takes up a connection a flow has just consented to, or asks after the bound one
+  (`claimConnection`). When the scheduler is told the credential reaches nothing, it asks again,
+  which lets the library go if the server says so (`reconcileAccount`).
+- **Bound**, the section names the provider and account, and says how syncing stands:
+  - up to date, and when it last synced;
+  - syncing, offline, or retrying;
+  - what needs attention, with the change that is stuck, or "Connect again" when the provider
+    must be asked again (`reauthorize_required`).
+
+  Sync now runs a sync and tries again a stuck change.
+- **Disconnect** asks first, then signs this device out on the server and lets go here. Where the
+  server will not or cannot answer, the section offers to stop syncing on this device alone
+  (`stopSyncingHere`).
+
+**Conflicts** (S6: `store/conflicts.ts`, `routes/conflicts.tsx`). What sync could not merge it
+keeps twice. The remote's version stays at the passage's path, and this device's goes beside it as
+a copy, `name (conflict 2026-10-13T14-32).md`. Nothing is decided for the user:
+- **Finding them.** A copy is known by the stamp in its name alone, so it is found on every device
+  it reaches. Its original is the passage at the name without the stamp. While there is one, the
+  Library and Settings say so, with a link to the conflicts screen.
+- **The screen** shows the two versions side by side, with the lines one has and the other does
+  not marked. The choices:
+  - **Keep this version**, on either side. Keeping the copy writes its words and details over the
+    original, at the original's path and under its id, and the copy goes. Keeping the original
+    lets the copy go. Either way, where the two have the same words, the progress of both is kept
+    (`mergePassage`). Each can be taken back from its notice. The undo leaves alone an original
+    changed since the choice, and still brings the copy back, so no version is lost.
+  - **Keep both**, as two passages. The copy is given the title "… (other version)", which moves
+    it to a name of its own.
+- **A copy whose original is gone** can be kept, which moves it to the original's name, or a name
+  from its title where that one is taken. It can also be deleted, with undo.
+
+**The two-device soak** (S6: `apps/web/tests/twoDeviceSoak.test.ts`). Two devices share one fake
+provider, each with its own database, web store and engine. A seed drives them at random:
+- passages made, edited, retitled, moved, deleted, and put back;
+- passes recorded;
+- collections made, renamed and deleted;
+- syncs, some with the other device acting while a push is in flight.
+
+At the end they sync in turn until nothing moves. Then the soak checks four things:
+- both devices and the remote hold the same passages and activity files;
+- neither device owes anything;
+- each device's last words for a passage nobody deleted are still some passage's words;
+- the last pass on such a passage is still in some passage's progress.
+
+12 seeds of 40 steps run with the tests. 300 ran clean once the move fix above was in.
+
+**Known issue: a passage's id can differ between devices.** A passage made here that meets another
+at its path on the remote, before it was ever sent, keeps its row and its id for the remote's file.
+That file's `id` is the other passage's, and its own words go to a conflict copy (`resolutionFor`
+in the engine, as skysa-notes'). The next edit of its details here writes the row's id into the
+file, and the other device's next edit writes its own back. No words or progress are lost. Import
+matches a backup's passages by the file's `id`, so a backup from the other device brings such a
+passage in as a second one rather than merging it. Fixing it means changing which row keeps which
+id in the engine's conflict rule, which is left for a milestone of its own.
+
 **Still to come:**
 - **Provider apps.** New registrations named "memoriam" are needed with Dropbox, Google and
   Microsoft (Dropbox app names are permanent). `docs/self-hosting.md` says how.
-- **`connect-src`** (S6) gains each provider's hosts when connecting appears in Settings.
+- **A real two-device soak**, against a live provider, once the apps are registered.
+- **The id rule above.**
+- **The devices list.** The server lists the devices holding a connection and signs any of them
+  out (`grants`, `revokeGrant`), but Settings does not show them yet.
 
 ## 11. Repository layout
 

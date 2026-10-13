@@ -3,6 +3,7 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState } from 'react';
 
 import { ConfirmDialog } from '../components/ConfirmDialog.js';
+import { ConflictsBanner } from '../components/ConflictsBanner.js';
 import { ErrorScreen } from '../components/ErrorScreen.js';
 import { Icon } from '../components/Icon.js';
 import { MasteryBar } from '../components/MasteryBar.js';
@@ -81,6 +82,8 @@ const Library = () => {
 					{t('library.newPassage')}
 				</Link>
 			</header>
+
+			<ConflictsBanner />
 
 			{library.count === 0 && library.collections.length === 0 && (
 				<p className="empty">{t('library.empty')}</p>

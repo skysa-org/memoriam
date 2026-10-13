@@ -4,6 +4,7 @@ import { useId } from 'react';
 
 import { Backup } from '../components/Backup.js';
 import { ErrorScreen } from '../components/ErrorScreen.js';
+import { SyncSettings } from '../components/SyncSettings.js';
 import { weekdayName } from '../i18n/dates.js';
 import { t } from '../i18n/t.js';
 import { db } from '../store/db.js';
@@ -157,6 +158,7 @@ const SettingsScreen = () => {
 					{t('settings.restDay.hint')}
 				</p>
 			</div>
+			<SyncSettings />
 			<Backup />
 		</main>
 	);

@@ -1538,3 +1538,62 @@ textarea.field {
 	border-radius: var(--radius-s);
 	color: var(--muted);
 }
+
+/* ---- Conflicts ------------------------------------------------------------ */
+
+/* Passages changed in two places at once (`ConflictsBanner.tsx`). */
+.conflicts-banner {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--space-s);
+	margin-block: var(--space-m);
+	padding: var(--space-s) var(--space-m);
+	border: 1px solid var(--border);
+	border-inline-start: 4px solid var(--warn);
+	border-radius: var(--radius-s);
+	background: var(--surface);
+}
+
+.conflicts-banner p {
+	flex: 1;
+	min-width: 12rem;
+	margin: 0;
+}
+
+.conflict {
+	margin-block-start: var(--space-xl);
+	padding-block-start: var(--space-l);
+	border-block-start: 1px solid var(--border);
+}
+
+.conflict h2 {
+	margin: 0 0 var(--space-m);
+	font-size: 1.125rem;
+}
+
+/* Side by side where there is room, one above the other on a phone. */
+.conflict-versions {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+	gap: var(--space-l);
+}
+
+.conflict-version {
+	min-width: 0;
+}
+
+.conflict-title {
+	margin: 0 0 var(--space-2xs);
+	font-weight: 600;
+}
+
+.conflict-text {
+	font-size: 1rem;
+}
+
+.conflict-text mark {
+	color: inherit;
+	background: var(--brand-wash);
+	border-radius: 2px;
+}
