@@ -5,8 +5,75 @@ export {
 	CURRENT_CHUNKER,
 	HIDDEN_PREFIX,
 	MARKER_FILE,
+	MARKER_SCHEMA_VERSION,
 	PASSAGE_EXTENSION,
+	PROVIDER_KINDS,
+	type ProviderKind,
 } from './config.js';
+
+export {
+	buildMarker,
+	type BuildMarkerInput,
+	type Marker,
+	type MarkerCreatedBy,
+	type MarkerParseResult,
+	parseMarker,
+	serializeMarker,
+} from './marker.js';
+
+export {
+	AuthError,
+	type ChangeEntry,
+	type ChangeSet,
+	ConflictError,
+	type CreateFileOptions,
+	CursorResetError,
+	type DeletedEntry,
+	type EntryRef,
+	isAuthError,
+	isConflictError,
+	isCursorResetError,
+	isNotFoundError,
+	isRateLimitError,
+	isUnreadableError,
+	NotFoundError,
+	parseRetryAfter,
+	type ProviderErrorCode,
+	RateLimitError,
+	type RemoteEntry,
+	type StorageProvider,
+	UnreadableError,
+	type WriteOptions,
+} from './providers/types.js';
+
+export { withoutNul } from './providers/text.js';
+
+export {
+	createDropboxProvider,
+	type DropboxProviderOptions,
+	type FetchLike,
+} from './providers/dropbox.js';
+
+export { createGDriveProvider, type GDriveProviderOptions } from './providers/gdrive.js';
+export { createOneDriveProvider, type OneDriveProviderOptions } from './providers/onedrive.js';
+
+export {
+	createFakeProvider,
+	type FakeCall,
+	type FakeFault,
+	type FakeOperation,
+	type FakeProvider,
+	type FakeProviderOptions,
+} from './providers/fake.js';
+
+export {
+	conflictContent,
+	conflictFilename,
+	conflictFilePath,
+	conflictFolderPath,
+	conflictPath,
+	conflictStamp,
+} from './sync/conflicts.js';
 
 export { contentHash, cyrb53, SHORT_KEY_LENGTH, shortKey } from './hash.js';
 
@@ -51,6 +118,7 @@ export {
 
 export {
 	clusters,
+	extensionAt,
 	fitBytes,
 	foldName,
 	MAX_NAME_BYTES,

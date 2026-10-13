@@ -15,6 +15,17 @@ export const APP_NAME = 'memoriam';
 /** Marker file written at the root of the library on first connect. */
 export const MARKER_FILE = '.memoriam-app.json';
 
+/**
+ * Layout version of the remote folder. A client that finds a marker with a
+ * higher version than this opens the connection read-only — see `parseMarker`.
+ */
+export const MARKER_SCHEMA_VERSION = 1;
+
+/** The storage providers the library can sync with (docs/ARCHITECTURE.md §10). */
+export const PROVIDER_KINDS = ['gdrive', 'onedrive', 'dropbox'] as const;
+
+export type ProviderKind = (typeof PROVIDER_KINDS)[number];
+
 /** Extension of every passage, and of every file the app keeps. */
 export const PASSAGE_EXTENSION = '.md';
 

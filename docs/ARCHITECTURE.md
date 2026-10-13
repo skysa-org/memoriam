@@ -472,7 +472,32 @@ Sync is skysa-notes' engine, ported:
 - `sync/{engine,store,conflicts}`;
 - the Hono Worker for OAuth, with the same per-connection credentials and no identity layer.
 
-The differences:
+**Ported as it is.** Skysa-notes' design record for this code is its `docs/ARCHITECTURE.md`, as of
+commit `fa92ad6`: §4 for the provider interface and its contract, §5 for each provider, and §7 for
+the store and the engine. The ported code cites it as "skysa-notes' `docs/ARCHITECTURE.md`", so a
+reference is never read against this file's sections. What follows records only where Memoriam
+differs.
+
+**The provider layer** (`packages/core/src/providers/`, `marker.ts`, `sync/conflicts.ts`):
+- The adapters for Dropbox, OneDrive and Google Drive, and the in-memory fake.
+- The marker file, and conflict names.
+- The contract suite every adapter passes (`tests/providers/contract.ts`), with each provider's
+  wire stub.
+
+Only the names differ:
+- `APP_FOLDER_NAME` is `memoriam`, and the marker is `.memoriam-app.json`.
+- Google Drive tags the app's folder `appProperties: { memoriam: 'root' }`.
+- `PROVIDER_KINDS` has no `webdav`, which skysa-notes deferred indefinitely.
+
+The interface keeps `readBytes` and `createFile`, though nothing here yet writes a file that is not
+a passage. Every adapter's `read` is its `readBytes` decoded, and audio (Phase 3) would need both.
+
+Three Google Drive tests drive the engine through the adapter. They come back with the engine:
+- "trashed, written around, and restored keeps every note it held";
+- "name an item sent here and trashed elsewhere…";
+- "are read across pages…".
+
+The other differences:
 
 **Merge before a conflict copy.** skysa-notes never merges: on a conflict the remote keeps the
 path, and the local version is written beside it as a conflict copy. Memoriam adds one merge
@@ -526,6 +551,8 @@ packages/core/         framework-free TypeScript: browser, Node and Workers
   src/
     passage/           body grammar, tokenizer, chunker, remap
     progress/          frontmatter codec, passage merge
+    providers/         storage adapters and the in-memory fake (from skysa-notes)
+    sync/              conflict names; the engine, from S2
     practice/          hiding, typing reducer, grading, fading
     schedule/          FSRS, the session planner
     rewards/           activity and its merge, streaks, mastery, badges
@@ -552,7 +579,15 @@ Phase 1 is delivered in milestones, each one pull request with `pnpm verify` gre
 | M8 | Export and import |
 | M9 | Polish: install, persistence, backup reminder, palette |
 
-Phase 2 is sync (§10).
+Phase 2 is sync (§10), in milestones of its own:
+
+| Milestone | Delivers |
+|---|---|
+| S1 | The provider adapters, the marker, conflict names, and the contract suite |
+| S2 | The sync engine and the store contract in core, with the merge hook |
+| S3 | The web app's store over Dexie, the scheduler, and tokens |
+| S4 | `apps/api`: the Worker for OAuth, with per-connection credentials |
+| S5 | Connecting storage in Settings, the conflict screen, and the two-device soak |
 
 Phase 3, later:
 - full-word or spoken recall checks;
