@@ -310,6 +310,97 @@ describe('changes here while a push is in flight', () => {
 	});
 });
 
+/** What is queued, as `op path`, with ` (lazy)` after a lazy write, in order. */
+const queuedOps = async (db: MemoriamDatabase): Promise<string[]> =>
+	(await db.opQueue.orderBy('seq').toArray()).map(
+		(op) => `${op.op} ${op.path}${op.lazy === true ? ' (lazy)' : ''}`
+	);
+
+describe('a pass’s write, and an edit’s (§10, "Push timing")', () => {
+	it('queues what a pass changes as lazy: the passage and the day’s activity', async () => {
+		const { db, engine } = await connected();
+		const made = await createPassage(db, details('Plan'));
+		await engine.sync();
+
+		await practise(db, made, 2);
+		await practise(db, (await row(db, made.id)) ?? made, 3);
+
+		expect(await queuedOps(db)).toEqual([
+			'write plan.md (lazy)',
+			'write .memoriam/activity-2026.md (lazy)',
+		]);
+	});
+
+	it('puts an edit’s write in place of a lazy one, at the back of the queue', async () => {
+		const { db, fake, engine } = await connected();
+		const made = await createPassage(db, details('Plan'));
+		await engine.sync();
+		await practise(db, made, 2);
+		const lazy = (await db.opQueue.toArray()).find((op) => op.path === 'plan.md');
+
+		await updatePassage(db, made.id, details('Plan', 'Other words.\n'));
+
+		expect(await queuedOps(db)).toEqual([
+			'write .memoriam/activity-2026.md (lazy)',
+			'write plan.md',
+		]);
+		const eager = (await db.opQueue.toArray()).find((op) => op.path === 'plan.md');
+		expect(eager?.seq).toBeGreaterThan(lazy?.seq ?? Infinity);
+		expect((await engine.sync()).status).toBe('ok');
+		await expectMirrored(db, fake);
+	});
+
+	it('leaves an edit’s write as it is when a pass follows it', async () => {
+		const { db, engine } = await connected();
+		const made = await createPassage(db, details('Plan'));
+		await engine.sync();
+		await updatePassage(db, made.id, details('Plan', 'Other words.\n'));
+
+		await practise(db, (await row(db, made.id)) ?? made, 2);
+
+		expect(await queuedOps(db)).toEqual([
+			'write plan.md',
+			'write .memoriam/activity-2026.md (lazy)',
+		]);
+	});
+
+	it('owes a lazy write for a pass made while the last one’s was on its way', async () => {
+		const { db, fake, engineOver } = await connected();
+		const made = await createPassage(db, details('Plan'));
+		await engineOver(fake).sync();
+		await practise(db, made, 2);
+		const passed = (await row(db, made.id)) ?? made;
+		const engine = engineOver(inFlight(fake, 'write', () => practise(db, passed, 3)));
+
+		await engine.sync();
+
+		expect(await queuedOps(db)).toContain('write plan.md (lazy)');
+		expect((await engine.sync()).status).toBe('ok');
+		await expectMirrored(db, fake);
+		expect(fake.contentAt('plan.md')).toContain('level: 3');
+	});
+
+	it('sends an edit made while a pass’s write was on its way, and not lazily', async () => {
+		const { db, fake, engineOver } = await connected();
+		const made = await createPassage(db, details('Plan'));
+		await engineOver(fake).sync();
+		await practise(db, made, 2);
+		const engine = engineOver(
+			inFlight(fake, 'write', () =>
+				updatePassage(db, made.id, details('Plan', 'Other words.\n'))
+			)
+		);
+
+		await engine.sync();
+
+		expect(await queuedOps(db)).toContain('write plan.md');
+		expect(await queuedOps(db)).not.toContain('write plan.md (lazy)');
+		expect((await engine.sync()).status).toBe('ok');
+		await expectMirrored(db, fake);
+		expect(fake.contentAt('plan.md')).toContain('Other words.');
+	});
+});
+
 describe('a passage deleted before its write was ever sent, on two devices', () => {
 	it('leaves the other device’s passage where it is', async () => {
 		const fake = createFakeProvider();

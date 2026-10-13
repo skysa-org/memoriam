@@ -1,4 +1,5 @@
 import { type ProviderKind } from '@memoriam/core';
+import { type PromiseExtended } from 'dexie';
 
 import {
 	isLive,
@@ -48,6 +49,65 @@ export const boundConnection = async (
 	db: Pick<MemoriamDatabase, 'syncState'>
 ): Promise<SyncStateRecord | undefined> => (await db.syncState.toArray())[0];
 
+/**
+ * How many times the library has been bound or let go, here. A sync or a
+ * question to the server that began before the count moved is about a binding
+ * that has gone, whatever connection is bound now — the same one again
+ * included — and its answer is not acted on (`sync/scheduler.ts`,
+ * `sync/account.ts`). As skysa-notes counts them.
+ */
+export const BINDINGS_KEY = 'sync.bindings';
+
+export const bindingCount = (db: Pick<MemoriamDatabase, 'prefs'>): PromiseExtended<number> =>
+	db.prefs.get(BINDINGS_KEY).then((record) => Number(record?.value ?? 0));
+
+const countBinding = (db: Pick<MemoriamDatabase, 'prefs'>): PromiseExtended<string> =>
+	bindingCount(db).then((count) => db.prefs.put({ key: BINDINGS_KEY, value: String(count + 1) }));
+
+/**
+ * Change the binding's row, if the library is still bound to `connectionId`:
+ * what a sync learns on its way — a root, when it last pulled, a token — is
+ * about that connection, and a row let go of meanwhile must not come back.
+ */
+export const updateBinding = (
+	db: Pick<MemoriamDatabase, 'syncState' | 'transaction'>,
+	connectionId: string,
+	change: (state: SyncStateRecord) => SyncStateRecord
+): Promise<void> =>
+	db.transaction('rw', db.syncState, async () => {
+		const state = await db.syncState.get(connectionId);
+		if (state !== undefined) await db.syncState.put(change(state));
+	});
+
+/**
+ * What the server says of the account the library is bound to: its id at the
+ * provider, and what it is called, each only where it was said. Only if the
+ * library is still bound as it was when the server was asked (`since`, from
+ * `bindingCount`); answers whether it was.
+ */
+export const rememberAccount = (
+	db: MemoriamDatabase,
+	account: {
+		connectionId: string;
+		accountId?: string | null;
+		displayName?: string | null;
+		since: number;
+	}
+): Promise<boolean> =>
+	db.transaction('rw', [db.syncState, db.prefs], async () => {
+		if ((await bindingCount(db)) !== account.since) return false;
+		const state = await db.syncState.get(account.connectionId);
+		if (state === undefined) return false;
+		const said = <T>(value: T | null | undefined): value is T =>
+			value !== null && value !== undefined && value !== '';
+		await db.syncState.put({
+			...state,
+			...(said(account.accountId) ? { accountId: account.accountId } : {}),
+			...(said(account.displayName) ? { displayName: account.displayName } : {}),
+		});
+		return true;
+	});
+
 /** Cut loose from the remote: nothing it says about a file is true once the binding has gone. */
 const loose = ({
 	remoteId: _remoteId,
@@ -82,6 +142,7 @@ export const bindLibrary = (
 			boundAt: now,
 		};
 		await db.syncState.add(state);
+		await countBinding(db);
 
 		// Unbound, nothing was queued and nothing was buried (`store/queue.ts`):
 		// every row is a live one the remote has never seen, and owed.
@@ -110,9 +171,23 @@ export const bindLibrary = (
  *
  * The files sync kept beside the passages go with the binding: they were the
  * remote's, and nothing here ever held their bytes.
+ *
+ * `only` is for a decision made from a server's answer, about one connection:
+ * nothing is let go unless the library is still bound to it, and, given
+ * `since`, has not been bound or let go meanwhile. Answers whether the library
+ * was let go of.
  */
-export const unbindLibrary = (db: MemoriamDatabase): Promise<void> =>
-	db.transaction('rw', [...writerTables(db), db.fileBytes], async () => {
+export const unbindLibrary = (
+	db: MemoriamDatabase,
+	only?: { connectionId: string; since?: number }
+): Promise<boolean> =>
+	db.transaction('rw', [...writerTables(db), db.fileBytes, db.prefs], async () => {
+		const bound = await boundConnection(db);
+		if (only !== undefined) {
+			const moved = only.since !== undefined && (await bindingCount(db)) !== only.since;
+			if (moved || bound?.connectionId !== only.connectionId) return false;
+		}
+		if (bound !== undefined) await countBinding(db);
 		await db.syncState.clear();
 		await db.opQueue.where('connectionId').equals(LOCAL_CONNECTION_ID).delete();
 
@@ -130,4 +205,5 @@ export const unbindLibrary = (db: MemoriamDatabase): Promise<void> =>
 
 		await db.files.where('connectionId').equals(LOCAL_CONNECTION_ID).delete();
 		await db.fileBytes.where('connectionId').equals(LOCAL_CONNECTION_ID).delete();
+		return true;
 	});

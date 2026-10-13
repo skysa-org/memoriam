@@ -9,6 +9,7 @@ import { session } from './session.js';
 import { settings } from './settings.js';
 import { shell } from './shell.js';
 import { stats } from './stats.js';
+import { sync } from './sync.js';
 import { today } from './today.js';
 
 /**
@@ -28,4 +29,5 @@ export const en = {
 	settings,
 	stats,
 	badges,
+	sync,
 } as const satisfies Catalog;

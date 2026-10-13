@@ -356,6 +356,8 @@ earn it.
   file.
 - Version 2 adds sync's tables: `syncState`, `opQueue`, `files` and `fileBytes`, and a passage's
   `remoteId`, `remoteVersion`, `syncedHash` and `deletedLocally`.
+- Version 3 adds `credentials`: the credential each connection is reached with (§10, "The sync
+  client").
 - Writes set `dirty`, and queue what the remote is owed in the same transaction, while the
   library is connected (§10, "The web store").
 - Deleting a passage or a collection removes its rows while the library is not connected, and
@@ -577,13 +579,64 @@ suite (`apps/web/tests/syncStore.test.ts`). Where it differs:
 - **When a passage counts as edited.** A pull keeps the row's `updatedAt` where the file changed
   only its progress (`sameApartFromProgress`). Otherwise the time moves forward, as skysa-notes'
   `editedAt` moves it.
-- **Practice** queues one write, like any edit. When it goes is the scheduler's to say (S4).
+- **Practice** queues one write, like any edit, marked as lazy ("Push timing", below).
+
+**The sync client** (S4: `apps/web/src/api/client.ts`, `store/credentials.ts`,
+`sync/{tokens,providers,scheduler,account,runtime}.ts`) is skysa-notes' client, ported. Where it
+differs:
+- **No change relay, and no connect gate.** skysa-notes' server can run a relay, which tells a
+  device as soon as another has pushed, and an operator's gate in front of connecting: a message,
+  a code its policy checks, and the reasons beside a refusal. Memoriam's server has neither. So
+  the client has no relay tickets, no connect code, no gate, and no reasons beside
+  `not_entitled`. A device hears of another's changes at its next sync: on opening, on focus, on
+  coming into view, and every minute while in view.
+- **Credentials** are skysa-notes':
+  - `sk1_` and 32 random bytes, made by the device, written down before the browser leaves for
+    the provider (`beginConnect`), and filed under the connection once the server names it;
+  - the server only ever sees the credential's SHA-256;
+  - kept in IndexedDB, never localStorage. `script-src 'self'` (§9) is what protects them.
+- **Tokens** are minted by `apps/api` against the credential, held in memory and on the `syncState`
+  row, and replaced a minute before they expire (`sync/tokens.ts`).
+- **Every provider request has a deadline** (`sync/providers.ts`): a minute, and longer for a
+  large body.
+- **The scheduler** (`sync/scheduler.ts`) follows the binding, with one session per bound
+  connection. From skysa-notes, unchanged:
+  - one run at a time per connection, across tabs (Web Locks, `memoriam:sync:<id>`);
+  - a backoff from 5 seconds, doubling to 5 minutes, and a provider's `Retry-After` honoured up to
+    15 minutes;
+  - an op out of attempts holds the queue (`blocked`), and is tried again after 15 minutes or when
+    the user asks;
+  - a run that ends after the library was bound or let go (`bindingCount`) is ignored, and asked
+    for again.
+
+  It is started in `main.tsx`, and does nothing while the library is bound to nothing.
+- **The account** (`sync/account.ts`). There is one library, so connecting is choosing where it
+  syncs.
+  - **A connect that comes back** binds the library (`claimConnection`). A library bound
+    elsewhere is let go first, with every passage kept. The old credential's grant is signed out,
+    since nothing here will present it again.
+  - **`credential_revoked` or `not_found`** about the bound connection lets the library go and
+    forgets the credential, keeping every passage. Anything else (offline, a 5xx, another refusal)
+    changes nothing.
+  - **Disconnecting** signs this device out on the server first, then lets go here.
+
+**Push timing.** skysa-notes pushes 2 seconds after the last edit. Practice records a pass every
+few seconds, and each pass changes the passage and the day's activity. Pushed alone, every pass
+would be two requests, and at the provider two new file versions. So:
+- **A pass's writes are lazy** (`queuePracticeWrite`): the passage's, and the activity file's.
+- **The scheduler sends lazy writes with the next sync**: the minute's poll while the page is in
+  view, or as the page is hidden. Either way they go within a minute of the first (`lazyMs`). A
+  later pass joins that wait rather than putting it off.
+- **An edit's write is never lazy.** An edit that finds a lazy write queued replaces it, at the
+  back of the queue, so it goes after the 2-second debounce and takes the pass with it.
+- **A write that lands after another pass was made** is owed again, as lazily as it was queued.
+- **Hiding the page sends whatever waits**, at once: a phone may not run the page again for hours,
+  and the next device opened should find the practice made here.
 
 **Still to come:**
-- **Push timing** (S4). Practice writes wait about 60 seconds, or until the page is hidden, before
-  they are pushed. Text edits keep skysa-notes' 2-second debounce.
 - **Provider apps** (S5). New registrations named "memoriam" are needed with Dropbox, Google and
   Microsoft (Dropbox app names are permanent).
+- **`connect-src`** (S6) gains each provider's hosts when connecting appears in Settings.
 
 ## 11. Repository layout
 
@@ -596,8 +649,9 @@ apps/web/              the PWA
     routes/            TanStack Router, a file route per screen (hash history)
     components/        the shell and shared UI
     practice/          the practice screen and keystroke capture
-    store/             Dexie: every local read and write, and the push queue
-    sync/              the Dexie SyncStore (from S3)
+    store/             Dexie: every local read and write, the push queue, credentials
+    api/               the typed client for apps/api (from S4)
+    sync/              the Dexie SyncStore, tokens, providers, the scheduler, the account
     archive/           zip export and import
     commands/          command registry, chords, palette
     i18n/              t(), rich(), and the English catalog

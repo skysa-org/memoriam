@@ -10,7 +10,7 @@ afterEach(async () => {
 });
 
 describe('the schema', () => {
-	it('carries a library written by version 1 forward, every passage in it live', async () => {
+	it('carries a library written by version 1 forward, every passage in it live, to the latest', async () => {
 		const name = `db-${crypto.randomUUID()}`;
 		const before = new Dexie(name);
 		before.version(1).stores({
@@ -40,5 +40,6 @@ describe('the schema', () => {
 		expect(await db.notes.where('deletedLocally').equals(0).count()).toBe(1);
 		expect(await db.opQueue.count()).toBe(0);
 		expect(await db.syncState.count()).toBe(0);
+		expect(await db.credentials.count()).toBe(0);
 	});
 });

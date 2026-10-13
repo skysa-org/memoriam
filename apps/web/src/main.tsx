@@ -11,8 +11,13 @@ import { createRoot } from 'react-dom/client';
 
 import { StaleTabGate } from './components/StaleTabGate.js';
 import { createAppRouter } from './router.js';
+import { syncScheduler } from './sync/runtime.js';
 
 const router = createAppRouter();
+
+// Before the first render, and never stopped: it follows the library's
+// binding on its own, and syncs nothing while there is none.
+syncScheduler.start();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('#root is missing from index.html');
