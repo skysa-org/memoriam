@@ -1,0 +1,448 @@
+:root {
+	color-scheme: light dark;
+
+	/* Spacing, in the few steps everything is built from. */
+	--space-3xs: 0.125rem;
+	--space-2xs: 0.25rem;
+	--space-xs: 0.375rem;
+	--space-s: 0.5rem;
+	--space-m: 0.75rem;
+	--space-l: 1rem;
+	--space-xl: 1.5rem;
+	--space-2xl: 2rem;
+	/* How far a block's words sit in from its sides. */
+	--gutter: var(--space-l);
+	--radius-s: 0.375rem;
+	--radius-m: 0.625rem;
+	--radius-l: 1rem;
+
+	/*
+	 * Motion: one curve for what arrives or answers, and one for what leaves.
+	 * `--duration-state` is a colour changing and is not movement, so it stays
+	 * when the system asks for less motion; every other step goes to nothing.
+	 */
+	--ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+	--ease-in: cubic-bezier(0.4, 0, 1, 1);
+	--duration-state: 120ms;
+	--duration-s: 120ms;
+	--duration-m: 180ms;
+	--duration-l: 240ms;
+	--duration-xl: 420ms;
+
+	--bg: #ffffff;
+	--fg: #111827;
+	--muted: #6b7280;
+	--surface: #f4f4f7;
+	--surface-raised: #ffffff;
+	--border: #e4e4ea;
+	/* Outcomes: a 4px bar or a wash behind the words, never the words' own
+	   colour, so a message reads the same whatever tone it arrives with. */
+	--ok: #15803d;
+	--warn: #b45309;
+	--bad: #dc2626;
+	/* Practice: a word the user recalled, one they missed, and a hidden word's
+	   placeholder. */
+	--recalled: var(--fg);
+	--missed: #dc2626;
+	--missed-bg: color-mix(in srgb, var(--missed) 12%, transparent);
+	--placeholder: color-mix(in srgb, var(--muted) 45%, transparent);
+	/* A streak's flame and the heatmap's warmest day. */
+	--flame: #ea580c;
+	/* `--brand` and `--on-brand` come from the brand's stylesheet, with
+	   `--font-sans` and `--font-mono` (`brand.ts`, docs/ARCHITECTURE.md §8). */
+	--hover-bg: color-mix(in srgb, var(--fg) 7%, transparent);
+	--brand-wash: color-mix(in srgb, var(--brand) 12%, transparent);
+	--ring: color-mix(in srgb, var(--brand) 70%, transparent);
+	--shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+	/* The passage's own type: a serif, since what is learnt by heart is read
+	   as much as it is typed. */
+	--font-text: ui-serif, 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+	font-family: var(--font-sans);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--bg: #0e1018;
+		--fg: #e7e7ee;
+		--muted: #9a9cab;
+		--surface: #171a25;
+		--surface-raised: #1d2030;
+		--border: #2a2e3e;
+		--ok: #4ade80;
+		--warn: #fbbf24;
+		--bad: #f87171;
+		--missed: #f87171;
+		--flame: #fb923c;
+		--shadow: 0 8px 24px rgb(0 0 0 / 0.4);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	:root {
+		--duration-s: 0ms;
+		--duration-m: 0ms;
+		--duration-l: 0ms;
+		--duration-xl: 0ms;
+	}
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--fg);
+	-webkit-font-smoothing: antialiased;
+	-webkit-text-size-adjust: 100%;
+}
+
+body {
+	min-height: 100dvh;
+}
+
+a {
+	color: var(--brand);
+}
+
+button,
+input,
+select,
+textarea {
+	font: inherit;
+	color: inherit;
+}
+
+button,
+a {
+	-webkit-tap-highlight-color: transparent;
+}
+
+/* One focus ring for every control, shown for the keyboard and not for a tap. */
+:where(button, a, input, select, textarea, [role='button']):focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 1px;
+}
+
+:where(button, a, input, select, textarea, [role='button']) {
+	transition-property: color, background-color, border-color, box-shadow, opacity;
+	transition-duration: var(--duration-state);
+	transition-timing-function: var(--ease-out);
+}
+
+@keyframes arrive {
+	from {
+		opacity: 0;
+		translate: 0 var(--arrive-y, 0);
+		scale: var(--arrive-scale, 1);
+	}
+}
+
+@keyframes dim-in {
+	from {
+		background-color: transparent;
+	}
+}
+
+/* ---- Buttons ------------------------------------------------------------ */
+
+.button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-xs);
+	min-height: 2.25rem;
+	padding: var(--space-xs) var(--space-l);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-s);
+	background: var(--surface-raised);
+	color: var(--fg);
+	cursor: pointer;
+	text-decoration: none;
+}
+
+.button.primary {
+	border-color: var(--brand);
+	background: var(--brand);
+	color: var(--on-brand);
+	font-weight: 600;
+}
+
+.button.ghost {
+	border-color: transparent;
+	background: transparent;
+	color: var(--muted);
+}
+
+.button.danger {
+	color: var(--bad);
+}
+
+.button:disabled {
+	opacity: 0.45;
+	cursor: default;
+}
+
+@media (hover: hover) {
+	.button:not(.primary, :disabled):hover {
+		background: var(--hover-bg);
+	}
+
+	.button.primary:not(:disabled):hover {
+		filter: brightness(1.08);
+	}
+}
+
+button.icon {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 2rem;
+	padding: 0;
+	border: 1px solid transparent;
+	border-radius: var(--radius-s);
+	background: none;
+	color: var(--muted);
+	cursor: pointer;
+}
+
+@media (hover: hover) {
+	button.icon:not(:disabled):hover {
+		color: var(--fg);
+		background: var(--hover-bg);
+	}
+}
+
+button.icon:disabled {
+	opacity: 0.4;
+	cursor: default;
+}
+
+.icon-glyph {
+	display: block;
+	flex: none;
+}
+
+/* ---- The frame ---------------------------------------------------------- */
+
+.app {
+	display: flex;
+	flex-direction: column;
+	min-height: 100dvh;
+}
+
+.screen {
+	width: 100%;
+	max-width: 46rem;
+	margin: 0 auto;
+	padding: var(--space-xl) var(--gutter) calc(var(--space-2xl) + env(safe-area-inset-bottom));
+}
+
+.screen-header {
+	display: flex;
+	align-items: center;
+	gap: var(--space-s);
+	margin-block-end: var(--space-l);
+}
+
+.screen-header h1 {
+	flex: 1;
+	min-width: 0;
+	margin: 0;
+	font-size: 1.5rem;
+	line-height: 1.25;
+}
+
+.empty {
+	color: var(--muted);
+	line-height: 1.6;
+}
+
+/* ---- Notices ------------------------------------------------------------ */
+
+.banner {
+	margin: 0;
+	padding: var(--space-s) var(--gutter);
+	font-size: 0.875rem;
+	color: var(--muted);
+	border-block-end: 1px solid var(--border);
+	background: var(--surface);
+}
+
+/* The offer to install the app (`InstallBanner.tsx`). */
+.install-banner {
+	display: flex;
+	align-items: center;
+	gap: var(--space-s);
+	padding-block: var(--space-2xs);
+	color: var(--fg);
+}
+
+.install-banner-text {
+	flex: 1;
+	min-width: 0;
+}
+
+.install-banner button.install-banner-install {
+	flex: none;
+	padding: var(--space-2xs) var(--space-m);
+	border-radius: var(--radius-s);
+	border: 1px solid var(--border);
+	background: var(--bg);
+	cursor: pointer;
+}
+
+/* The new-build notice and the toasts are the same shape. */
+.update-prompt,
+.toast {
+	display: flex;
+	gap: var(--space-s);
+	align-items: center;
+	padding: var(--space-m) var(--space-l);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-m);
+	background: var(--surface-raised);
+	box-shadow: var(--shadow);
+	--arrive-y: 0.5rem;
+	animation: arrive var(--duration-l) var(--ease-out);
+}
+
+.update-prompt {
+	position: fixed;
+	z-index: 50;
+	inset-block-end: calc(var(--space-l) + env(safe-area-inset-bottom));
+	inset-inline: var(--space-l);
+	margin-inline: auto;
+	max-width: 28rem;
+}
+
+.update-prompt span,
+.toast span {
+	flex: 1;
+}
+
+.update-prompt button,
+.toast button {
+	padding: var(--space-xs) var(--space-m);
+	border-radius: var(--radius-s);
+	border: 1px solid var(--border);
+	background: var(--bg);
+	cursor: pointer;
+}
+
+.update-prompt button.ghost,
+.toast button.ghost {
+	border-color: transparent;
+	background: transparent;
+	color: var(--muted);
+}
+
+/* ---- When the app is in trouble ----------------------------------------- */
+
+.error-screen {
+	max-width: 36rem;
+	margin: 0 auto;
+	padding: 3rem 1.25rem;
+	line-height: 1.6;
+}
+
+.error-screen h1 {
+	margin: 0 0 var(--space-s);
+	font-size: 1.25rem;
+}
+
+.error-actions {
+	display: flex;
+	gap: var(--space-s);
+	margin-block: 1.25rem;
+}
+
+.error-actions button {
+	padding: var(--space-xs) var(--space-m);
+	border-radius: var(--radius-s);
+	border: 1px solid var(--border);
+	background: var(--surface);
+	cursor: pointer;
+}
+
+.error-screen details {
+	color: var(--muted);
+	font-size: 0.85rem;
+}
+
+.error-screen summary {
+	cursor: pointer;
+}
+
+.error-screen pre {
+	margin: var(--space-s) 0 0;
+	padding: var(--space-s) var(--space-m);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-s);
+	background: var(--surface);
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+/* A wrapper only so there is something to make inert; it must not become a box. */
+.tab-gate {
+	display: contents;
+}
+
+.tab-notice-backdrop,
+.modal-backdrop {
+	position: fixed;
+	inset: 0;
+	z-index: 100;
+	display: grid;
+	place-items: center;
+	padding: var(--space-l);
+	background: rgb(0 0 0 / 0.4);
+	animation: dim-in var(--duration-l) var(--ease-out);
+}
+
+.tab-notice,
+.modal {
+	width: 100%;
+	max-width: 28rem;
+	padding: 1.25rem 1.5rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-m);
+	background: var(--surface-raised);
+	box-shadow: var(--shadow);
+	line-height: 1.6;
+	--arrive-y: 0.5rem;
+	--arrive-scale: 0.98;
+	animation: arrive var(--duration-l) var(--ease-out);
+}
+
+.tab-notice h2,
+.modal h2 {
+	margin: 0 0 var(--space-s);
+	font-size: 1.1rem;
+}
+
+.tab-notice button {
+	padding: var(--space-xs) var(--space-m);
+	border-radius: var(--radius-s);
+	border: 1px solid var(--border);
+	background: var(--bg);
+	cursor: pointer;
+}
+
+.tab-notice-actions,
+.modal-actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: var(--space-s);
+}
+
+.tab-stale-bar {
+	inset-block-start: var(--space-l);
+	inset-block-end: auto;
+}

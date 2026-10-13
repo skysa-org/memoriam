@@ -1,0 +1,8 @@
+pnpm-lock.yaml
+dist
+dev-dist
+**/routeTree.gen.ts
+LICENSE
+
+# Prose is hand-formatted; Prettier rewrites markdown tables into unreadable diffs.
+*.md

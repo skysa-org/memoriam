@@ -1,0 +1,41 @@
+name: Idea or feature request
+description: Something the app should do that it does not.
+labels: [enhancement]
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Two things worth reading first, because they will answer a lot of
+              these faster than we can:
+
+              - The open [issues](https://github.com/skysa-org/memoriam/issues)
+                are what is coming; **`docs/ARCHITECTURE.md`** is why things are
+                the shape they are.
+              - **`docs/research.md`** is the evidence behind how practice and
+                scheduling work. If your idea changes how people learn, the
+                useful thing is to say what it would do to recall a month later.
+
+    - type: textarea
+      id: problem
+      attributes:
+          label: What are you trying to do?
+          description: >-
+              The problem, not the solution. What are you doing when you hit
+              this, and what do you do instead today?
+      validations:
+          required: true
+
+    - type: textarea
+      id: idea
+      attributes:
+          label: What would help
+          description: If you have a shape in mind, describe it. It is fine not to.
+
+    - type: textarea
+      id: alternatives
+      attributes:
+          label: What else you considered
+          description: >-
+              Including doing it outside the app. Passages and their progress are
+              plain markdown, so some things are already possible with other
+              tools — say if you have tried and it did not work.
