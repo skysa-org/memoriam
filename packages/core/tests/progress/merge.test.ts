@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { parsePassageFile } from '../../src/markdown/passage.js';
 import { chunkPassage } from '../../src/passage/chunk.js';
 import { readProgress } from '../../src/progress/codec.js';
-import { mergePassage } from '../../src/progress/merge.js';
+import { mergePassage, sameApartFromProgress } from '../../src/progress/merge.js';
 
 const BODY =
 	'\nThe Lord is my shepherd; I shall not want.\nHe makes me lie down in green pastures.\n\nHe restores my soul.\n';
@@ -76,5 +76,24 @@ describe('mergePassage', () => {
 		const broken = `---\nid: p1\ntitle: [Psalm\n---\n${BODY}`;
 		expect(mergePassage(broken, file([]))).toEqual({ kind: 'apart' });
 		expect(mergePassage(file([]), broken)).toEqual({ kind: 'apart' });
+	});
+});
+
+describe('sameApartFromProgress', () => {
+	it('is true for copies that differ only in their progress, however it is written', () => {
+		expect(sameApartFromProgress(file([]), file([`${A}: { level: 2 }`]))).toBe(true);
+		expect(
+			sameApartFromProgress(file([`${A}: { level: 1 }`]), file([`${B}: { level: 3 }`]))
+		).toBe(true);
+	});
+
+	it('is false where the words or another detail differ, or a copy cannot be read', () => {
+		expect(sameApartFromProgress(file([]), file([], '', `${BODY}More.\n`))).toBe(false);
+		expect(sameApartFromProgress(file([]), file([], 'updated: 2026-10-13T09:00:00Z\n'))).toBe(
+			false
+		);
+		expect(sameApartFromProgress(file([], 'tags: [\n'), file([], 'tags: [\n'.repeat(2)))).toBe(
+			false
+		);
 	});
 });

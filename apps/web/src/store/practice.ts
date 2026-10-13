@@ -14,9 +14,10 @@ import {
 	writeProgress,
 } from '@memoriam/core';
 
-import { LOCAL_CONNECTION_ID, type MemoriamDatabase } from './db.js';
+import { isLive, LOCAL_CONNECTION_ID, type MemoriamDatabase, writerTables } from './db.js';
 import { rowFor } from './passages.js';
 import { getPreference } from './prefs.js';
+import { queueWrite } from './queue.js';
 
 /**
  * Practice, as the store keeps it: a pass's progress written into its
@@ -25,7 +26,8 @@ import { getPreference } from './prefs.js';
  *
  * One transaction, which reads the file as it is now and changes only the
  * chunk practised: two tabs practising one passage each write their own chunk
- * over the other's, never over its whole progress.
+ * over the other's, never over its whole progress. The write that sends it is
+ * queued in the same transaction; when it goes is the scheduler's to say.
  */
 
 export interface PassRecord {
@@ -89,21 +91,28 @@ export const changeActivity = async (
 	change: (text: string | undefined) => ActivityWrite
 ): Promise<boolean> => {
 	const path = activityPath(now.getFullYear());
-	const row = await db.notes.where('[connectionId+path]').equals([connectionId, path]).first();
+	const row = await db.notes
+		.where('[connectionId+path]')
+		.equals([connectionId, path])
+		.filter(isLive)
+		.first();
 	const written = change(row?.source);
 	if (!written.ok) return false;
 	if (written.text === row?.source) return true;
 	const at = now.getTime();
-	await db.notes.put(
-		rowFor({
+	const next = rowFor(
+		{
 			id: row?.id ?? `activity-${String(now.getFullYear())}`,
 			connectionId,
 			path,
 			source: written.text,
 			createdAt: row?.createdAt ?? at,
 			updatedAt: at,
-		})
+		},
+		row
 	);
+	await db.notes.put(next);
+	await queueWrite(db, next);
 	return true;
 };
 
@@ -128,7 +137,7 @@ export const recordPractice = (
 	{ connectionId = LOCAL_CONNECTION_ID }: Readonly<{ connectionId?: string }> = {},
 	now: Date = new Date()
 ): Promise<boolean> =>
-	db.transaction('rw', db.notes, () =>
+	db.transaction('rw', writerTables(db), () =>
 		addActivity(db, { connectionId, device }, { ...activity, started: 0 }, now)
 	);
 
@@ -139,9 +148,9 @@ export const recordPass = (
 	{ connectionId = LOCAL_CONNECTION_ID }: Readonly<{ connectionId?: string }> = {},
 	now: Date = new Date()
 ): Promise<Recorded> =>
-	db.transaction('rw', db.notes, db.prefs, async () => {
+	db.transaction('rw', [...writerTables(db), db.prefs], async () => {
 		const row = await db.notes.get([connectionId, pass.id]);
-		if (row === undefined) return { ok: false, reason: 'missing' } as const;
+		if (row === undefined || !isLive(row)) return { ok: false, reason: 'missing' } as const;
 
 		const parsed = parsePassageFile(row.source);
 		const chunked = chunkPassage(parsed.body, parsed.chunker ?? CURRENT_CHUNKER);
@@ -163,7 +172,9 @@ export const recordPass = (
 			chunks.map((chunk) => chunk.key)
 		);
 		if (!written.ok) return written;
-		await db.notes.put({ ...row, source: written.text, dirty: 1 });
+		const practisedRow = { ...row, source: written.text, dirty: 1 as const };
+		await db.notes.put(practisedRow);
+		await queueWrite(db, practisedRow);
 
 		const chunk = chunks.find((each) => each.key === pass.key);
 		const started = before === undefined && chunk !== undefined ? chunk.end - chunk.start : 0;

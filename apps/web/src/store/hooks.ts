@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 
 import {
 	db as defaultDb,
+	isLive,
 	LOCAL_CONNECTION_ID,
 	type MemoriamDatabase,
 	type NoteRecord,
@@ -19,7 +20,11 @@ export const useLibrary = (
 	connectionId: string = LOCAL_CONNECTION_ID
 ): LibraryView | undefined =>
 	useLiveQuery(async () => {
-		const notes = await db.notes.where('connectionId').equals(connectionId).toArray();
+		const notes = await db.notes
+			.where('connectionId')
+			.equals(connectionId)
+			.filter(isLive)
+			.toArray();
 		const folders = await db.folders.where('connectionId').equals(connectionId).toArray();
 		return libraryView(notes, folders);
 	}, [db, connectionId]);
@@ -30,7 +35,8 @@ export const usePassage = (
 	db: MemoriamDatabase = defaultDb,
 	connectionId: string = LOCAL_CONNECTION_ID
 ): NoteRecord | null | undefined =>
-	useLiveQuery(
-		async () => (await db.notes.get([connectionId, id])) ?? null,
-		[db, connectionId, id]
-	);
+	useLiveQuery(async () => {
+		const row = await db.notes.get([connectionId, id]);
+		// A tombstone is deleted, as far as anything shown is concerned.
+		return row !== undefined && isLive(row) ? row : null;
+	}, [db, connectionId, id]);

@@ -351,16 +351,16 @@ earn it.
 **IndexedDB through Dexie** (`apps/web/src/store/db.ts`):
 - The tables mirror skysa-notes': `notes` keyed `[connectionId+id]`, `folders`, `prefs`. A
   "note" is any markdown file in the library: a passage, or a year's activity.
-- Every row has `connectionId = 'local'` until sync arrives.
+- Every row has `connectionId = 'local'`, connected or not (§10, "The web store").
 - Each row also keeps its title and source read out of the file, so a list need not parse every
   file.
-- There is no queue of writes owed to a provider yet. Sync brings skysa-notes' queue in a schema
-  version of its own. A first connection queues the whole library afresh anyway, as skysa-notes'
-  does, so a queue kept before then would have no reader. Writes set `dirty` from the start.
-- Deleting a passage or a collection removes its rows, and an undo notice puts them back. Once
-  there is sync, a delete leaves a tombstone until it has been sent, as in skysa-notes.
-- Until the first release, version 1 of the schema may still change. After it, a version only
-  adds, and an upgrade carries forward what an older build wrote.
+- Version 2 adds sync's tables: `syncState`, `opQueue`, `files` and `fileBytes`, and a passage's
+  `remoteId`, `remoteVersion`, `syncedHash` and `deletedLocally`.
+- Writes set `dirty`, and queue what the remote is owed in the same transaction, while the
+  library is connected (§10, "The web store").
+- Deleting a passage or a collection removes its rows while the library is not connected, and
+  leaves tombstones while it is. Either way an undo notice puts them back.
+- A version only adds, and an upgrade carries forward what an older build wrote.
 
 **Recording a pass.** `recordPass` (`apps/web/src/store/practice.ts`) is one transaction:
 1. Read the row's current `source`, and cut it into chunks by its own `chunker`.
@@ -543,12 +543,46 @@ import"). `mergePassage` is in `packages/core/src/progress/merge.ts`. `mergeActi
 the rest of the activity codec in `rewards/activity.ts`, and writes nothing when the incoming file
 adds nothing.
 
-**Still to come** (S3):
-- **When a passage counts as edited.** A pull that changed only progress keeps the passage's
-  `updatedAt`.
-- **Push timing.** Practice writes wait about 60 seconds, or until the page is hidden, before they
-  are pushed. Text edits keep skysa-notes' 2-second debounce.
-- **Provider apps.** New registrations named "memoriam" are needed with Dropbox, Google and
+**The web store** (S3: `apps/web/src/store/{queue,connection}.ts`, `apps/web/src/sync/store.ts`)
+is skysa-notes' push queue and Dexie `SyncStore`, ported. The store passes the core contract
+suite (`apps/web/tests/syncStore.test.ts`). Where it differs:
+- **One library, one connection.**
+  - skysa-notes keeps each connected source as a silo of its own. Its rows are keyed by that
+    source, and the device's own pile is copied into the first source connected.
+  - Memoriam has one library, so a connection is where that library syncs to. The rows stay
+    under `connectionId = 'local'` whatever they sync with. The connection is the one
+    `syncState` row, keyed by the id `apps/api` gives it.
+  - The store is made for a connection, and writes only while the library is still bound to it.
+- **Binding** (`bindLibrary`) queues the whole library for the remote, collection by collection
+  (`queueByNotebook`). The first sync then pulls what the remote has and sends the rest. A
+  passage on both sides is merged on that pull, or kept twice where the words differ.
+- **Unbinding** (`unbindLibrary`) cuts every passage loose and keeps it.
+  - Everything owed is forgotten, and so are the tombstones: their deletes were never sent.
+  - The remote keeps those files, so binding to the same account again brings them back.
+  - The files sync kept beside the passages go with the binding: they were the remote's.
+- **Nothing is queued while the library is bound to nothing.**
+  - There is nowhere to send it, and binding queues everything afresh.
+  - A delete then removes the row outright rather than leaving a tombstone.
+  - The rule is one check, in the queue's `add`, inside the writer's transaction.
+- **Tombstones** are skysa-notes': a delete while bound keeps the row until the delete is sent,
+  and every reader but sync passes over it (`isLive`).
+  - Undo lifts a tombstone. One whose file the remote still has keeps its path, and a passage
+    made at that name meanwhile moves aside.
+  - A pull can write into a tombstone, since a tombstone owes the remote nothing but its delete.
+    Then the undo merges the progress of both where the words agree. Otherwise it brings the
+    deleted text back as a copy of its own.
+- **Files beside passages.** A collection's rename moves them with it (`queueMoveFile`). A
+  collection's delete leaves them: nothing here shows one, so nothing here deletes one. Their
+  directory stays on the remote while it holds one.
+- **When a passage counts as edited.** A pull keeps the row's `updatedAt` where the file changed
+  only its progress (`sameApartFromProgress`). Otherwise the time moves forward, as skysa-notes'
+  `editedAt` moves it.
+- **Practice** queues one write, like any edit. When it goes is the scheduler's to say (S4).
+
+**Still to come:**
+- **Push timing** (S4). Practice writes wait about 60 seconds, or until the page is hidden, before
+  they are pushed. Text edits keep skysa-notes' 2-second debounce.
+- **Provider apps** (S5). New registrations named "memoriam" are needed with Dropbox, Google and
   Microsoft (Dropbox app names are permanent).
 
 ## 11. Repository layout
@@ -562,7 +596,8 @@ apps/web/              the PWA
     routes/            TanStack Router, a file route per screen (hash history)
     components/        the shell and shared UI
     practice/          the practice screen and keystroke capture
-    store/             Dexie: every local read and write
+    store/             Dexie: every local read and write, and the push queue
+    sync/              the Dexie SyncStore (from S3)
     archive/           zip export and import
     commands/          command registry, chords, palette
     i18n/              t(), rich(), and the English catalog
@@ -605,9 +640,10 @@ Phase 2 is sync (§10), in milestones of its own:
 |---|---|
 | S1 | The provider adapters, the marker, conflict names, and the contract suite |
 | S2 | The sync engine and the store contract in core, with the merge hook |
-| S3 | The web app's store over Dexie, the scheduler, and tokens |
-| S4 | `apps/api`: the Worker for OAuth, with per-connection credentials |
-| S5 | Connecting storage in Settings, the conflict screen, and the two-device soak |
+| S3 | The web store: schema version 2, the push queue, tombstones, binding, and the Dexie `SyncStore` |
+| S4 | The sync client: credentials, tokens, the API client, the scheduler and push timing |
+| S5 | `apps/api`: the Worker for OAuth, with per-connection credentials |
+| S6 | Connecting storage in Settings, the conflict screen, and the two-device soak |
 
 Phase 3, later:
 - full-word or spoken recall checks;

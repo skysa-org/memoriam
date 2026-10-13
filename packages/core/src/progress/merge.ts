@@ -61,18 +61,23 @@ const practisedAt = (entry: ChunkProgress): number => {
 const later = (ours: ChunkProgress, theirs: ChunkProgress): ChunkProgress =>
 	practisedAt(ours) > practisedAt(theirs) ? ours : theirs;
 
+/**
+ * Whether two copies of a passage say the same but for their progress: the
+ * same words, and every other detail the same. False where either cannot be
+ * read. A pull that changes only this much was practice somewhere else, not an
+ * edit (§10).
+ */
+export const sameApartFromProgress = (one: string, two: string): boolean => {
+	if (one === two) return true;
+	const a = splitFrontmatter(one);
+	const b = splitFrontmatter(two);
+	const details = detailsOf(a.frontmatter);
+	return a.body === b.body && details !== undefined && details === detailsOf(b.frontmatter);
+};
+
 export const mergePassage = (ours: string, theirs: string): PassageMerge => {
 	if (ours === theirs) return { kind: 'same' };
-	const mine = splitFrontmatter(ours);
-	const other = splitFrontmatter(theirs);
-	const details = detailsOf(mine.frontmatter);
-	if (
-		mine.body !== other.body ||
-		details === undefined ||
-		details !== detailsOf(other.frontmatter)
-	) {
-		return { kind: 'apart' };
-	}
+	if (!sameApartFromProgress(ours, theirs)) return { kind: 'apart' };
 	const parsed = parsePassageFile(ours);
 	const before = readProgress(parsed.progress);
 	const incoming = readProgress(parsePassageFile(theirs).progress);

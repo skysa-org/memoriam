@@ -5,7 +5,7 @@ import { useSyncExternalStore } from 'react';
 import { Icon } from '../components/Icon.js';
 import { useMediaQuery } from '../components/layout.js';
 import { t } from '../i18n/t.js';
-import { db as appDatabase, type MemoriamDatabase } from '../store/db.js';
+import { db as appDatabase, isLive, type MemoriamDatabase } from '../store/db.js';
 import { dismissInstall, getInstallDismissed } from '../store/prefs.js';
 import { type Device, type ManualInstall, manualInstall, thisDevice } from './installHow.js';
 import { type InstallPrompt, installPrompt } from './installPrompt.js';
@@ -48,7 +48,7 @@ export const InstallBanner = ({
 	const wanted = useLiveQuery(
 		async () =>
 			!(await getInstallDismissed(database)) &&
-			(await database.notes.filter((row) => !isHidden(row.path)).count()) > 0,
+			(await database.notes.filter((row) => isLive(row) && !isHidden(row.path)).count()) > 0,
 		[database]
 	);
 	// An installed app opens in a window of its own (`display: standalone` in

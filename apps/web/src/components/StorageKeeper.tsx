@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useRef } from 'react';
 
-import { db as appDatabase, type MemoriamDatabase } from '../store/db.js';
+import { db as appDatabase, isLive, type MemoriamDatabase } from '../store/db.js';
 import { browserStorage, keepIfDue, type StorageApi } from '../store/persistence.js';
 
 /**
@@ -14,7 +14,7 @@ export const StorageKeeper = ({
 	storage = browserStorage(),
 }: Readonly<{ database?: MemoriamDatabase; storage?: StorageApi | undefined }>) => {
 	// Any passage at all: the count changes as the first is added.
-	const passages = useLiveQuery(() => database.notes.count(), [database]);
+	const passages = useLiveQuery(() => database.notes.filter(isLive).count(), [database]);
 	// Once a page load: the answer is noted, and a second ask while the first
 	// is out would be a second prompt in Firefox.
 	const asking = useRef(false);
