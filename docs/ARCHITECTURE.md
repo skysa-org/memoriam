@@ -158,24 +158,27 @@ Each day key has exactly one writing device, so two devices' copies can be merge
 |---|---|
 | L0 | Every word visible; type the first letters to copy it |
 | L1 | About 25% of words hidden, shown as placeholders of their length |
-| L2 | About 50% hidden, alternating complementary halves on each pass |
+| L2 | About 50% hidden, mostly the half shown on the pass before |
 | L3 | About 75% hidden |
 | L4 | Every word hidden, with placeholders |
 | L5 | Bare: no placeholders, only a line of context before the chunk (or the title, for the first chunk) |
 
-**Which words are hidden:**
-- Words are rotated so that every word is hidden within a few passes.
-- Words recalled last time are more likely to be hidden.
+**Which words are hidden** (`practice/hide.ts`):
+- Words take turns: those hidden least so far this session are hidden first, so every word is
+  hidden within a few passes (five at L1, three at L2, two at L3).
+- Among words hidden as often, one missed less over time (`progress.misses`) is likelier to be
+  hidden: what is known loses its cue first.
 - A missed word is shown on the next pass and hidden again on the pass after.
-- At L1 and L2, no more than 2–3 hidden words in a row.
-- The random choice is seeded, so a pass can be replayed exactly.
+- No more than 2 hidden words in a row at L1, or 3 at L2. So two L2 passes are not always exact
+  complements: a run of four shown words cannot all be hidden next time.
+- The random choice is seeded (mulberry32), so a pass can be replayed exactly.
 
 **Moving between levels:**
 
 | A pass | Then |
 |---|---|
 | At least 90% correct, no hints | Up one level |
-| 100% correct at a fluent pace | Up two |
+| 100% correct with no hesitations | Up two |
 | 70–89% correct | The same level again, with the missed words shown once |
 | Below 70% | Down one level |
 
@@ -189,10 +192,13 @@ into the next state:
 - A wrong one shows the correct word in red. The user must then type its letter, and it is one
   miss however many keys follow.
 - A slip onto an adjacent key, on a touch keyboard, is shown the same way but logged as a slip,
-  not a miss.
-- About 5 seconds idle shows a faint outline of the word, then the word itself. Either counts as a
-  miss.
-- A hesitation is a gap longer than max(2 s, 2.5× the user's median time per word).
+  not a miss. Neighbours are worked out from where a phone puts the keys; QWERTY is the only layout
+  so far.
+- 5 seconds idle on a word shows a faint outline of it, and 8 seconds the word itself. Either
+  counts as a miss, and the word is still typed to go on. A hint can also be asked for.
+- A key that is no letter or digit (a space, a full stop) is passed over.
+- A hesitation is a wait before a word's first key, right or wrong, longer than max(2 s, 2.5× the
+  user's median time per word).
 
 **First letters.** A word's first letter is its first letter or digit, case-folded and with
 diacritics removed. Ligatures (æ, œ) and ß are folded, final sigma and Hebrew final forms are

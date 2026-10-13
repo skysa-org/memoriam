@@ -114,3 +114,38 @@ export {
 } from './passage/text.js';
 
 export { firstKey, foldKey, type LineWords, tokenizeLine, type Word } from './passage/tokenize.js';
+
+export { fade, type Faded, STAY_SHARE, UP_SHARE } from './practice/fade.js';
+
+export { AGAIN_SHARE, grade, type Grade, type GradeOptions } from './practice/grade.js';
+
+export {
+	HIDDEN_SHARE,
+	type HideInput,
+	hideWords,
+	type PastPass,
+	type Shown,
+} from './practice/hide.js';
+
+export { isNeighbour, type Neighbours, QWERTY } from './practice/keyboard.js';
+
+export { median, type PassSummary, summarize, tallyMisses } from './practice/pass.js';
+
+export { randoms } from './practice/random.js';
+
+export {
+	type Effect,
+	HESITATION_FACTOR,
+	HESITATION_FLOOR_MS,
+	hesitationThreshold,
+	type Hint,
+	isTyped,
+	OUTLINE_AFTER_MS,
+	startTyping,
+	type Typing,
+	typing,
+	type TypingEvent,
+	type TypingOptions,
+	WORD_AFTER_MS,
+	type WordResult,
+} from './practice/typing.js';
