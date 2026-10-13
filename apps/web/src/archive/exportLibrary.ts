@@ -1,5 +1,6 @@
 import { localDay } from '@memoriam/core';
 
+import { noteExported } from '../store/backup.js';
 import { LOCAL_CONNECTION_ID, type MemoriamDatabase } from '../store/db.js';
 import { zipParts, type ZipWrite } from './zip.js';
 
@@ -63,7 +64,10 @@ export type Exported =
 	| Readonly<{ ok: true; name: string }>
 	| Readonly<{ ok: false; limit: Exclude<ZipWrite, { ok: true }>['limit'] }>;
 
-/** Export the library, and say what the file is called, or why there is none. */
+/**
+ * Export the library, and say what the file is called, or why there is none.
+ * The day is noted, so the reminder to back up waits a while (`store/backup.ts`).
+ */
 export const exportLibrary = async (
 	db: MemoriamDatabase,
 	now: Date = new Date()
@@ -72,5 +76,6 @@ export const exportLibrary = async (
 	if (!archive.ok) return archive;
 	const name = archiveName(now);
 	save(archive.parts, name);
+	await noteExported(db, now);
 	return { ok: true, name };
 };

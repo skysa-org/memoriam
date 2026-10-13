@@ -31,4 +31,14 @@ export const today = {
 	done: 'You are done for today. Each part you have learnt comes back for review when it is due.',
 	beyond: 'To learn more today, open a passage in your library and practise it.',
 	open: 'Open the library',
+	/** A reminder to export a backup, while the library is kept only in this browser. */
+	backup: {
+		label: 'Backup',
+		never: 'Your passages and progress are kept only in this browser. Export a backup, and keep it somewhere safe.',
+		since: {
+			one: 'Your last backup was {count} day ago, and your library has changed since.',
+			other: 'Your last backup was {count} days ago, and your library has changed since.',
+		},
+		later: 'Not now',
+	},
 } as const;

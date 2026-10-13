@@ -61,5 +61,16 @@ export const shell = {
 			practice: 'Practice',
 		},
 		palette: 'Show all commands',
+		today: 'Go to Today',
+		library: 'Go to the library',
+		stats: 'Go to your progress',
+		settings: 'Go to Settings',
+		/** The whole library as a ZIP, downloaded. */
+		export: 'Export a backup',
+		newPassage: 'New passage',
+		practiseToday: 'Start today’s practice',
+		/** On a passage's page, about that passage. */
+		practisePassage: 'Practise this passage',
+		editPassage: 'Edit this passage',
 	},
 } as const;

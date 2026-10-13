@@ -422,6 +422,12 @@ sent to a server.
 **Keyboard.** Commands are registered by the components that own them
 (`apps/web/src/commands/`), and the palette and the shortcuts read the same list. Shortcuts need a
 modifier, so they never collide with typing during practice.
+- `Mod+K` opens the palette (`components/CommandPalette.tsx`, ported from skysa-notes). It is the
+  only chord: the screens are a tap away in the bar, and the chords a browser keeps for itself
+  (`Mod+N`, `Mod+T`) cannot be taken.
+- `components/AppCommands.tsx` registers what can be done from anywhere: go to each screen, start
+  today's practice, add a passage, export a backup. A passage's page adds practising and editing
+  that passage while it is open.
 
 ## 8. PWA
 
@@ -435,8 +441,19 @@ modifier, so they never collide with typing during practice.
 - **Installing from the browser.** As skysa-notes. Chromium's install event is held for a banner.
   Safari's menu path is named on iPhone, iPad and Mac.
 - **Keeping data.** Safari deletes a site's storage after 7 days without use unless the app is
-  installed to the home screen. The app asks for persistent storage (`navigator.storage.persist()`)
-  once there is a passage to keep, encourages installing, and reminds the user to export a backup.
+  installed to the home screen, and any browser may clear storage it has not been granted for good
+  when the disk runs short. Until sync, the only copy of the library is this one. So, once there is
+  a passage to keep:
+  - **The install banner** shows, and not before.
+  - **Persistent storage.** The app asks for it (`navigator.storage.persist()`,
+    `store/persistence.ts`). After a refusal it asks again a month later. Chromium and Safari
+    answer by how the site is used, so a later ask may be granted. Firefox asks the user, who is
+    not to be asked on every visit. Settings says whether the browser has agreed, and can ask
+    again.
+  - **The backup reminder** (`store/backup.ts`) shows on Today a week after the first passage if
+    no backup has been made here. After that, it shows a week after the last export, but only if
+    any file has changed since; a day's practice changes the activity file. "Not now" puts it off
+    for three days. An export from anywhere notes the day.
 
 ## 9. Security
 

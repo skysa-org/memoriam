@@ -1,6 +1,7 @@
 import { type Streak } from '@memoriam/core';
 import { createFileRoute, Link } from '@tanstack/react-router';
 
+import { BackupReminder } from '../components/BackupReminder.js';
 import { ErrorScreen } from '../components/ErrorScreen.js';
 import { Icon } from '../components/Icon.js';
 import { formatDay } from '../i18n/dates.js';
@@ -121,6 +122,7 @@ const Today = () => {
 					{t('today.start')}
 				</Link>
 			)}
+			<BackupReminder />
 		</main>
 	);
 };

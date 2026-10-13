@@ -1,10 +1,12 @@
 import { createRootRoute, Outlet } from '@tanstack/react-router';
 
 import { CommandsProvider, useShortcuts } from '../commands/context.js';
+import { AppCommands } from '../components/AppCommands.js';
 import { BadgeKeeper } from '../components/BadgeKeeper.js';
 import { ErrorScreen } from '../components/ErrorScreen.js';
 import { NavBar } from '../components/NavBar.js';
 import { NoticesProvider } from '../components/Notices.js';
+import { StorageKeeper } from '../components/StorageKeeper.js';
 import { UpdatePrompt } from '../components/UpdatePrompt.js';
 import { InstallBanner } from '../install/InstallBanner.js';
 
@@ -23,6 +25,8 @@ const RootLayout = () => (
 				<Outlet />
 				<UpdatePrompt />
 				<BadgeKeeper />
+				<StorageKeeper />
+				<AppCommands />
 			</div>
 		</NoticesProvider>
 	</CommandsProvider>

@@ -64,6 +64,12 @@ export const settings = {
 		},
 		unreadable: 'These could not be read, and were left out: {names}.',
 		nothing: 'There was nothing to import.',
+		/** Whether the browser has agreed to keep the library (`navigator.storage.persist()`). */
+		kept: 'This browser has agreed to keep your library until you clear it yourself.',
+		unkept: 'This browser may clear your library if the device runs short of space, or, in Safari, after a week without use. Installing the app helps it stay.',
+		keep: 'Ask the browser to keep it',
+		refused:
+			'The browser has not agreed yet. Installing the app, or using it more often, may change its answer.',
 	},
 	restDay: {
 		label: 'Rest day',
