@@ -123,6 +123,21 @@ describe('the Library', () => {
 		expect(await db.folders.count()).toBe(1);
 	});
 
+	it('shows a passage as the parts it is learnt in, under its sections’ names', async () => {
+		const passage = await createPassage(db, {
+			title: 'Psalm 23',
+			reference: '',
+			collection: '',
+			text: '# Verse 1\nThe Lord is my shepherd;\nI shall not want.\n\n# Verse 2\nHe makes me lie down in green pastures.\n',
+		});
+		open(`/passage/${passage.id}`);
+
+		expect(await screen.findByRole('heading', { level: 2, name: 'Verse 1' })).toBeTruthy();
+		expect(screen.getByRole('heading', { level: 2, name: 'Verse 2' })).toBeTruthy();
+		expect(screen.getByText('17 words · 2 parts')).toBeTruthy();
+		expect(screen.getByText('He makes me lie down in green pastures.')).toBeTruthy();
+	});
+
 	it('says so when a passage is not there', async () => {
 		open('/passage/no-such-id');
 		expect(await screen.findByRole('heading', { name: 'Not in your library' })).toBeTruthy();

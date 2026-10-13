@@ -447,12 +447,58 @@ a.icon-link {
 	color: var(--muted);
 }
 
+.passage-size {
+	margin: calc(-1 * var(--space-s)) 0 var(--space-l);
+	color: var(--muted);
+	font-size: 0.875rem;
+}
+
+.passage-reference + .passage-size {
+	margin-block-start: calc(-1 * var(--space-m));
+}
+
 .passage-text {
 	font-family: var(--font-text);
 	font-size: 1.125rem;
 	line-height: 1.7;
 	white-space: pre-wrap;
 	overflow-wrap: break-word;
+}
+
+.passage-section + .passage-section {
+	margin-block-start: var(--space-xl);
+}
+
+.passage-label {
+	margin: 0 0 var(--space-2xs);
+	color: var(--muted);
+	font-family: var(--font-sans);
+	font-size: 0.8125rem;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+/* Each chunk is what is learnt at a sitting: a rule down its side sets it
+   apart from the next without breaking the stanza it is part of. */
+.passage-chunk {
+	padding-inline-start: var(--space-m);
+	border-inline-start: 2px solid var(--border);
+}
+
+/* Lines with nothing to type ahead of a section's first chunk (`* * *`),
+   in line with the words but not part of any chunk. */
+.passage-lines {
+	padding-inline-start: calc(var(--space-m) + 2px);
+}
+
+.passage-chunk + .passage-chunk,
+.passage-lines + .passage-chunk {
+	margin-block-start: var(--space-s);
+}
+
+.passage-line {
+	display: block;
 }
 
 /* ---- Forms ---------------------------------------------------------------- */
