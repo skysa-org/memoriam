@@ -83,7 +83,7 @@ const chosenTitle = (details: PassageDetails): string =>
 	details.title.trim() || titleFromText(details.text) || UNTITLED_TITLE;
 
 /** The row for a file, with what a list shows read out of it. */
-const rowFor = ({
+export const rowFor = ({
 	id,
 	connectionId,
 	path,

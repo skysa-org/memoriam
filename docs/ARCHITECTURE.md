@@ -184,10 +184,24 @@ Each day key has exactly one writing device, so two devices' copies can be merge
 
 A chunk is learnt after one clean pass at L5. Practice of it stops for the session there.
 
-**Typing.** One hidden `<input>` takes the keystrokes. It works out what was typed by comparing
-the input's value before and after, respecting composition, and ignores the 229 keydowns that
-Android keyboards send. A pure reducer (`practice/typing.ts`) turns each character plus a time
-into the next state:
+**Learnt, in the file.** A chunk is learnt once its entry has a `due` day. The learning pass that
+learns it sets `due` to the next day (`practice/learn.ts`), and its FSRS card starts from its first
+review (§5). Until then, its entry holds only `level`, `reviewed` and `misses`.
+
+**The typist's pace** is kept per device, since a phone and a keyboard differ: the median time per
+word of each clean pass, folded in a fifth at a time (`practice.pace` in `prefs`). A hesitation and
+an Easy grade are measured against it.
+
+**Typing.** One hidden `<input>` takes the keystrokes (`apps/web/src/practice/LetterCapture.tsx`).
+It is focused in the tap on Start and kept focused, so a phone's keyboard stays up for the whole
+session. Taps on the chunk and on its buttons do not take the focus from it.
+- Keys are never read from `keydown`, where Android keyboards send every letter as 229. What was
+  typed is what follows the part the input's old and new values share (`practice/capture.ts`).
+- The value is emptied after each read, except while a keyboard is composing a word in it.
+  Emptied then, the keyboard would put its word back.
+- Enter, or the keyboard's Next key, starts the next pass.
+
+A pure reducer (`practice/typing.ts`) turns each character plus a time into the next state:
 - A correct first letter reveals the word.
 - A wrong one shows the correct word in red. The user must then type its letter, and it is one
   miss however many keys follow.
@@ -283,12 +297,19 @@ separately, except a badge's date, so they sync for free.
 - Until the first release, version 1 of the schema may still change. After it, a version only
   adds, and an upgrade carries forward what an older build wrote.
 
-**Recording a pass.** `recordPass` is one transaction:
-1. Read the row's current `source`.
-2. Merge the practised chunks into its `progress`.
-3. Write it back.
+**Recording a pass.** `recordPass` (`apps/web/src/store/practice.ts`) is one transaction:
+1. Read the row's current `source`, and cut it into chunks by its own `chunker`.
+2. If the chunk practised is no longer one of them (the words were edited meanwhile), refuse and
+   say so.
+3. Fill gaps left by another tool (§3, "Writes"), then set the practised chunk's entry from what
+   the file has for it now.
+4. Write the `progress` block back, in passage order, and nothing else of the file.
+5. Add the pass to today's line in `.memoriam/activity-YYYY.md` (row id `activity-YYYY`), made on
+   the first pass of a year. If that file cannot be read, the pass is still recorded, and the user
+   is told the day was not.
 
-Two tabs practising at once therefore cannot overwrite each other.
+Two tabs practising at once therefore cannot overwrite each other: each changes only its own
+chunk's entry, in the file as it is when the write is made.
 
 **The app's words.** Every word the user reads comes from the catalog: `t('…')` in
 `apps/web/src/i18n/t.ts`.

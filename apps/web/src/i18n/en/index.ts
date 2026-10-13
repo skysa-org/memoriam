@@ -3,6 +3,7 @@ import { common } from './common.js';
 import { install } from './install.js';
 import { library } from './library.js';
 import { passage } from './passage.js';
+import { practice } from './practice.js';
 import { shell } from './shell.js';
 import { today } from './today.js';
 
@@ -18,4 +19,5 @@ export const en = {
 	today,
 	library,
 	passage,
+	practice,
 } as const satisfies Catalog;
