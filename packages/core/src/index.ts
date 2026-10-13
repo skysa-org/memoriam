@@ -66,6 +66,8 @@ export {
 	type FakeProviderOptions,
 } from './providers/fake.js';
 
+export { mergeFile } from './sync/merge.js';
+
 export {
 	conflictContent,
 	conflictFilename,

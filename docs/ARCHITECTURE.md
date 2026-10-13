@@ -492,19 +492,41 @@ Only the names differ:
 The interface keeps `readBytes` and `createFile`, though nothing here yet writes a file that is not
 a passage. Every adapter's `read` is its `readBytes` decoded, and audio (Phase 3) would need both.
 
-Three Google Drive tests drive the engine through the adapter. They come back with the engine:
-- "trashed, written around, and restored keeps every note it held";
-- "name an item sent here and trashed elsewhere…";
-- "are read across pages…".
-
-The other differences:
+**The engine** (`sync/engine.ts`, `sync/store.ts`, from S2) is ported whole, with its tests: the
+store contract (`tests/sync/storeContract.ts`), run against the in-memory store the engine tests
+use, the engine over every adapter's stub, and the randomized remote. The Google Drive tests that
+drive the engine through the adapter, held back in S1, are restored. Where it differs:
+- **No clipboard.** skysa-notes' engine pulls a clipboard folder for its share target. Memoriam
+  has neither, so that path is gone, from the pull and from its progress reports.
+- **The app's own folder.** The engine passes over hidden paths, except `.memoriam/` and its
+  `activity-YYYY.md` files (`unsynced` in the engine). Every other hidden path, `.memoriam/` or
+  not, is left alone, as skysa-notes leaves it. `isHidden` itself is unchanged, so the library
+  still hides them.
+- **Files, kept dormant.** The engine still carries skysa-notes' attachments: `SyncFile`, and the
+  `upload`, `move-file` and `delete-file` ops. Nothing in the web app makes one yet. They stay so
+  that audio (Phase 3) does not reopen the engine. `files.ts` holds the extension → content type
+  map they need.
 
 **Merge before a conflict copy.** skysa-notes never merges: on a conflict the remote keeps the
 path, and the local version is written beside it as a conflict copy. Memoriam adds one merge
 before that rule, through a `merge` option on the engine:
-- At the pull site, and in `resolvePushConflict`.
-- A new `merge-note` pull change, applied only if the local `source` still equals the base the
-  merge was made from.
+- **The option.** `merge({ path, local, remote })` returns the merged text, or `undefined` for no
+  merge. A merge that throws counts as no merge. Without the option, the engine behaves as
+  skysa-notes'.
+- **`mergeFile`** (`sync/merge.ts`) is the merge the app passes:
+  - an activity file goes to `mergeActivity`, if the remote one can be read;
+  - a passage (`.md`, not hidden) goes to `mergePassage`;
+  - anything else gets no merge.
+- **On a pull.** Where a note changed here and on the remote since they last agreed, the engine
+  merges before it decides on a conflict copy. This includes a note never sent that meets a
+  remote one at its path, such as two devices' `activity-2026.md`.
+- **On a push.** Where a write meets a `ConflictError` (`resolvePushConflict`), the engine reads
+  the remote, merges, and writes the merge against the version it read.
+- **The `merge-note` pull change** carries the merge. The store applies it only if the note still
+  holds the content the merge was made from (`base`), and otherwise refuses the whole pull, so the
+  next one decides again.
+  - A merge that equals the remote leaves the note clean, and drops its queued writes.
+  - Any other merge leaves it dirty, with a write queued, so the merge is sent.
 
 **`mergePassage`:**
 - If the bodies and the non-progress frontmatter match, merge `progress` chunk by chunk. The later
@@ -521,9 +543,7 @@ import"). `mergePassage` is in `packages/core/src/progress/merge.ts`. `mergeActi
 the rest of the activity codec in `rewards/activity.ts`, and writes nothing when the incoming file
 adds nothing.
 
-**Other changes:**
-- **Hidden files.** `isHidden` gets an exception for `.memoriam/activity-YYYY.md` only, as
-  skysa-notes has for its scratchpad.
+**Still to come** (S3):
 - **When a passage counts as edited.** A pull that changed only progress keeps the passage's
   `updatedAt`.
 - **Push timing.** Practice writes wait about 60 seconds, or until the page is hidden, before they
@@ -552,7 +572,7 @@ packages/core/         framework-free TypeScript: browser, Node and Workers
     passage/           body grammar, tokenizer, chunker, remap
     progress/          frontmatter codec, passage merge
     providers/         storage adapters and the in-memory fake (from skysa-notes)
-    sync/              conflict names; the engine, from S2
+    sync/              the engine and its store contract, conflict names, the merge
     practice/          hiding, typing reducer, grading, fading
     schedule/          FSRS, the session planner
     rewards/           activity and its merge, streaks, mastery, badges
