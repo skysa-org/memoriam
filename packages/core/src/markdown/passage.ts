@@ -1,0 +1,120 @@
+import {
+	joinFrontmatter,
+	type PassageFrontmatter,
+	type ProgressBlock,
+	readFrontmatter,
+	readPassageTimes,
+	splitFrontmatter,
+	writeFrontmatter,
+} from './frontmatter.js';
+import { firstLineEnding, withLineEnding } from './lineEndings.js';
+import { deriveTitle } from './title.js';
+
+/**
+ * A passage's file, read into its parts. The markdown string is the only source
+ * of truth; this is a view of it, not a replacement. Reading a file never
+ * changes it — `parsePassageFile` adds nothing and normalizes nothing, so a
+ * passage written elsewhere keeps its own formatting until someone actually
+ * edits it. See docs/ARCHITECTURE.md §3.
+ */
+export interface ParsedPassageFile {
+	/** `id` from frontmatter. Absent for a file written by another tool. */
+	id?: string;
+	title: string;
+	/** Where the words are from, where the file says. */
+	source?: string;
+	/** Markdown with the frontmatter block removed: the passage itself. */
+	body: string;
+	/** Raw YAML between the fences, or null when the file had none. */
+	frontmatter: string | null;
+	/** When the passage was added, as an instant, where the file says (`readPassageTimes`). */
+	createdAt?: number;
+	/** When it was last edited, or else added, where the file says. */
+	updatedAt?: number;
+	tags: string[];
+	/** The chunker its progress is keyed by, where the file names one. */
+	chunker?: number;
+	/** The `progress` mapping as the file has it, for `progress/codec.ts` to read. */
+	progress?: ProgressBlock;
+}
+
+export interface ParsePassageFileOptions {
+	/** Used to derive a title when the file has no `title`. */
+	filename?: string;
+}
+
+export const parsePassageFile = (
+	text: string,
+	options: ParsePassageFileOptions = {}
+): ParsedPassageFile => {
+	const { frontmatter, body } = splitFrontmatter(text);
+	const fields = readFrontmatter(frontmatter);
+	const times = readPassageTimes(frontmatter);
+
+	return {
+		...(fields.id === undefined ? {} : { id: fields.id }),
+		...(fields.source === undefined ? {} : { source: fields.source }),
+		...(times.created === undefined ? {} : { createdAt: times.created }),
+		...(times.updated === undefined ? {} : { updatedAt: times.updated }),
+		...(fields.chunker === undefined ? {} : { chunker: fields.chunker }),
+		...(fields.progress === undefined ? {} : { progress: fields.progress }),
+		title: deriveTitle({ frontmatterTitle: fields.title, filename: options.filename }),
+		body,
+		frontmatter,
+		tags: fields.tags ?? [],
+	};
+};
+
+export interface SerializePassageFileInput {
+	/** The file's existing frontmatter, so unknown keys and comments survive. */
+	frontmatter: string | null;
+	body: string;
+	/** Fields to write. Anything omitted is left as it was. */
+	metadata: PassageFrontmatter;
+}
+
+/** A body that already begins with a line break, in any of the three spellings. */
+const OPENS_BLANK = /^(?:\r\n|\n|\r)/;
+
+/**
+ * Write a passage back to a file. The app adds frontmatter on first write; on
+ * every write after that it edits the block in place, so keys it does not
+ * understand are preserved.
+ */
+export const serializePassageFile = (input: SerializePassageFileInput): string => {
+	const yaml = writeFrontmatter(input.frontmatter, input.metadata);
+	if (yaml === '') return input.body;
+
+	// The block is written the way this file writes lines, so the app never adds
+	// a second style to a file that already had one: an `\n` fence above a CRLF
+	// body is a shape no tool authors, and every line of it reads as changed to
+	// anything comparing line by line.
+	//
+	// The body answers first, because it is the half a person edits — once it
+	// has been through an editor it is `\n`, and the block follows it rather
+	// than holding the file back at what it was. A body with no line ending at
+	// all (empty, or one line with no trailing newline) has no answer, and then
+	// the block's interior endings are asked instead.
+	//
+	// Both can be silent, and then this settles for `\n`. A block has interior
+	// endings only if it holds two or more keys, so the gap is a CRLF passage with
+	// exactly one key *and* a body with no line ending: renaming it rewrites the
+	// four lines of the file as `\n`. Closing it properly means carrying the
+	// ending the fences had, which only `splitFrontmatter` ever sees and nothing
+	// stores — a wider change than the shape is worth. Bounded and known, not
+	// unnoticed.
+	//
+	// What is *not* asked is whether a CRLF appears anywhere in the body. One
+	// pasted in from elsewhere is content, not the file's style, and letting it
+	// vote turns a `\n` file into a CRLF one over a single byte.
+	const ending = firstLineEnding(input.body) ?? firstLineEnding(input.frontmatter ?? '') ?? '\n';
+
+	// A file that is gaining frontmatter for the first time gets the customary
+	// blank line after the closing fence; one that already had a block keeps
+	// whatever separator it already had, since body includes it verbatim.
+	const separator = input.frontmatter === null && !OPENS_BLANK.test(input.body) ? ending : '';
+
+	// The body goes through untouched. This writes the frontmatter block; it is
+	// not a normalizer, and a passage nobody edited comes back byte for byte.
+	return withLineEnding(joinFrontmatter(yaml, ''), ending) + separator + input.body;
+};
