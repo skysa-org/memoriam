@@ -1024,8 +1024,9 @@ export const createDexieSyncStore = (
 		scope: Scope,
 		seq: number,
 		outcome: OpOutcome,
-		withdrawn: boolean
+		op: OpQueueRecord | undefined
 	): Promise<void> => {
+		const withdrawn = op === undefined;
 		if (outcome.kind === 'done') return;
 		if (outcome.kind === 'made-folder') {
 			const folder = await scope.folders.get([LIBRARY, outcome.path]);
@@ -1083,7 +1084,10 @@ export const createDexieSyncStore = (
 			...(same ? { dirty: 0 as const } : {}),
 		};
 		await scope.notes.put(pushed);
-		if (!same) await queueWrite(scope, pushed, seq);
+		// As lazy as the write that is landing: a pass made while it was on its
+		// way waits for the next sync as the pass before it did. An edit has
+		// queued a write that is not lazy already.
+		if (!same) await queueWrite(scope, pushed, seq, op?.lazy === true ? 'lazy' : 'soon');
 		// Renamed while its write was in flight: the file is where the write put
 		// it; the passage stays where the user put it, and moves there.
 		if (note.path !== outcome.remote.path) {
@@ -1213,7 +1217,7 @@ export const createDexieSyncStore = (
 				// Gone is not an error: a change the user made while the op was in
 				// flight withdrew it. See `settle`.
 				const op = await queuedOp(db, seq);
-				await settle(db, seq, outcome, op === undefined);
+				await settle(db, seq, outcome, op);
 				if (op !== undefined) await db.opQueue.delete(seq);
 			}),
 

@@ -32,6 +32,10 @@ import {
  *   the op, so one queued write covers every edit and every pass made before it
  *   runs, and one made while its write is in flight is left dirty by the store
  *   and owed a fresh write (`settle` in `sync/store.ts`).
+ * - **A pass's write is lazy, and an edit's is not.** The scheduler sends a
+ *   lazy write with the next sync rather than straight after (§10, "Push
+ *   timing"). An edit that finds a lazy write queued replaces it with one that
+ *   is not, at the back of the queue, which is how the scheduler sees it.
  * - **A move says where the passage is going, so a second rename replaces
  *   it.** Two moves queued for one passage would move the file to the first
  *   name and back again.
@@ -109,7 +113,7 @@ const add = (
 	db: QueueDb,
 	op: Pick<
 		OpQueueRecord,
-		'connectionId' | 'op' | 'noteId' | 'fileId' | 'path' | 'targetPath' | 'remoteId'
+		'connectionId' | 'op' | 'noteId' | 'fileId' | 'path' | 'targetPath' | 'remoteId' | 'lazy'
 	>
 ): Queued =>
 	isBound(db).then((bound) =>
@@ -118,25 +122,46 @@ const add = (
 			: undefined
 	);
 
+/** When a write is to be sent: soon after it was made, or with the next sync. */
+export type Timing = 'soon' | 'lazy';
+
 /**
  * The passage's file has changed. One queued write is enough, however many
- * edits land before it runs. `except` is an op that is finishing, which does
- * not count as still queued.
+ * changes land before it runs, and it is lazy only while every one of them
+ * was. `except` is an op that is finishing, which does not count as still
+ * queued.
  */
-export const queueWrite = (db: QueueDb, note: NoteRecord, except?: number): Queued =>
+export const queueWrite = (
+	db: QueueDb,
+	note: NoteRecord,
+	except?: number,
+	timing: Timing = 'soon'
+): Queued => {
 	// A tombstone owes the remote its delete and nothing else.
-	note.deletedLocally === 1
-		? nothing()
-		: opsFor(db, note).then((queued) =>
-				queued.some((op) => op.op === 'write' && op.seq !== except)
-					? undefined
-					: add(db, {
-							connectionId: note.connectionId,
-							op: 'write',
-							noteId: note.id,
-							path: note.path,
-						})
-			);
+	if (note.deletedLocally === 1) return nothing();
+	return opsFor(db, note).then((ops) => {
+		const queued = ops.filter((op) => op.op === 'write' && op.seq !== except);
+		const lazy = timing === 'lazy';
+		if (queued.length > 0 && (lazy || queued.some((op) => op.lazy !== true))) {
+			return undefined;
+		}
+		// Withdrawn even while it is on its way: the store finds the passage
+		// changed again when it lands, and this write is owed it.
+		return db.opQueue.bulkDelete(seqsOf(queued)).then(() =>
+			add(db, {
+				connectionId: note.connectionId,
+				op: 'write',
+				noteId: note.id,
+				path: note.path,
+				...(lazy ? { lazy: true as const } : {}),
+			})
+		);
+	});
+};
+
+/** A pass, or the day's practice, has changed the file: sent with the next sync. */
+export const queuePracticeWrite = (db: QueueDb, note: NoteRecord): Queued =>
+	queueWrite(db, note, undefined, 'lazy');
 
 /**
  * The passage is now at `note.path`, having been at `from`. Replaces any move

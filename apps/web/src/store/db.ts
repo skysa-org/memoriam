@@ -127,6 +127,11 @@ export interface OpQueueRecord {
 	attempts: number;
 	lastError?: string;
 	queuedAt: number;
+	/**
+	 * A write practice made: sent with the next sync rather than straight after
+	 * (§10, "Push timing"). Set on writes only.
+	 */
+	lazy?: true;
 }
 
 /**
@@ -157,6 +162,22 @@ export interface FileBytesRecord {
 	lastUsedAt: number;
 }
 
+/**
+ * The credential that proves this device's right to a connection
+ * (`store/credentials.ts`), keyed by the connection it reaches, or by
+ * `PENDING_CREDENTIAL_ID` while a connect is on its way to the provider.
+ */
+export interface CredentialRecord {
+	id: string;
+	/** `sk1_…`. Never logged, put in a URL, or shown. */
+	credential: string;
+	provider: ProviderKind;
+	createdAt: number;
+}
+
+/** The id a credential is kept under until the server says which connection it reaches. */
+export const PENDING_CREDENTIAL_ID = 'pending';
+
 export interface PreferenceRecord {
 	key: string;
 	value: string;
@@ -170,6 +191,7 @@ export type MemoriamDatabase = Dexie & {
 	opQueue: Table<OpQueueRecord, number>;
 	files: Table<FileRecord, [string, string]>;
 	fileBytes: Table<FileBytesRecord, [string, string]>;
+	credentials: Table<CredentialRecord, string>;
 };
 
 /**
@@ -229,6 +251,10 @@ export const createDatabase = (name: string = DATABASE_NAME): MemoriamDatabase =
 			>[];
 			await tx.table('notes').bulkPut(rows.map((row) => ({ ...row, deletedLocally: 0 })));
 		});
+
+	// Connecting (§10, "The sync client"): the credential each connection is
+	// reached with. IndexedDB, never localStorage (CLAUDE.md).
+	db.version(3).stores({ credentials: 'id' });
 
 	// A build with a later version, opening this database in another tab, must
 	// find this tab stopped rather than still writing (`store/staleTab.ts`).

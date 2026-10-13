@@ -17,7 +17,7 @@ import {
 import { isLive, LOCAL_CONNECTION_ID, type MemoriamDatabase, writerTables } from './db.js';
 import { rowFor } from './passages.js';
 import { getPreference } from './prefs.js';
-import { queueWrite } from './queue.js';
+import { queuePracticeWrite } from './queue.js';
 
 /**
  * Practice, as the store keeps it: a pass's progress written into its
@@ -112,7 +112,7 @@ export const changeActivity = async (
 		row
 	);
 	await db.notes.put(next);
-	await queueWrite(db, next);
+	await queuePracticeWrite(db, next);
 	return true;
 };
 
@@ -174,7 +174,7 @@ export const recordPass = (
 		if (!written.ok) return written;
 		const practisedRow = { ...row, source: written.text, dirty: 1 as const };
 		await db.notes.put(practisedRow);
-		await queueWrite(db, practisedRow);
+		await queuePracticeWrite(db, practisedRow);
 
 		const chunk = chunks.find((each) => each.key === pass.key);
 		const started = before === undefined && chunk !== undefined ? chunk.end - chunk.start : 0;
