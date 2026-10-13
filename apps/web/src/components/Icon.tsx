@@ -34,6 +34,10 @@ const PATHS = {
 	upload: 'M12 20V9M7 14l5-5 5 5M5 4h14',
 	folder: 'M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z',
 	more: 'M5 12h.01M12 12h.01M19 12h.01',
+	/** A rosette on two ribbons: a badge earned. */
+	badge: 'M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM8.5 14 7 21l5-3 5 3-1.5-7',
+	/** A snowflake: a streak's freeze. */
+	freeze: 'M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9M9.5 4.5 12 6l2.5-1.5M9.5 19.5 12 18l2.5 1.5',
 } as const;
 
 export type IconName = keyof typeof PATHS;

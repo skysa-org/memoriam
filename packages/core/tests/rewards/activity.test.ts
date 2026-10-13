@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { activityPath, addToDay, dayKey, readActivity } from '../../src/rewards/activity.js';
+import {
+	activityPath,
+	addBadges,
+	addToDay,
+	dayKey,
+	dayTotals,
+	isActivityPath,
+	readActivity,
+	recordedBadges,
+} from '../../src/rewards/activity.js';
 
 const DAY = { words: 20, passes: 2, reviews: 1, started: 10, ms: 15000 };
 
@@ -14,6 +23,9 @@ describe('activity', () => {
 	it('is kept in the app’s own folder, a file a year', () => {
 		expect(activityPath(2026)).toBe('.memoriam/activity-2026.md');
 		expect(dayKey('2026-10-13', 'k3fq9mab')).toBe('2026-10-13~k3fq9mab');
+		expect(isActivityPath('.memoriam/activity-2026.md')).toBe(true);
+		expect(isActivityPath('activity-2026.md')).toBe(false);
+		expect(isActivityPath('.memoriam/activity-2026.md.bak')).toBe(false);
 	});
 
 	it('starts a file with a day’s line', () => {
@@ -71,5 +83,63 @@ describe('activity', () => {
 			['2026-10-13~a', { words: 0, passes: 2, reviews: 0, started: 0, ms: 0 }],
 		]);
 		expect(readActivity('no frontmatter').days.size).toBe(0);
+	});
+});
+
+describe('badges', () => {
+	it('adds a badge earned, and keeps the day of one already there', () => {
+		const first = addBadges(
+			written(undefined, '2026-10-13~a'),
+			new Map([['first-learnt', '2026-10-13']])
+		);
+		if (!first.ok) throw new Error(first.reason);
+		const again = addBadges(
+			first.text,
+			new Map([
+				['first-learnt', '2026-10-20'],
+				['words-100', '2026-10-20'],
+			])
+		);
+		if (!again.ok) throw new Error(again.reason);
+		expect(again.text).toContain(
+			'badges:\n  first-learnt: 2026-10-13\n  words-100: 2026-10-20\n'
+		);
+		expect(readActivity(again.text).days.size).toBe(1);
+	});
+
+	it('will not write over badges it cannot read', () => {
+		expect(addBadges('---\nbadges: [a]\n---\n', new Map([['comeback', '2026-10-13']]))).toEqual(
+			{
+				ok: false,
+				reason: 'unreadable',
+			}
+		);
+	});
+});
+
+describe('across files', () => {
+	const a = readActivity(
+		'---\ndays:\n  2026-10-13~a: { words: 10, passes: 1, reviews: 1, started: 5, ms: 100 }\n  2026-10-14~a: { words: 1, passes: 1, reviews: 0, started: 0, ms: 1 }\nbadges:\n  comeback: 2026-10-14\n---\n'
+	);
+	const b = readActivity(
+		'---\ndays:\n  2026-10-13~b: { words: 20, passes: 2, reviews: 0, started: 0, ms: 200 }\nbadges:\n  comeback: 2026-10-13\n  first-learnt: 2026-10-14\n---\n'
+	);
+
+	it('sums each day over every device', () => {
+		expect(dayTotals([a, b]).get('2026-10-13')).toEqual({
+			words: 30,
+			passes: 3,
+			reviews: 1,
+			started: 5,
+			ms: 300,
+		});
+		expect(dayTotals([a, b]).size).toBe(2);
+	});
+
+	it('keeps the earliest day any file gives a badge', () => {
+		expect(Object.fromEntries(recordedBadges([a, b]))).toEqual({
+			comeback: '2026-10-13',
+			'first-learnt': '2026-10-14',
+		});
 	});
 });

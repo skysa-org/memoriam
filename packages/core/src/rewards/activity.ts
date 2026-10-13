@@ -53,6 +53,12 @@ const DAY_FIELDS = ['words', 'passes', 'reviews', 'started', 'ms'] as const;
 export const activityPath = (year: number): string =>
 	joinPath(APP_DATA_FOLDER, `activity-${String(year)}${PASSAGE_EXTENSION}`);
 
+/** Whether `path` is a year's activity file. */
+export const isActivityPath = (path: string): boolean => {
+	const year = /activity-(\d{4})/.exec(path)?.[1];
+	return year !== undefined && activityPath(Number(year)) === path;
+};
+
 /** A day's key: its date and the device. */
 export const dayKey = (day: string, device: string): string => `${day}~${device}`;
 
@@ -108,15 +114,31 @@ const added = (before: DayActivity, more: DayActivity): DayActivity => ({
 	ms: Math.round(before.ms + more.ms),
 });
 
-/** The `days` mapping, made if there is none; `undefined` where it is something else. */
-const daysOf = (doc: Document): YAMLMap | undefined => {
-	const days = doc.get('days', true);
-	if (days === undefined || (isScalar(days) && days.value === null)) {
+/** The mapping under `key`, made if there is none; `undefined` where it is something else. */
+const mappingOf = (doc: Document, key: 'days' | 'badges'): YAMLMap | undefined => {
+	const found = doc.get(key, true);
+	if (found === undefined || (isScalar(found) && found.value === null)) {
 		const made = doc.createNode({});
-		doc.set('days', made);
+		doc.set(key, made);
 		return made;
 	}
-	return isMap(days) ? days : undefined;
+	return isMap(found) ? found : undefined;
+};
+
+/** The file's frontmatter, ready to change; none where it cannot safely be. */
+const editable = (
+	text: string | undefined
+): Readonly<{ doc: Document; body: string }> | undefined => {
+	const { frontmatter, body } = splitFrontmatter(text ?? '');
+	// A file that opens a block the reader could not close is a block gone
+	// wrong, not a body: a new one written above it would leave two.
+	const opened = frontmatter === null && /^---\r?\n/.test(text ?? '');
+	if (opened || (frontmatter !== null && !frontmatterIsEditable(frontmatter))) return undefined;
+	const doc =
+		frontmatter === null || frontmatter.trim() === ''
+			? new Document({})
+			: parseDocument(frontmatter);
+	return isMap(doc.contents) ? { doc, body } : undefined;
 };
 
 /** `text` with `more` added to the day `key`, or a new file for none. */
@@ -125,19 +147,10 @@ export const addToDay = (
 	key: string,
 	more: DayActivity
 ): ActivityWrite => {
-	const { frontmatter, body } = splitFrontmatter(text ?? '');
-	// A file that opens a block the reader could not close is a block gone
-	// wrong, not a body: a new one written above it would leave two.
-	const opened = frontmatter === null && /^---\r?\n/.test(text ?? '');
-	if (opened || (frontmatter !== null && !frontmatterIsEditable(frontmatter))) {
-		return { ok: false, reason: 'unreadable' };
-	}
-	const doc =
-		frontmatter === null || frontmatter.trim() === ''
-			? new Document({})
-			: parseDocument(frontmatter);
-	if (!isMap(doc.contents)) return { ok: false, reason: 'unreadable' };
-	const days = daysOf(doc);
+	const open = editable(text);
+	if (open === undefined) return { ok: false, reason: 'unreadable' };
+	const { doc, body } = open;
+	const days = mappingOf(doc, 'days');
 	if (days === undefined) return { ok: false, reason: 'unreadable' };
 	const before = days.get(key, true);
 	if (before !== undefined && !isMap(before)) return { ok: false, reason: 'unreadable' };
@@ -150,3 +163,42 @@ export const addToDay = (
 	days.set(key, node);
 	return { ok: true, text: joinFrontmatter(doc.toString({ lineWidth: 0 }), body) };
 };
+
+/**
+ * `text` with each badge it does not have yet added under `badges`, with the
+ * day it was earned. A badge it has keeps the day it already says.
+ */
+export const addBadges = (
+	text: string | undefined,
+	earned: ReadonlyMap<string, string>
+): ActivityWrite => {
+	const open = editable(text);
+	if (open === undefined) return { ok: false, reason: 'unreadable' };
+	const { doc, body } = open;
+	const badges = mappingOf(doc, 'badges');
+	if (badges === undefined) return { ok: false, reason: 'unreadable' };
+	[...earned]
+		.filter(([badge]) => !badges.has(badge))
+		.forEach(([badge, day]) => {
+			badges.set(badge, day);
+		});
+	return { ok: true, text: joinFrontmatter(doc.toString({ lineWidth: 0 }), body) };
+};
+
+/** Each day's practice, every device's summed, from each year's activity. */
+export const dayTotals = (activities: readonly Activity[]): Map<string, DayActivity> =>
+	activities
+		.flatMap((activity) => [...activity.days])
+		.reduce((totals, [key, day]) => {
+			const date = key.split('~')[0] ?? key;
+			return new Map(totals).set(date, added(totals.get(date) ?? NO_DAY, day));
+		}, new Map<string, DayActivity>());
+
+/** Every badge the activity files record, at the earliest day any of them says. */
+export const recordedBadges = (activities: readonly Activity[]): Map<string, string> =>
+	activities
+		.flatMap((activity) => [...activity.badges])
+		.reduce((found, [badge, day]) => {
+			const was = found.get(badge);
+			return was !== undefined && was <= day ? found : new Map(found).set(badge, day);
+		}, new Map<string, string>());

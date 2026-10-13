@@ -79,7 +79,7 @@ created: 2026-10-13T14:00:00Z
 updated: 2026-10-13T14:00:00Z
 chunker: 1
 progress:
-  k3fq9ma: { level: 5, due: 2026-10-20, stability: 6.21, difficulty: 4.1, reps: 3, lapses: 0, reviewed: 2026-10-13T14:03:02Z, misses: "0,0,2,0,1" }
+  k3fq9ma: { level: 5, due: 2026-10-20, learnt: 2026-10-13, stability: 6.21, difficulty: 4.1, reps: 3, lapses: 0, reviewed: 2026-10-13T14:03:02Z, misses: "0,0,2,0,1" }
   p8dz2ve: { level: 3, reviewed: 2026-10-13T14:05:00Z }
 ---
 
@@ -93,6 +93,11 @@ He makes me lie down in green pastures.
 - `*emphasis*`, `**emphasis**` and `_emphasis_` markers are kept in the file but are neither
   shown nor typed. A run of `*` or `_` with a space or the line's edge on both sides is not a
   marker, and is shown: the `* * *` that parts two stanzas.
+
+**A chunk's entry** holds `level` (0 to 5); once learnt, `due` and `learnt`, the day it was first
+learnt, which a lapse does not change; after its first review, the FSRS fields `stability`,
+`difficulty`, `reps` and `lapses`; `reviewed`, when it was last practised; and `misses`, a count
+per word. A field the app does not know is kept as it was.
 
 **Chunk keys:**
 - 7 characters of base32 from a synchronous 53-bit hash (cyrb53) of the chunk's normalised words.
@@ -148,7 +153,8 @@ chunker, not a fix.
 - `days`, keyed `YYYY-MM-DD~<deviceId>`, giving `{ words, passes, reviews, started, ms }`.
   `started` counts the words of chunks practised for the first time that day: what the cap on new
   words is measured against, summed over every device's line for the day;
-- `badges`, giving the date each was earned.
+- `badges`, giving the date each was earned. A badge already there keeps its date; across files
+  and devices, the earliest date wins.
 
 Each day key has exactly one writing device, so two devices' copies can be merged exactly (§10).
 
@@ -287,29 +293,58 @@ write that changes a passage, and always able to be dropped and rebuilt.
 
 ## 6. Rewards
 
-All of these are derived from the passages' progress and the activity files. None is stored
-separately, except a badge's date, so they sync for free.
+All of these are worked out afresh from the passages' progress and the activity files, each time
+either changes (`packages/core/src/rewards/`, `apps/web/src/store/rewards.ts`). Nothing is
+stored separately, except the day each badge was earned, so they sync for free.
 
-- **Daily goal:** clear the due reviews, plus the day's new words.
-- **Streak:**
-  - a day counts after any completed pass;
-  - one freeze is earned per 7 consecutive days, at most 2 held, and spent automatically on a
-    missed day;
-  - a broken streak can be repaired within 48 hours by a day of double the goal;
-  - an optional weekly rest day;
-  - no guilt messaging.
-- **Mastery %:** the share of a passage's words that are in learnt chunks.
-- **Memory health:** the mean predicted recall of those chunks, weighted by words.
-- **Heat maps:** activity per day, and misses per word within a passage.
-- **Badges:**
-  - first passage learnt;
-  - first passage mastered (every chunk at a stability of 21 days or more);
-  - words memorised: 100, 500, 1k, 5k;
-  - streaks of 7, 30, 100 and 365 days;
-  - a whole-passage run with no misses;
-  - a passage kept current for 30, 90 and 365 days;
-  - a comeback, after a break of 7 days or more, framed positively.
-- **Celebrations** are small and respect `prefers-reduced-motion`.
+**Daily goal:** clear the reviews due, plus the day's new words. Today shows each as a bar: the
+reviews done today out of those done and still due, and the words begun today out of those begun
+and the new words still planned.
+
+**Streak** (`rewards/streak.ts`):
+- A day counts once any pass is finished on it, on any device. Today is never missed: it is not
+  over.
+- Each 7 days practised in a row earns a freeze, and at most 2 are held. A freeze is spent by
+  itself on a day missed.
+- A day missed with no freeze to spend can be mended within the 2 days after it by a day of twice
+  the usual practice: words typed at least double the median of the 28 practised days before the
+  miss, and at least 40. Until the window closes, the streak stands and Today says how to keep it.
+  Once it closes unmended, the streak is the days practised since.
+- An optional weekly rest day neither counts nor breaks it.
+- There is no guilt messaging: a repair is offered as a way to carry on, never as a loss.
+
+**Mastery %:** the share of a passage's words in chunks learnt and not since forgotten (a chunk
+relearning after a lapse does not count).
+
+**Memory health:** the mean predicted recall now (FSRS retrievability) of the chunks with a
+schedule, weighted by their words. A chunk learnt and not yet reviewed counts as 1.
+
+**Heat maps:**
+- practice by the day, 26 weeks of it, each day's words placed in a quarter of the days
+  practised in view; days the streak kept without practice (a freeze, a repair, a rest day) are
+  outlined;
+- misses per word within a passage, underlined on its page, the darker the more often.
+
+**Badges** (`rewards/badges.ts`), each earned once:
+- first passage learnt (every chunk learnt);
+- first passage mastered (every chunk at a stability of 21 days or more);
+- words learnt across the library: 100, 500, 1,000, 5,000;
+- streaks of 7, 30, 100 and 365 days, dated the day each length was reached;
+- a passage held for 30, 90 and 365 days: every chunk learnt, none relearning or overdue, counted
+  from the day its last chunk was first learnt (`learnt`, §3). A passage that falls behind and
+  catches up again is held from where it was: forgiving, like the streak;
+- word perfect: a run through a whole passage without a miss, earned by the pass itself;
+- a comeback, practising again after a week or more without, framed as a welcome.
+
+Every other badge is derived from the state it describes. The app writes each one derived and not
+yet recorded into this year's activity file, and says so in a small notice that goes by itself.
+
+**Celebrations** are small: a check that pops when a chunk is learnt, and the badge notice. Both
+keep still under `prefers-reduced-motion`.
+
+**Progress screen:** the streak and freezes, the practice heat map, totals (words and passages
+learnt, minutes, passes), each passage's mastery and health, and every badge, earned or how to
+earn it.
 
 ## 7. Local store and the app
 

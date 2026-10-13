@@ -28,4 +28,9 @@ export const settings = {
 		label: 'Forgive slips of the finger',
 		hint: 'On a touch keyboard, a key next to the right one is not counted as a miss.',
 	},
+	restDay: {
+		label: 'Rest day',
+		none: 'None',
+		hint: 'A day of the week that neither counts toward your streak nor breaks it.',
+	},
 } as const;

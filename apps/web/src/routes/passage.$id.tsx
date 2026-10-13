@@ -3,12 +3,14 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { ChunkedText } from '../components/ChunkedText.js';
 import { ErrorScreen } from '../components/ErrorScreen.js';
 import { Icon } from '../components/Icon.js';
+import { MasteryBar } from '../components/MasteryBar.js';
 import { MissingPassage } from '../components/MissingPassage.js';
 import { useNotices } from '../components/Notices.js';
 import { t } from '../i18n/t.js';
 import { db } from '../store/db.js';
 import { usePassage } from '../store/hooks.js';
 import { deletePassage, restorePassages } from '../store/passages.js';
+import { useRewards } from '../store/rewards.js';
 
 /**
  * One passage: its words, as the chunks they are learnt in, where they are
@@ -18,6 +20,7 @@ import { deletePassage, restorePassages } from '../store/passages.js';
 const Passage = () => {
 	const { id } = Route.useParams();
 	const passage = usePassage(id);
+	const measure = useRewards()?.measures.get(id);
 	const notices = useNotices();
 	const navigate = useNavigate();
 
@@ -69,6 +72,11 @@ const Passage = () => {
 			</header>
 			{passage.reference !== undefined && (
 				<p className="passage-reference">{passage.reference}</p>
+			)}
+			{measure !== undefined && measure.mastery > 0 && (
+				<p className="passage-measure">
+					<MasteryBar measure={measure} />
+				</p>
 			)}
 			<Link
 				to="/practice/$id"

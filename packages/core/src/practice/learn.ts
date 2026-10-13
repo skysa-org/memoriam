@@ -33,9 +33,10 @@ export const learningPass = (
 			level: faded.level,
 			reviewed: instant(now),
 			...(misses === undefined ? {} : { misses }),
-			// Relearnt after a lapse, it keeps the day its review gave it.
+			// Relearnt after a lapse, it keeps the day its review gave it, and
+			// the day it was first learnt.
 			...(faded.learnt && before?.due === undefined
-				? { due: addDays(localDay(now), 1) }
+				? { due: addDays(localDay(now), 1), learnt: localDay(now) }
 				: {}),
 		},
 		faded,

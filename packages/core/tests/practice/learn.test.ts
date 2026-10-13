@@ -34,7 +34,18 @@ describe('learningPass', () => {
 		const { progress, faded } = learningPass({ level: 5 }, [word(), word()], NOW);
 		expect(faded.learnt).toBe(true);
 		expect(progress.due).toBe('2026-10-14');
+		expect(progress.learnt).toBe('2026-10-13');
 		expect(isLearnt(progress)).toBe(true);
+	});
+
+	it('keeps the day a chunk was first learnt, and its review, when it is learnt again', () => {
+		const { progress, faded } = learningPass(
+			{ level: 5, due: '2026-10-20', learnt: '2026-09-01', stability: 1.2 },
+			[word(), word()],
+			NOW
+		);
+		expect(faded.learnt).toBe(true);
+		expect(progress).toMatchObject({ due: '2026-10-20', learnt: '2026-09-01', stability: 1.2 });
 	});
 
 	it('keeps what it does not change', () => {

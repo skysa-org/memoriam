@@ -1,9 +1,11 @@
+import { type Measure } from '@memoriam/core';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState } from 'react';
 
 import { ConfirmDialog } from '../components/ConfirmDialog.js';
 import { ErrorScreen } from '../components/ErrorScreen.js';
 import { Icon } from '../components/Icon.js';
+import { MasteryBar } from '../components/MasteryBar.js';
 import { NameDialog } from '../components/NameDialog.js';
 import { useNotices } from '../components/Notices.js';
 import { t } from '../i18n/t.js';
@@ -16,21 +18,31 @@ import {
 import { db, type NoteRecord } from '../store/db.js';
 import { useLibrary } from '../store/hooks.js';
 import { collectionName, type CollectionView } from '../store/library.js';
+import { useRewards } from '../store/rewards.js';
 
 /** Every passage, in its collection (docs/ARCHITECTURE.md §2). */
 
-const PassageList = ({ passages }: { passages: readonly NoteRecord[] }) => (
+const PassageList = ({
+	passages,
+	measures,
+}: Readonly<{ passages: readonly NoteRecord[]; measures?: ReadonlyMap<string, Measure> }>) => (
 	<ul className="passage-list">
-		{passages.map((passage) => (
-			<li key={passage.id}>
-				<Link to="/passage/$id" params={{ id: passage.id }} className="passage-row">
-					<span className="passage-row-title">{passage.title}</span>
-					{passage.reference !== undefined && (
-						<span className="passage-row-reference">{passage.reference}</span>
-					)}
-				</Link>
-			</li>
-		))}
+		{passages.map((passage) => {
+			const measure = measures?.get(passage.id);
+			return (
+				<li key={passage.id}>
+					<Link to="/passage/$id" params={{ id: passage.id }} className="passage-row">
+						<span className="passage-row-title">{passage.title}</span>
+						{passage.reference !== undefined && (
+							<span className="passage-row-reference">{passage.reference}</span>
+						)}
+						{measure !== undefined && measure.mastery > 0 && (
+							<MasteryBar measure={measure} />
+						)}
+					</Link>
+				</li>
+			);
+		})}
 	</ul>
 );
 
@@ -42,6 +54,7 @@ type Asking =
 
 const Library = () => {
 	const library = useLibrary();
+	const measures = useRewards()?.measures;
 	const notices = useNotices();
 	const [asking, setAsking] = useState<Asking | null>(null);
 	const close = () => {
@@ -78,7 +91,10 @@ const Library = () => {
 					{library.collections.length > 0 && (
 						<h2 className="collection-name">{t('library.unfiled')}</h2>
 					)}
-					<PassageList passages={library.unfiled} />
+					<PassageList
+						passages={library.unfiled}
+						{...(measures === undefined ? {} : { measures })}
+					/>
 				</section>
 			)}
 
@@ -128,7 +144,10 @@ const Library = () => {
 					{collection.passages.length === 0 ? (
 						<p className="empty">{t('library.collectionEmpty')}</p>
 					) : (
-						<PassageList passages={collection.passages} />
+						<PassageList
+							passages={collection.passages}
+							{...(measures === undefined ? {} : { measures })}
+						/>
 					)}
 				</section>
 			))}

@@ -1,4 +1,5 @@
 import { type Catalog } from '../catalog.js';
+import { badges } from './badges.js';
 import { common } from './common.js';
 import { install } from './install.js';
 import { library } from './library.js';
@@ -7,6 +8,7 @@ import { practice } from './practice.js';
 import { session } from './session.js';
 import { settings } from './settings.js';
 import { shell } from './shell.js';
+import { stats } from './stats.js';
 import { today } from './today.js';
 
 /**
@@ -24,4 +26,6 @@ export const en = {
 	practice,
 	session,
 	settings,
+	stats,
+	badges,
 } as const satisfies Catalog;

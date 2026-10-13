@@ -16,7 +16,7 @@ import { readTime } from '../markdown/time.js';
  *
  * ```yaml
  * progress:
- *   k3fq9ma: { level: 5, due: 2026-10-20, stability: 6.21, difficulty: 4.1, reps: 3, lapses: 0, reviewed: 2026-10-13T14:03:02Z, misses: "0,0,2,0,1" }
+ *   k3fq9ma: { level: 5, due: 2026-10-20, learnt: 2026-10-13, stability: 6.21, difficulty: 4.1, reps: 3, lapses: 0, reviewed: 2026-10-13T14:03:02Z, misses: "0,0,2,0,1" }
  *   p8dz2ve: { level: 3, reviewed: 2026-10-13T14:05:00Z }
  * ```
  *
@@ -36,6 +36,8 @@ export interface ChunkProgress {
 	readonly level: number;
 	/** The day the chunk is next due, `YYYY-MM-DD`, once it has graduated. */
 	readonly due?: string;
+	/** The day it was first learnt, `YYYY-MM-DD`: kept through lapses, for how long it has been held. */
+	readonly learnt?: string;
 	/** FSRS stability, in days. */
 	readonly stability?: number;
 	/** FSRS difficulty, 1 to 10. */
@@ -68,14 +70,18 @@ const MISSES = /^\d+(?:,\d+)*$/;
 /** A field that is not what this app writes is read as absent. */
 const lenient = <T extends z.ZodType>(schema: T) => schema.optional().catch(undefined);
 
-const ENTRY = z.looseObject({
-	level: z.number().int().min(0).max(MAX_LEVEL).catch(0),
-	due: lenient(
+const aDay = () =>
+	lenient(
 		z
 			.string()
 			.regex(DAY)
 			.refine((day) => readTime(day) !== undefined)
-	),
+	);
+
+const ENTRY = z.looseObject({
+	level: z.number().int().min(0).max(MAX_LEVEL).catch(0),
+	due: aDay(),
+	learnt: aDay(),
 	stability: lenient(z.number().positive()),
 	difficulty: lenient(z.number().min(1).max(10)),
 	reps: lenient(z.number().int().nonnegative()),
@@ -88,6 +94,7 @@ const ENTRY = z.looseObject({
 const FIELDS = [
 	'level',
 	'due',
+	'learnt',
 	'stability',
 	'difficulty',
 	'reps',
@@ -106,10 +113,11 @@ const defined = <T extends object>(value: T): T =>
 	Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined)) as T;
 
 const readEntry = (raw: Readonly<Record<string, unknown>>): ChunkProgress => {
-	const { level, due, stability, difficulty, reps, lapses, reviewed, misses } = ENTRY.parse(raw);
+	const { level, due, learnt, stability, difficulty, reps, lapses, reviewed, misses } =
+		ENTRY.parse(raw);
 	const extra = Object.fromEntries(Object.entries(raw).filter(([key]) => !isField(key)));
 	return {
-		...defined({ due, stability, difficulty, reps, lapses, reviewed }),
+		...defined({ due, learnt, stability, difficulty, reps, lapses, reviewed }),
 		level,
 		...(misses === undefined ? {} : { misses: misses.split(',').map(Number) }),
 		...(Object.keys(extra).length === 0 ? {} : { extra }),
@@ -138,6 +146,7 @@ const entryBlock = (chunk: ChunkProgress): Record<string, unknown> =>
 	defined({
 		level: chunk.level,
 		due: chunk.due,
+		learnt: chunk.learnt,
 		stability: rounded(chunk.stability),
 		difficulty: rounded(chunk.difficulty),
 		reps: chunk.reps,

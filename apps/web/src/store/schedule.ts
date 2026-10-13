@@ -88,21 +88,33 @@ export const planFor = (rows: readonly NoteRecord[], settings: Settings, now: Da
 };
 
 /** What a day's plan holds: chunks to review or learn again, and words to learn. */
-export const planCounts = ({
-	steps,
-	passages,
-}: Pick<DayPlan, 'steps' | 'passages'>): Readonly<{ reviews: number; newWords: number }> =>
-	steps.reduce(
+export interface PlanCounts {
+	/** Chunks to review, and to learn again after a lapse. */
+	readonly reviews: number;
+	/** Words of chunks to learn: begun before, or new. */
+	readonly newWords: number;
+	/** Words of chunks never practised: what counts toward the day's new words. */
+	readonly fresh: number;
+}
+
+export const planCounts = ({ steps, passages }: Pick<DayPlan, 'steps' | 'passages'>): PlanCounts =>
+	steps.reduce<PlanCounts>(
 		(counts, step) => {
 			if (step.kind === 'review') {
 				return { ...counts, reviews: counts.reviews + step.chunks.length };
 			}
 			if (step.kind === 'relearn') return { ...counts, reviews: counts.reviews + 1 };
-			const chunk = passages.get(step.id)?.chunked.chunks[step.chunk];
+			const passage = passages.get(step.id);
+			const chunk = passage?.chunked.chunks[step.chunk];
 			const words = chunk === undefined ? 0 : chunk.end - chunk.start;
-			return { ...counts, newWords: counts.newWords + words };
+			const begun = chunk !== undefined && passage?.progress.chunks.has(chunk.key) === true;
+			return {
+				...counts,
+				newWords: counts.newWords + words,
+				fresh: counts.fresh + (begun ? 0 : words),
+			};
 		},
-		{ reviews: 0, newWords: 0 }
+		{ reviews: 0, newWords: 0, fresh: 0 }
 	);
 
 /** The day's plan, live. */

@@ -17,5 +17,17 @@ export const addDays = (day: string, count: number): string => {
 	return localDay(new Date(year, month - 1, date + count, 12));
 };
 
+const utcNoon = (day: string): number => {
+	const [year = 0, month = 1, date = 1] = day.split('-').map(Number);
+	return Date.UTC(year, month - 1, date, 12);
+};
+
+/** How many days `to` is after `from`: negative if it is before. */
+export const daysBetween = (from: string, to: string): number =>
+	Math.round((utcNoon(to) - utcNoon(from)) / 86_400_000);
+
+/** The day of the week a day falls on: 0 for Sunday, to 6 for Saturday. */
+export const weekday = (day: string): number => new Date(utcNoon(day)).getUTCDay();
+
 /** A moment as the frontmatter keeps it: UTC, to the second (`2026-10-13T14:03:02Z`). */
 export const instant = (date: Date): string => `${date.toISOString().slice(0, 19)}Z`;
