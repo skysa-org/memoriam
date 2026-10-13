@@ -18,6 +18,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 
 import {
 	db as defaultDb,
+	isLive,
 	LOCAL_CONNECTION_ID,
 	type MemoriamDatabase,
 	type NoteRecord,
@@ -126,7 +127,11 @@ export const useDayPlan = (
 	const day = localDay(now);
 	return useLiveQuery(
 		async () => {
-			const rows = await db.notes.where('connectionId').equals(connectionId).toArray();
+			const rows = await db.notes
+				.where('connectionId')
+				.equals(connectionId)
+				.filter(isLive)
+				.toArray();
 			return planFor(rows, await readSettings(db), new Date());
 		},
 		// The day, so a page left open past midnight plans the new one.

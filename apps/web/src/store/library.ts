@@ -1,12 +1,13 @@
 import { foldName, isHidden, parentPath, ROOT, SEPARATOR } from '@memoriam/core';
 
 import { LOCALE } from '../i18n/t.js';
-import { type FolderRecord, type NoteRecord } from './db.js';
+import { type FolderRecord, isLive, type NoteRecord } from './db.js';
 
 /**
  * The library as the Library screen lists it: the passages in no collection,
  * then each collection with the passages directly in it. The app's own files
- * (`.memoriam/`) are in the same table and in none of this (`isHidden`).
+ * (`.memoriam/`) are in the same table and in none of this (`isHidden`), and
+ * nor is a passage deleted and not yet gone (`isLive`).
  */
 
 export interface CollectionView {
@@ -35,7 +36,7 @@ export const libraryView = (
 	notes: readonly NoteRecord[],
 	folders: readonly FolderRecord[]
 ): LibraryView => {
-	const passages = notes.filter((note) => !isHidden(note.path));
+	const passages = notes.filter((note) => isLive(note) && !isHidden(note.path));
 	const paths = [
 		...folders.map((folder) => folder.path),
 		...passages.map((note) => parentPath(note.path)),

@@ -22,9 +22,16 @@ import {
 } from '@memoriam/core';
 
 import { t } from '../i18n/t.js';
-import { ensureCollections } from '../store/collections.js';
-import { LOCAL_CONNECTION_ID, type MemoriamDatabase, type NoteRecord } from '../store/db.js';
+import { addCollections } from '../store/collections.js';
+import {
+	isLive,
+	LOCAL_CONNECTION_ID,
+	type MemoriamDatabase,
+	type NoteRecord,
+	writerTables,
+} from '../store/db.js';
 import { keptText, rowFor, titleFromText } from '../store/passages.js';
+import { queueByNotebook } from '../store/queue.js';
 import { readZip } from './readZip.js';
 
 /**
@@ -164,6 +171,9 @@ const count = (placing: Placing, key: Exclude<keyof ImportReport, 'unreadable'>)
 	report: { ...placing.report, [key]: placing.report[key] + 1 },
 });
 
+/** The live row a file is matched against; a tombstone is a passage deleted. */
+const liveRows = (placing: Placing): NoteRecord[] => placing.rows.filter(isLive);
+
 const put = (placing: Placing, row: NoteRecord): Placing => ({
 	...placing,
 	rows: [...placing.rows.filter((each) => each.id !== row.id), row],
@@ -175,10 +185,10 @@ const unreadable = (placing: Placing, path: string): Placing => ({
 	report: { ...placing.report, unreadable: [...placing.report.unreadable, path] },
 });
 
-/** The names taken in a folder, folded as the library compares them. */
+/** The names taken in a folder, folded as the library compares them; a tombstone's is free. */
 const namesIn = (rows: readonly NoteRecord[], folder: string): string[] =>
 	rows
-		.filter((row) => foldName(parentPath(row.path)) === foldName(folder))
+		.filter((row) => isLive(row) && foldName(parentPath(row.path)) === foldName(folder))
 		.map((row) => basename(row.path));
 
 /** A passage file's path in the library: `.md`, whatever it came as. */
@@ -220,7 +230,7 @@ const placeText = (placing: Placing, file: Incoming, context: Context): Placing 
 /** A year's activity: merged into the library's own, or added where it has none. */
 const placeActivity = (placing: Placing, file: Incoming, context: Context): Placing => {
 	if (!activityIsReadable(file.text)) return unreadable(placing, file.path);
-	const ours = placing.rows.find((row) => row.path === file.path);
+	const ours = liveRows(placing).find((row) => row.path === file.path);
 	if (ours === undefined) {
 		const id = basename(file.path).replace(/\.[^.]*$/, '');
 		return added(
@@ -240,7 +250,7 @@ const placeActivity = (placing: Placing, file: Incoming, context: Context): Plac
 	if (!merged.ok) return unreadable(placing, file.path);
 	if (merged.text === ours.source) return placing;
 	return count(
-		put(placing, rowFor({ ...ours, source: merged.text, updatedAt: context.now })),
+		put(placing, rowFor({ ...ours, source: merged.text, updatedAt: context.now }, ours)),
 		'records'
 	);
 };
@@ -280,21 +290,24 @@ const placeCopy = (
 const placePassage = (placing: Placing, file: Incoming, context: Context): Placing => {
 	const path = passagePath(file.path);
 	const parsed = parsePassageFile(file.text, { filename: basename(path) });
+	const live = liveRows(placing);
 	const ours =
 		parsed.id === undefined
-			? placing.rows.find((row) => foldName(row.path) === foldName(path))
-			: placing.rows.find((row) => row.id === parsed.id && !isHidden(row.path));
+			? live.find((row) => foldName(row.path) === foldName(path))
+			: live.find((row) => row.id === parsed.id && !isHidden(row.path));
 	if (ours !== undefined) {
 		const merged = mergePassage(ours.source, file.text);
 		if (merged.kind === 'same') return count(placing, 'unchanged');
 		if (merged.kind === 'merged') {
 			// Practice, not an edit: `updatedAt` stays where the words left it.
-			return count(put(placing, rowFor({ ...ours, source: merged.text })), 'merged');
+			return count(put(placing, rowFor({ ...ours, source: merged.text }, ours)), 'merged');
 		}
 		return placeCopy(placing, file, ours, parsed.title, context);
 	}
 	const folder = parentPath(path);
-	const free = !placing.rows.some((row) => foldName(row.path) === foldName(path));
+	// A tombstone's id is still its row's key, so one deleted here and brought
+	// back by a backup comes back under an id of its own.
+	const free = !live.some((row) => foldName(row.path) === foldName(path));
 	return added(
 		placing,
 		rowFor({
@@ -328,7 +341,7 @@ export const importLibrary = (
 	{ connectionId = LOCAL_CONNECTION_ID }: Readonly<{ connectionId?: string }> = {},
 	now: number = Date.now()
 ): Promise<ImportReport> =>
-	db.transaction('rw', db.notes, db.folders, async () => {
+	db.transaction('rw', writerTables(db), async () => {
 		const rows = await db.notes.where('connectionId').equals(connectionId).toArray();
 		const context: Context = { connectionId, now, newId: () => crypto.randomUUID() };
 		const placed = gathered.files.reduce<Placing>(
@@ -349,7 +362,7 @@ export const importLibrary = (
 		);
 		const written = [...placed.changed.values()];
 		await db.notes.bulkPut(written);
-		await ensureCollections(
+		const made = await addCollections(
 			db,
 			[
 				...written.filter((row) => !isHidden(row.path)).map((row) => parentPath(row.path)),
@@ -358,5 +371,7 @@ export const importLibrary = (
 			connectionId,
 			now
 		);
+		// Collection by collection, so another device fills in one at a time.
+		await queueByNotebook(db, connectionId, { folders: made, notes: written });
 		return placed.report;
 	});

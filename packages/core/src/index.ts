@@ -77,6 +77,30 @@ export {
 	conflictStamp,
 } from './sync/conflicts.js';
 
+export {
+	createSyncEngine,
+	type MergeInput,
+	type SyncEngine,
+	type SyncEngineOptions,
+	type SyncOutcome,
+	type SyncProgress,
+	type SyncStatus,
+} from './sync/engine.js';
+
+export type {
+	ConflictResolution,
+	OpOutcome,
+	PullBatch,
+	PullChange,
+	SyncFile,
+	SyncFolder,
+	SyncNote,
+	SyncOp,
+	SyncOperation,
+	SyncStore,
+	UnreadableFile,
+} from './sync/store.js';
+
 export { contentHash, cyrb53, SHORT_KEY_LENGTH, shortKey } from './hash.js';
 
 export {
@@ -254,7 +278,7 @@ export {
 
 export { type HeatDay, heatmap, type HeatWeek } from './rewards/heatmap.js';
 
-export { mergePassage, type PassageMerge } from './progress/merge.js';
+export { mergePassage, type PassageMerge, sameApartFromProgress } from './progress/merge.js';
 
 export { daysHeld, MASTERED_STABILITY, type Measure, measure } from './rewards/mastery.js';
 

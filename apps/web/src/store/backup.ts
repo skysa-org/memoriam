@@ -1,7 +1,7 @@
 import { daysBetween, isHidden, localDay } from '@memoriam/core';
 import { useLiveQuery } from 'dexie-react-hooks';
 
-import { db as defaultDb, LOCAL_CONNECTION_ID, type MemoriamDatabase } from './db.js';
+import { db as defaultDb, isLive, LOCAL_CONNECTION_ID, type MemoriamDatabase } from './db.js';
 import { getPreference, setPreference } from './prefs.js';
 
 /**
@@ -63,7 +63,7 @@ export const backupState = async (
 	db: MemoriamDatabase,
 	connectionId: string = LOCAL_CONNECTION_ID
 ): Promise<BackupState> => {
-	const rows = await db.notes.where('connectionId').equals(connectionId).toArray();
+	const rows = await db.notes.where('connectionId').equals(connectionId).filter(isLive).toArray();
 	const passages = rows.filter((row) => !isHidden(row.path));
 	const exportedAt = await timeOf(db, EXPORTED_KEY);
 	const snoozedUntil = await timeOf(db, SNOOZED_KEY);

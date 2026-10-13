@@ -19,9 +19,11 @@ import { useLiveQuery } from 'dexie-react-hooks';
 
 import {
 	db as defaultDb,
+	isLive,
 	LOCAL_CONNECTION_ID,
 	type MemoriamDatabase,
 	type NoteRecord,
+	writerTables,
 } from './db.js';
 import { changeActivity } from './practice.js';
 import { readied } from './schedule.js';
@@ -106,7 +108,11 @@ export const useRewards = (
 	const day = localDay(now);
 	return useLiveQuery(
 		async () => {
-			const rows = await db.notes.where('connectionId').equals(connectionId).toArray();
+			const rows = await db.notes
+				.where('connectionId')
+				.equals(connectionId)
+				.filter(isLive)
+				.toArray();
 			return rewardsFor(rows, await readSettings(db), new Date());
 		},
 		// The day, so a page left open past midnight counts the new one.
@@ -121,6 +127,6 @@ export const recordBadges = (
 	{ connectionId = LOCAL_CONNECTION_ID }: Readonly<{ connectionId?: string }> = {},
 	now: Date = new Date()
 ): Promise<boolean> =>
-	db.transaction('rw', db.notes, () =>
+	db.transaction('rw', writerTables(db), () =>
 		changeActivity(db, connectionId, now, (text) => addBadges(text, badges))
 	);
