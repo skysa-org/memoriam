@@ -150,6 +150,14 @@ vite.config.ts.timestamp-*
 
 # ── memoriam ─────────────────────────────────────────────────────────
 
+# Cloudflare Workers secrets (see .dev.vars.example for the full key list)
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+
+# Wrangler local state, including the local D1 SQLite database
+.wrangler/
+
 # vite-plugin-pwa dev service worker output
 dev-dist/
 

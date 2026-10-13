@@ -38,7 +38,7 @@ Requires Node 22.13 or later and pnpm 10 (`corepack enable`).
 
 ```bash
 pnpm install
-pnpm dev        # Vite on :5173
+pnpm dev        # Vite on :5173, and the sync Worker on :8787 (docs/self-hosting.md)
 pnpm verify     # format check, lint, typecheck, tests: run before every commit
 pnpm build
 ```
