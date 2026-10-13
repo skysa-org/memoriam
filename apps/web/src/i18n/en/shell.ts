@@ -11,6 +11,11 @@ export const shell = {
 	update: {
 		available: 'A new version is available.',
 	},
+	/** The notice a delete leaves: the only way back from it, so it waits while held. */
+	undo: {
+		action: 'Undo',
+		failed: 'That could not be undone. Reload and look again: nothing else was changed.',
+	},
 	staleTab: {
 		title: 'This tab is out of date',
 		text: 'A newer version of the app is open in another tab, and this one can no longer save. Reload to carry on here.',

@@ -5,25 +5,14 @@ import './styles.css';
 // the banner that shows it has mounted (see the module).
 import './install/installPrompt.js';
 
-import { createRouter, RouterProvider } from '@tanstack/react-router';
+import { RouterProvider } from '@tanstack/react-router';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { StaleTabGate } from './components/StaleTabGate.js';
-import { routeTree } from './routeTree.gen';
+import { createAppRouter } from './router.js';
 
-const router = createRouter({
-	routeTree,
-	// The app renders from local state before any network call, so there is
-	// nothing to wait on at boot.
-	defaultPreload: 'intent',
-});
-
-declare module '@tanstack/react-router' {
-	interface Register {
-		router: typeof router;
-	}
-}
+const router = createAppRouter();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('#root is missing from index.html');
