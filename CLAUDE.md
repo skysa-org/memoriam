@@ -24,8 +24,9 @@ change.
 ## Hard rules
 - `packages/core` imports nothing from `apps/*`, and has no framework, DOM or Node-only
   dependencies. It must run in the browser, Node and Workers.
-- The markdown string is the only source of truth for a passage. Everything else in IndexedDB
-  (`cards`, `chunks`) is derived from it, and can be dropped and rebuilt.
+- The markdown string is the only source of truth for a passage. Anything else kept about it
+  (the day's plan now; a `cards` or `chunks` table, should one be added) is derived from it, and
+  can be dropped and rebuilt.
 - Progress lives in the passage's own frontmatter (`progress:`). Recording a pass rewrites only
   that block, and never `updated`, the body, or keys the app does not know. If the YAML cannot be
   edited safely, refuse and tell the user. Never drop a pass silently.

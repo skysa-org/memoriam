@@ -655,6 +655,25 @@ a.icon-link {
 	margin-block-start: var(--space-l);
 }
 
+.practice-left {
+	color: var(--muted);
+	font-size: 0.875rem;
+	white-space: nowrap;
+}
+
+.practice-tally p {
+	margin: 0 0 var(--space-s);
+}
+
+.today-counts {
+	margin-block-end: var(--space-l);
+	font-size: 1.125rem;
+}
+
+.today-counts p {
+	margin: 0 0 var(--space-xs);
+}
+
 .practice-hint {
 	margin: 0;
 	color: var(--muted);
@@ -686,6 +705,24 @@ a.icon-link {
 	background: var(--surface-raised);
 	/* 16px at least, or iOS zooms the page in on focus. */
 	font-size: max(1rem, 16px);
+}
+
+select.field {
+	padding-inline-end: var(--space-xl);
+}
+
+/* A box to tick, beside what it says. */
+.field-check {
+	display: flex;
+	align-items: center;
+	gap: var(--space-s);
+}
+
+.field-check input {
+	width: 1.25rem;
+	height: 1.25rem;
+	margin: 0;
+	accent-color: var(--brand);
 }
 
 .field[aria-invalid='true'] {

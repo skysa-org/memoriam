@@ -4,6 +4,8 @@ import { install } from './install.js';
 import { library } from './library.js';
 import { passage } from './passage.js';
 import { practice } from './practice.js';
+import { session } from './session.js';
+import { settings } from './settings.js';
 import { shell } from './shell.js';
 import { today } from './today.js';
 
@@ -20,4 +22,6 @@ export const en = {
 	library,
 	passage,
 	practice,
+	session,
+	settings,
 } as const satisfies Catalog;

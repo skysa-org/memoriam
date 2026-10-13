@@ -19,6 +19,7 @@
 		"test": "vitest run"
 	},
 	"dependencies": {
+		"ts-fsrs": "^5.4.2",
 		"yaml": "^2.9.1",
 		"zod": "^4.6.5"
 	},

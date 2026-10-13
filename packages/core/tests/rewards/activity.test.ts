@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { activityPath, addToDay, dayKey, readActivity } from '../../src/rewards/activity.js';
 
-const DAY = { words: 20, passes: 2, reviews: 1, ms: 15000 };
+const DAY = { words: 20, passes: 2, reviews: 1, started: 10, ms: 15000 };
 
 const written = (text: string | undefined, key: string, more = DAY): string => {
 	const result = addToDay(text, key, more);
@@ -18,7 +18,7 @@ describe('activity', () => {
 
 	it('starts a file with a day’s line', () => {
 		expect(written(undefined, '2026-10-13~k3fq9mab')).toBe(
-			'---\ndays:\n  2026-10-13~k3fq9mab: { words: 20, passes: 2, reviews: 1, ms: 15000 }\n---\n'
+			'---\ndays:\n  2026-10-13~k3fq9mab: { words: 20, passes: 2, reviews: 1, started: 10, ms: 15000 }\n---\n'
 		);
 	});
 
@@ -28,11 +28,12 @@ describe('activity', () => {
 			words: 5,
 			passes: 1,
 			reviews: 0,
+			started: 0,
 			ms: 2500.4,
 		});
 		const next = written(again, '2026-10-14~a');
 		expect([...readActivity(next).days]).toEqual([
-			['2026-10-13~a', { words: 25, passes: 3, reviews: 1, ms: 17500 }],
+			['2026-10-13~a', { words: 25, passes: 3, reviews: 1, started: 10, ms: 17500 }],
 			['2026-10-14~a', DAY],
 		]);
 	});
@@ -67,7 +68,7 @@ describe('activity', () => {
 			'---\ndays:\n  2026-10-13~a: { words: many, passes: 2, ms: -5 }\n  odd: 7\n---\n'
 		);
 		expect([...activity.days]).toEqual([
-			['2026-10-13~a', { words: 0, passes: 2, reviews: 0, ms: 0 }],
+			['2026-10-13~a', { words: 0, passes: 2, reviews: 0, started: 0, ms: 0 }],
 		]);
 		expect(readActivity('no frontmatter').days.size).toBe(0);
 	});

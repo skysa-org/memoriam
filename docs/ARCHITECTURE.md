@@ -145,7 +145,9 @@ chunker, not a fix.
   it could not carry to them.
 
 **`activity-YYYY.md`.** Its frontmatter has two maps:
-- `days`, keyed `YYYY-MM-DD~<deviceId>`, giving `{ words, passes, reviews, ms }`;
+- `days`, keyed `YYYY-MM-DD~<deviceId>`, giving `{ words, passes, reviews, started, ms }`.
+  `started` counts the words of chunks practised for the first time that day: what the cap on new
+  words is measured against, summed over every device's line for the day;
 - `badges`, giving the date each was earned.
 
 Each day key has exactly one writing device, so two devices' copies can be merged exactly (§10).
@@ -228,12 +230,18 @@ normalised. Punctuation and symbols are never typed.
 - desired retention 0.90 by default, with presets of 0.85, 0.90 and 0.95;
 - longest interval 365 days.
 
-A chunk gets its card when it is learnt. Its first review is the next day.
+A chunk gets its card when it is learnt: learnt means its entry has a `due`. Its first review is
+the next day. An entry with a `due` and no `stability` is a card not yet reviewed, so a chunk
+learnt in one build is reviewed in another without a migration. `due` is a local day; ts-fsrs is
+given that day's noon, and a review is never due sooner than tomorrow.
 
 **Reviews:**
-- A passage's due chunks are run together, with one line of context before the first.
-- Each chunk is still graded separately, and reviewed at most once a day.
-- A lapse drops the chunk to L3 and relearns it.
+- A passage's due chunks come one after another, each a bare pass at L5 with the words before it
+  as its context.
+- Each chunk is graded on its own, and reviewed at most once a day.
+- A lapse (Again) drops the chunk to `min(level, 3)` and relearns it in the same session, once
+  the reviews still to come are done. A chunk with a `due` below L5 is relearning: it climbs the
+  ladder again, and a clean pass at L5 ends it. It keeps the `due` the lapse gave it.
 
 **Grades** (`docs/research.md` §3.7):
 
@@ -244,16 +252,38 @@ A chunk gets its card when it is learnt. Its first review is the next day.
 | Good | No misses and at most 1 hesitation |
 | Easy | Reviews only: no misses, no hesitations, and at least the user's usual pace |
 
-**A day's session:**
-1. Due reviews, the lowest predicted recall first.
+**A day's session** (`packages/core/src/schedule/session.ts`, `apps/web/src/practice/tasks.ts`):
+1. Due reviews, a passage's together, the passage with the lowest predicted recall first.
 2. Relearning.
-3. New chunks through the ladder, capped at 50 new words a day by default.
-4. Link passes and a run through the section so far, using a rolling window past 150 words.
-5. A summary.
+3. Chunks begun on an earlier day and not yet learnt.
+4. New chunks, in passage order, while the words begun today (`started`, §3) stay within the cap:
+   50 a day by default. A day that has begun nothing yet may always begin one chunk, however long.
+5. After each new chunk is learnt, a link pass: the last line of the chunk before it, then the new
+   chunk, when the one before is learnt.
+6. At the end, a run through each section learnt in, from its start to the last chunk learnt
+   there, keeping to the last 150 words or so (a rolling window, from a chunk's start).
+7. A summary.
 
-**Derived tables.** The `cards` table indexes every chunk's state for the due queue. It is derived
-from the passages' frontmatter in the same transaction as any write that changes a passage. It can
-always be dropped and rebuilt.
+Link passes and runs are bare, at L5, and not graded: they add to the day's activity and change no
+chunk's progress.
+
+The session is planned once, when it starts. Each pass is recorded as it ends, and the session
+adds its own tasks (links, relearning, runs) as it goes.
+
+**A passage's own practice.** Practising from a passage's page plans that passage alone: what is
+due in it, then every chunk not yet learnt, whatever the day's cap. Once all of it is learnt, it
+can be run through whole, section by section, in runs of no more than 150 words.
+
+**Settings** are kept per device in `prefs`, like the typist's pace, each one of a few choices:
+desired retention (0.85, 0.90, 0.95), new words a day (20, 30, 50, 80, 120), the longest interval
+(90, 180, 365 days), and whether a slip on a touch keyboard is forgiven. A value that is none of
+the choices reads as the default.
+
+**No derived tables yet.** The day's plan is worked out in memory from the passages each time one
+changes (`apps/web/src/store/schedule.ts`): each is cut into chunks and its progress laid against
+them. A library would have to be large for this to be slow. If one is, a `cards` table can index
+every chunk's state for the due queue, derived from the frontmatter in the same transaction as any
+write that changes a passage, and always able to be dropped and rebuilt.
 
 ## 6. Rewards
 
