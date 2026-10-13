@@ -101,5 +101,7 @@ jobs:
                       To sign, post exactly this as a new comment:
                   custom-allsigned-prcomment: |-
                       All contributors have signed the CLA. Thank you.
-                  # Bots do not have copyright to grant.
-                  allowlist: dependabot[bot],github-actions[bot]
+                  # Bots do not have copyright to grant. rans0r maintains the
+                  # Project, which is who the agreement grants its licence to,
+                  # so there is nobody for that account to sign it to.
+                  allowlist: rans0r,dependabot[bot],github-actions[bot]
