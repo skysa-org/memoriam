@@ -70,6 +70,14 @@ const Passage = () => {
 			{passage.reference !== undefined && (
 				<p className="passage-reference">{passage.reference}</p>
 			)}
+			<Link
+				to="/practice/$id"
+				params={{ id: passage.id }}
+				className="button primary passage-practise"
+			>
+				<Icon name="play" />
+				{t('passage.practise')}
+			</Link>
 			<ChunkedText source={passage.source} />
 		</main>
 	);

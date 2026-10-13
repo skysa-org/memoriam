@@ -501,6 +501,169 @@ a.icon-link {
 	display: block;
 }
 
+.passage-practise {
+	margin-block-end: var(--space-l);
+}
+
+/* ---- Practice ------------------------------------------------------------- */
+
+.practice-where {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin: calc(-1 * var(--space-s)) 0 var(--space-m);
+	color: var(--muted);
+	font-size: 0.875rem;
+}
+
+/* The fade ladder, a dot a level: filled up to the chunk's own. */
+.practice-level {
+	display: inline-flex;
+	gap: var(--space-2xs);
+}
+
+.practice-level > span {
+	width: 0.5rem;
+	height: 0.5rem;
+	border-radius: 50%;
+	background: var(--border);
+}
+
+.practice-level > span.reached {
+	background: var(--brand);
+}
+
+.practice-context {
+	margin: 0 0 var(--space-s);
+	color: var(--muted);
+	font-family: var(--font-text);
+	font-style: italic;
+}
+
+.practice-stage {
+	position: relative;
+}
+
+/* Typed into, never seen. 16px, or iOS zooms the page in on focus; on the
+   stage, so the browser scrolls to the chunk when it focuses it. */
+.letter-capture {
+	position: absolute;
+	inset-block-start: 0;
+	inset-inline-start: 0;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	border: 0;
+	opacity: 0;
+	font-size: 16px;
+	caret-color: transparent;
+	pointer-events: none;
+}
+
+.chunk-view {
+	min-height: 6lh;
+	font-family: var(--font-text);
+	font-size: 1.25rem;
+	line-height: 1.8;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+	user-select: none;
+	-webkit-user-select: none;
+	cursor: text;
+}
+
+.chunk-line {
+	display: block;
+}
+
+.chunk-word {
+	border-radius: var(--radius-s);
+	transition:
+		color var(--duration-m),
+		background-color var(--duration-m);
+}
+
+/* Yet to be typed, and shown: there to be copied, at the first level. */
+.chunk-word.word {
+	color: var(--muted);
+}
+
+.chunk-word.typed {
+	color: var(--recalled);
+}
+
+.chunk-word.missed {
+	color: var(--recalled);
+	background: var(--missed-bg);
+}
+
+.chunk-word.wrong {
+	color: var(--missed);
+	font-weight: 600;
+}
+
+.chunk-word.hint {
+	color: var(--muted);
+}
+
+.chunk-word.outline {
+	color: var(--placeholder);
+}
+
+/* Hidden: the word's own width, its letters not there to read. */
+.chunk-word.placeholder {
+	color: transparent;
+	background: var(--placeholder);
+}
+
+.chunk-word.current {
+	box-shadow: 0 2px 0 var(--brand);
+}
+
+.chunk-caret {
+	display: inline-block;
+	width: 2px;
+	height: 1.1em;
+	margin-inline: 1px;
+	vertical-align: text-bottom;
+	background: var(--brand);
+	animation: caret-blink 1s steps(1) infinite;
+}
+
+@keyframes caret-blink {
+	50% {
+		opacity: 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.chunk-caret {
+		animation: none;
+	}
+
+	.chunk-word {
+		transition: none;
+	}
+}
+
+.practice-actions,
+.practice-outcome {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: var(--space-s);
+	margin-block-start: var(--space-l);
+}
+
+.practice-hint {
+	margin: 0;
+	color: var(--muted);
+}
+
+.practice-outcome p {
+	margin: 0;
+}
+
 /* ---- Forms ---------------------------------------------------------------- */
 
 .field-row {

@@ -2,6 +2,7 @@
 export const passage = {
 	back: 'Back to the library',
 	edit: 'Edit',
+	practise: 'Practise',
 	delete: 'Delete',
 	deleted: '“{title}” deleted.',
 	/** How long a passage is, and how many parts it is learnt in: shown together, as "113 words · 5 parts". */

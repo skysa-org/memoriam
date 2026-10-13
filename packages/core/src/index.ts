@@ -149,3 +149,18 @@ export {
 	WORD_AFTER_MS,
 	type WordResult,
 } from './practice/typing.js';
+
+export { addDays, instant, localDay } from './day.js';
+
+export { isLearnt, type LearnedPass, learningPass } from './practice/learn.js';
+
+export {
+	type Activity,
+	type ActivityWrite,
+	activityPath,
+	addToDay,
+	type DayActivity,
+	dayKey,
+	NO_DAY,
+	readActivity,
+} from './rewards/activity.js';
