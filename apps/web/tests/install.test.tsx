@@ -6,6 +6,7 @@ import { InstallBanner } from '../src/install/InstallBanner.js';
 import { type Device, manualInstall } from '../src/install/installHow.js';
 import { createInstallPrompt } from '../src/install/installPrompt.js';
 import { createDatabase, type MemoriamDatabase } from '../src/store/db.js';
+import { rowFor } from '../src/store/passages.js';
 import { getInstallDismissed } from '../src/store/prefs.js';
 
 /**
@@ -173,9 +174,25 @@ afterEach(async () => {
 	await Promise.all(opened.splice(0).map((db) => db.delete()));
 });
 
-const show = ({ userAgent = UA.windowsEdge, maxTouchPoints = 0 } = {}) => {
+/** A library with a passage in it, which is when the banner has something to keep. */
+const library = (db: MemoriamDatabase, passages = 1) =>
+	db.notes.bulkPut(
+		Array.from({ length: passages }, (_, n) =>
+			rowFor({
+				connectionId: 'local',
+				id: `p${String(n)}`,
+				path: `p${String(n)}.md`,
+				source: 'Jesus wept.\n',
+				createdAt: 0,
+				updatedAt: 0,
+			})
+		)
+	);
+
+const show = ({ userAgent = UA.windowsEdge, maxTouchPoints = 0, passages = 1 } = {}) => {
 	const db = createDatabase(`install-${crypto.randomUUID()}`);
 	opened.push(db);
+	void library(db, passages);
 	const target = new EventTarget();
 	const prompt = createInstallPrompt(target);
 	const view = () => (
@@ -285,6 +302,16 @@ describe('the install banner', () => {
 		expect(
 			await screen.findByText("Install Memoriam: in Safari's File menu, choose Add to Dock.")
 		).toBeDefined();
+	});
+
+	it('waits for a passage to keep', async () => {
+		const { db, target } = show({ passages: 0 });
+		offer(target);
+		await new Promise((resolve) => setTimeout(resolve, 50));
+		expect(banner()).toBeNull();
+
+		await library(db);
+		expect(await screen.findByRole('button', { name: 'Install' })).toBeTruthy();
 	});
 
 	it('says nothing where the browser cannot install the app', async () => {

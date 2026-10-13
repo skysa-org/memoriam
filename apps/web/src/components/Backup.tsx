@@ -1,9 +1,10 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { exportLibrary } from '../archive/exportLibrary.js';
 import { gather, importLibrary, type ImportReport } from '../archive/importLibrary.js';
 import { LOCALE, t } from '../i18n/t.js';
 import { db } from '../store/db.js';
+import { askToKeep, type Persistence, persistence } from '../store/persistence.js';
 import { Icon } from './Icon.js';
 
 /**
@@ -32,6 +33,41 @@ const reported = (report: ImportReport): string[] => {
 			: undefined,
 	].filter((line) => line !== undefined);
 	return lines.length === 0 ? [t('settings.backup.nothing')] : lines;
+};
+
+/** Whether the browser has agreed to keep the library, and a way to ask it where not. */
+const Keeping = () => {
+	const [state, setState] = useState<Persistence>();
+	const [refused, setRefused] = useState(false);
+	useEffect(() => {
+		void persistence().then(setState);
+	}, []);
+	if (state === undefined || state === 'unknown') return null;
+	if (state === 'kept') return <p className="field-hint">{t('settings.backup.kept')}</p>;
+	return (
+		<>
+			<p className="field-hint">{t('settings.backup.unkept')}</p>
+			<div className="form-actions">
+				<button
+					type="button"
+					className="button"
+					onClick={() => {
+						void askToKeep().then((answer) => {
+							setState(answer);
+							setRefused(answer === 'unkept');
+						});
+					}}
+				>
+					{t('settings.backup.keep')}
+				</button>
+			</div>
+			{refused && (
+				<p className="field-hint" role="status">
+					{t('settings.backup.refused')}
+				</p>
+			)}
+		</>
+	);
 };
 
 export const Backup = () => {
@@ -66,6 +102,7 @@ export const Backup = () => {
 		<section className="settings-section" aria-labelledby="settings-backup">
 			<h2 id="settings-backup">{t('settings.backup.title')}</h2>
 			<p className="field-hint">{t('settings.backup.hint')}</p>
+			<Keeping />
 			<div className="form-actions">
 				<button
 					type="button"

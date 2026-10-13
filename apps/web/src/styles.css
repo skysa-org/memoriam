@@ -1041,6 +1041,20 @@ textarea.field {
 	font-size: 1rem;
 }
 
+/* The reminder to back up (`BackupReminder.tsx`): below the day's practice, never in its way. */
+.today-backup {
+	margin-block-start: var(--space-xl);
+	padding: var(--space-m) var(--space-l);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-m);
+	background: var(--surface);
+}
+
+.today-backup p {
+	margin: 0 0 var(--space-s);
+	font-size: 0.9375rem;
+}
+
 .today-meter {
 	display: flex;
 	flex-direction: column;
@@ -1419,4 +1433,108 @@ textarea.field {
 
 .settings-said p {
 	margin: var(--space-xs) 0 0;
+}
+
+/* ---- The command palette ------------------------------------------------ */
+
+/* Fixed to the viewport, above the notices and below a dialog. Near the top
+   rather than centred: the list grows downwards, and a centred dialog would
+   move its own field as it does. */
+.palette-backdrop {
+	position: fixed;
+	inset: 0;
+	z-index: 90;
+	display: flex;
+	justify-content: center;
+	align-items: flex-start;
+	padding: 4rem var(--gutter) var(--space-l);
+	background: rgb(0 0 0 / 35%);
+	animation: dim-in var(--duration-l) var(--ease-out);
+}
+
+.palette {
+	display: flex;
+	flex-direction: column;
+	width: min(32rem, 100%);
+	max-height: min(24rem, calc(100dvh - 6rem));
+	overflow: hidden;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-m);
+	background: var(--bg);
+	box-shadow: 0 1rem 2.5rem rgb(0 0 0 / 25%);
+}
+
+.palette-field {
+	flex: none;
+	padding: var(--space-m);
+	font: inherit;
+	/* 16px, so iOS does not zoom in on it. */
+	font-size: 1rem;
+	border: 0;
+	border-block-end: 1px solid var(--border);
+	background: transparent;
+	color: var(--fg);
+}
+
+/* The dialog's one control, focused from the moment it opens: its edge says so,
+   where the page's ring would be clipped by the dialog's rounded corners. */
+.palette-field:focus-visible {
+	outline: none;
+	border-block-end-color: var(--brand);
+}
+
+.palette ul {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	margin: 0;
+	padding: var(--space-2xs);
+	list-style: none;
+}
+
+.palette .placeholder {
+	margin: 0;
+	padding: var(--space-m);
+	color: var(--muted);
+}
+
+.palette-row {
+	display: flex;
+	align-items: baseline;
+	gap: var(--space-s);
+	padding: var(--space-s);
+	font-size: 0.9375rem;
+	border-radius: var(--radius-s);
+	color: var(--fg);
+	cursor: pointer;
+}
+
+/* The highlight follows the keyboard, so it is on the row rather than on
+   `:hover`: with both, the mouse and the arrows would light two rows at once. */
+.palette-row.active {
+	background: var(--surface);
+}
+
+.palette-row[aria-disabled='true'] {
+	color: var(--muted);
+	cursor: default;
+}
+
+.palette-label {
+	flex: 1 1 auto;
+}
+
+.palette-group {
+	flex: none;
+	font-size: 0.75rem;
+	color: var(--muted);
+}
+
+.palette-chord {
+	flex: none;
+	padding: 0.1rem 0.35rem;
+	font-family: inherit;
+	font-size: 0.75rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-s);
+	color: var(--muted);
 }

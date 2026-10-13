@@ -1,3 +1,4 @@
+import { isHidden } from '@memoriam/core';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useSyncExternalStore } from 'react';
 
@@ -17,8 +18,10 @@ import { type InstallPrompt, installPrompt } from './installPrompt.js';
  * iPhone, an iPad or a Mac), it says which. Nowhere else, since anything it
  * said there would be advice the browser cannot follow.
  *
- * Gone once the app is installed, or opened as an installed app, and for good
- * once dismissed: the dismissal is kept on this device (`dismissInstall`).
+ * Not shown until there is a passage to keep: installing is what keeps it, in
+ * Safari above all (§8, "Keeping data"). Gone once the app is installed, or
+ * opened as an installed app, and for good once dismissed: the dismissal is
+ * kept on this device (`dismissInstall`).
  */
 
 export interface InstallBannerProps {
@@ -42,13 +45,18 @@ export const InstallBanner = ({
 	device = thisDevice(),
 	name = import.meta.env.VITE_APP_NAME ?? t('install.thisApp'),
 }: InstallBannerProps) => {
-	const dismissed = useLiveQuery(() => getInstallDismissed(database), [database]);
+	const wanted = useLiveQuery(
+		async () =>
+			!(await getInstallDismissed(database)) &&
+			(await database.notes.filter((row) => !isHidden(row.path)).count()) > 0,
+		[database]
+	);
 	// An installed app opens in a window of its own (`display: standalone` in
 	// the manifest), and Chromium moves a tab into one as it installs.
 	const inBrowser = useMediaQuery('(display-mode: browser)');
 	const state = useSyncExternalStore(prompt.subscribe, prompt.state);
 
-	if (dismissed !== false || !inBrowser || state.kind === 'installed') return null;
+	if (wanted !== true || !inBrowser || state.kind === 'installed') return null;
 	const manual = state.kind === 'ready' ? undefined : manualInstall(device);
 	if (state.kind !== 'ready' && manual === undefined) return null;
 

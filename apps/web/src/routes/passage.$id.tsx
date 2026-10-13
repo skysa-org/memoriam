@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 
+import { useCommand } from '../commands/context.js';
 import { ChunkedText } from '../components/ChunkedText.js';
 import { ErrorScreen } from '../components/ErrorScreen.js';
 import { Icon } from '../components/Icon.js';
@@ -23,6 +24,21 @@ const Passage = () => {
 	const measure = useRewards()?.measures.get(id);
 	const notices = useNotices();
 	const navigate = useNavigate();
+	const group = t('shell.commands.group.passage');
+	useCommand({
+		id: 'passage.practise',
+		label: t('shell.commands.practisePassage'),
+		group,
+		enabled: typeof passage === 'object' && passage !== null,
+		run: () => void navigate({ to: '/practice/$id', params: { id } }),
+	});
+	useCommand({
+		id: 'passage.edit',
+		label: t('shell.commands.editPassage'),
+		group,
+		enabled: typeof passage === 'object' && passage !== null,
+		run: () => void navigate({ to: '/edit/$id', params: { id } }),
+	});
 
 	if (passage === undefined) return <main className="screen" aria-busy="true" />;
 	if (passage === null) return <MissingPassage />;
