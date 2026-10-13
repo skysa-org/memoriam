@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ConflictsRouteImport } from './routes/conflicts'
 import { Route as LibraryRouteImport } from './routes/library'
 import { Route as NewRouteImport } from './routes/new'
 import { Route as SessionRouteImport } from './routes/session'
@@ -22,6 +23,11 @@ import { Route as PracticeIdRouteImport } from './routes/practice.$id'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConflictsRoute = ConflictsRouteImport.update({
+  id: '/conflicts',
+  path: '/conflicts',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LibraryRoute = LibraryRouteImport.update({
@@ -67,6 +73,7 @@ const PracticeIdRoute = PracticeIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/conflicts': typeof ConflictsRoute
   '/library': typeof LibraryRoute
   '/new': typeof NewRoute
   '/session': typeof SessionRoute
@@ -78,6 +85,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/conflicts': typeof ConflictsRoute
   '/library': typeof LibraryRoute
   '/new': typeof NewRoute
   '/session': typeof SessionRoute
@@ -90,6 +98,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/conflicts': typeof ConflictsRoute
   '/library': typeof LibraryRoute
   '/new': typeof NewRoute
   '/session': typeof SessionRoute
@@ -103,6 +112,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/conflicts'
     | '/library'
     | '/new'
     | '/session'
@@ -114,6 +124,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/conflicts'
     | '/library'
     | '/new'
     | '/session'
@@ -125,6 +136,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/conflicts'
     | '/library'
     | '/new'
     | '/session'
@@ -137,6 +149,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ConflictsRoute: typeof ConflictsRoute
   LibraryRoute: typeof LibraryRoute
   NewRoute: typeof NewRoute
   SessionRoute: typeof SessionRoute
@@ -154,6 +167,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/conflicts': {
+      id: '/conflicts'
+      path: '/conflicts'
+      fullPath: '/conflicts'
+      preLoaderRoute: typeof ConflictsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/library': {
@@ -217,6 +237,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ConflictsRoute: ConflictsRoute,
   LibraryRoute: LibraryRoute,
   NewRoute: NewRoute,
   SessionRoute: SessionRoute,

@@ -10,11 +10,19 @@
 #   and script the policy lets run could read it.
 # - style-src 'unsafe-inline': React sets element styles (the practice card's
 #   position over the keyboard). Neither can run script.
-# - connect-src 'self': nothing leaves the device. The storage providers' hosts
-#   arrive with sync (docs/ARCHITECTURE.md §10).
+# - connect-src: this origin (the API) and the hosts of the storage providers
+#   the browser syncs with directly (docs/ARCHITECTURE.md §10). From skysa-notes:
+#   Dropbox: *.dropboxapi.com (api. for metadata, content. for bytes).
+#   OneDrive: graph.microsoft.com for everything but file bytes, which come
+#   from the item's pre-authenticated download URL on another host —
+#   *.files.1drv.com or my.microsoftpersonalcontent.com for personal accounts,
+#   *.sharepoint.com for work and school ones.
+#   Google Drive: www.googleapis.com, the one host the adapter asks, file
+#   bytes and uploads included. Don't add *.googleusercontent.com ahead of a
+#   live check that needs it: it takes in Apps Script web apps.
 # Strict-Transport-Security: two years, for this host alone. `includeSubDomains`
 # and `preload` are deliberately absent: each is a commitment on behalf of
 # whoever hosts this, and theirs to make.
 /*
   Strict-Transport-Security: max-age=63072000
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.dropboxapi.com https://graph.microsoft.com https://*.files.1drv.com https://my.microsoftpersonalcontent.com https://*.sharepoint.com https://www.googleapis.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'

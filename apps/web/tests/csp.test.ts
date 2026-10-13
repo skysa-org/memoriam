@@ -89,8 +89,16 @@ describe('Content-Security-Policy', () => {
 		expect(directives.get('form-action')).toEqual(["'self'"]);
 	});
 
-	it('connects only to this origin: nothing leaves the device until sync arrives', () => {
-		expect(policy().get('connect-src')).toEqual(["'self'"]);
+	it('connects to this origin and the storage providers sync talks to, and nowhere else', () => {
+		expect(policy().get('connect-src')).toEqual([
+			"'self'",
+			'https://*.dropboxapi.com',
+			'https://graph.microsoft.com',
+			'https://*.files.1drv.com',
+			'https://my.microsoftpersonalcontent.com',
+			'https://*.sharepoint.com',
+			'https://www.googleapis.com',
+		]);
 	});
 
 	it('has no inline script in the page for it to block', () => {

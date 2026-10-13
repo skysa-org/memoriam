@@ -25,6 +25,7 @@ import {
 	createPassage,
 	deletePassage,
 	type PassageDetails,
+	passageText,
 	restorePassages,
 	updatePassage,
 } from '../src/store/passages.js';
@@ -162,6 +163,19 @@ describe('changes here, pushed', () => {
 		await expectMirrored(db, fake);
 		expect(Object.keys(remoteFiles(fake))).toEqual(['Work/roadmap.md']);
 		expect(fake.snapshot().map((entry) => entry.path)).toContain('Empty');
+	});
+
+	it('owes nothing once a passage moved as it was has been sent', async () => {
+		const { db, fake, engine } = await connected();
+		const plan = await createPassage(db, details('Plan'));
+		await engine.sync();
+
+		await updatePassage(db, plan.id, details('Plan', 'Plan, the words.\n', 'Work'));
+		expect(await row(db, plan.id)).toMatchObject({ path: 'Work/plan.md', dirty: 0 });
+		expect((await engine.sync()).status).toBe('ok');
+
+		await expectMirrored(db, fake);
+		expect(fake.callLog().filter((call) => call.op === 'write')).toHaveLength(1);
 	});
 
 	it('writes a passage retitled before its first push once, at its final name', async () => {
@@ -398,6 +412,60 @@ describe('a pass’s write, and an edit’s (§10, "Push timing")', () => {
 		expect((await engine.sync()).status).toBe('ok');
 		await expectMirrored(db, fake);
 		expect(fake.contentAt('plan.md')).toContain('Other words.');
+	});
+});
+
+describe('a passage moved on one device, on two devices', () => {
+	const twoDevices = async () => {
+		const fake = createFakeProvider();
+		await fake.ensureRoot();
+		const [here, there] = await Promise.all(
+			[freshDatabase(), freshDatabase()].map(async (db) => {
+				await bindLibrary(db, { connectionId: CONNECTION, provider: 'dropbox' });
+				return {
+					db,
+					engine: engineFor(createDexieSyncStore(db, { connectionId: CONNECTION }), fake),
+				};
+			})
+		);
+		if (here === undefined || there === undefined) throw new Error('two devices');
+		return { fake, here, there };
+	};
+
+	it('takes the other device’s edit without a conflict copy', async () => {
+		const { fake, here, there } = await twoDevices();
+		const plan = await createPassage(here.db, details('Plan'));
+		await here.engine.sync();
+		await there.engine.sync();
+
+		await updatePassage(here.db, plan.id, details('Plan', 'Plan, the words.\n', 'Work'));
+		await here.engine.sync();
+		await there.engine.sync();
+		await updatePassage(there.db, plan.id, details('Plan', 'New words.\n', 'Work'));
+		await there.engine.sync();
+		const result = await here.engine.sync();
+
+		expect(result).toMatchObject({ status: 'ok', conflicts: [] });
+		expect(Object.keys(remoteFiles(fake))).toEqual(['Work/plan.md']);
+		await expectMirrored(here.db, fake);
+		expect(passageText((await row(here.db, plan.id))?.source ?? '')).toBe('New words.\n');
+	});
+
+	it('lets it go when the other device deletes it', async () => {
+		const { fake, here, there } = await twoDevices();
+		const plan = await createPassage(here.db, details('Plan'));
+		await here.engine.sync();
+		await there.engine.sync();
+
+		await updatePassage(there.db, plan.id, details('Plan', 'Plan, the words.\n', 'Work'));
+		await there.engine.sync();
+		await here.engine.sync();
+		await deletePassage(here.db, plan.id);
+		await here.engine.sync();
+		await there.engine.sync();
+
+		expect(remoteFiles(fake)).toEqual({});
+		await expectMirrored(there.db, fake);
 	});
 });
 

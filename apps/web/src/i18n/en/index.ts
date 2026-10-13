@@ -1,6 +1,7 @@
 import { type Catalog } from '../catalog.js';
 import { badges } from './badges.js';
 import { common } from './common.js';
+import { conflicts } from './conflicts.js';
 import { install } from './install.js';
 import { library } from './library.js';
 import { passage } from './passage.js';
@@ -30,4 +31,5 @@ export const en = {
 	stats,
 	badges,
 	sync,
+	conflicts,
 } as const satisfies Catalog;

@@ -41,6 +41,13 @@ import { type CredentialRecord, type MemoriamDatabase } from '../store/db.js';
 /** Providers the app can sync with. */
 export const CONNECTABLE: readonly ProviderKind[] = ['dropbox', 'onedrive', 'gdrive'];
 
+/** Each provider's own name, which is the same in every language. */
+export const PROVIDER_LABELS: Readonly<Record<ProviderKind, string>> = {
+	dropbox: 'Dropbox',
+	onedrive: 'OneDrive',
+	gdrive: 'Google Drive',
+};
+
 export type AccountState =
 	/** The connection the library is bound to, as the server answers for it. */
 	| { kind: 'connected'; connection: Connection }
