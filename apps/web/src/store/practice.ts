@@ -13,7 +13,7 @@ import {
 	writeProgress,
 } from '@memoriam/core';
 
-import { LOCAL_CONNECTION_ID, type MemoriamDatabase, type NoteRecord } from './db.js';
+import { LOCAL_CONNECTION_ID, type MemoriamDatabase } from './db.js';
 import { rowFor } from './passages.js';
 import { getPreference } from './prefs.js';
 
@@ -34,8 +34,11 @@ export interface PassRecord {
 	readonly key: string;
 	/** Its progress after the pass, from what the file has for it now. */
 	readonly update: (before: ChunkProgress | undefined) => ChunkProgress;
-	/** What the pass adds to today's practice. */
-	readonly activity: DayActivity;
+	/**
+	 * What the pass adds to today's practice. Whether it began a chunk, and
+	 * so counts against the day's new words, is read from the file.
+	 */
+	readonly activity: Omit<DayActivity, 'started'>;
 	/** This device's name for itself (`deviceId`). */
 	readonly device: string;
 	/** The pass's median time per word, if it was clean: the typist's pace. */
@@ -73,26 +76,45 @@ const notePace = async (db: MemoriamDatabase, pace: number): Promise<void> => {
 	await db.prefs.put({ key: PACE_KEY, value: String(Math.round(next)) });
 };
 
-/** The year's activity file with the pass added, or `undefined` where it cannot be. */
-const activityRow = (
-	row: NoteRecord | undefined,
-	{ activity, device }: PassRecord,
-	connectionId: string,
+/** Add to today's line in the year's activity file; false where it cannot be read. */
+const addActivity = async (
+	db: MemoriamDatabase,
+	{ connectionId, device }: Readonly<{ connectionId: string; device: string }>,
+	activity: DayActivity,
 	now: Date
-): NoteRecord | undefined => {
+): Promise<boolean> => {
 	const day = localDay(now);
+	const path = activityPath(now.getFullYear());
+	const row = await db.notes.where('[connectionId+path]').equals([connectionId, path]).first();
 	const written = addToDay(row?.source, dayKey(day, device), activity);
-	if (!written.ok) return undefined;
+	if (!written.ok) return false;
 	const at = now.getTime();
-	return rowFor({
-		id: row?.id ?? `activity-${day.slice(0, 4)}`,
-		connectionId,
-		path: row?.path ?? activityPath(now.getFullYear()),
-		source: written.text,
-		createdAt: row?.createdAt ?? at,
-		updatedAt: at,
-	});
+	await db.notes.put(
+		rowFor({
+			id: row?.id ?? `activity-${day.slice(0, 4)}`,
+			connectionId,
+			path,
+			source: written.text,
+			createdAt: row?.createdAt ?? at,
+			updatedAt: at,
+		})
+	);
+	return true;
 };
+
+/**
+ * Record practice that is no one chunk's: a link pass, a run through a
+ * section. Only the day's practice is added to.
+ */
+export const recordPractice = (
+	db: MemoriamDatabase,
+	{ activity, device }: Readonly<{ activity: Omit<DayActivity, 'started'>; device: string }>,
+	{ connectionId = LOCAL_CONNECTION_ID }: Readonly<{ connectionId?: string }> = {},
+	now: Date = new Date()
+): Promise<boolean> =>
+	db.transaction('rw', db.notes, () =>
+		addActivity(db, { connectionId, device }, { ...activity, started: 0 }, now)
+	);
 
 /** Record a pass: its chunk's progress, and the day's practice. */
 export const recordPass = (
@@ -117,7 +139,8 @@ export const recordPass = (
 			chunks.map((chunk) => ({ key: chunk.key, words: chunk.end - chunk.start })),
 			readProgress(parsed.progress)
 		);
-		const practised = pass.update(progress.chunks.get(pass.key));
+		const before = progress.chunks.get(pass.key);
+		const practised = pass.update(before);
 		const written = writeProgress(
 			row.source,
 			{ ...progress, chunks: new Map(progress.chunks).set(pass.key, practised) },
@@ -126,13 +149,14 @@ export const recordPass = (
 		if (!written.ok) return written;
 		await db.notes.put({ ...row, source: written.text, dirty: 1 });
 
-		const path = activityPath(now.getFullYear());
-		const year = await db.notes
-			.where('[connectionId+path]')
-			.equals([connectionId, path])
-			.first();
-		const activity = activityRow(year, pass, connectionId, now);
-		if (activity !== undefined) await db.notes.put(activity);
+		const chunk = chunks.find((each) => each.key === pass.key);
+		const started = before === undefined && chunk !== undefined ? chunk.end - chunk.start : 0;
+		const activity = await addActivity(
+			db,
+			{ connectionId, device: pass.device },
+			{ ...pass.activity, started },
+			now
+		);
 		if (pass.pace !== undefined) await notePace(db, pass.pace);
-		return { ok: true, progress: practised, activity: activity !== undefined } as const;
+		return { ok: true, progress: practised, activity } as const;
 	});

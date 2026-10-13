@@ -1,4 +1,11 @@
-import { chunkPassage, parsePassageFile, readProgress, ROOT } from '@memoriam/core';
+import {
+	addDays,
+	chunkPassage,
+	localDay,
+	parsePassageFile,
+	readProgress,
+	ROOT,
+} from '@memoriam/core';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -89,7 +96,7 @@ describe('practice', () => {
 		const key = chunkPassage('Jesus wept.\n', 1)?.chunks[0]?.key ?? '';
 		const learnt = passage.source.replace(
 			'chunker: 1\n',
-			`chunker: 1\nprogress:\n  ${key}: { level: 5, due: 2026-10-14 }\n`
+			`chunker: 1\nprogress:\n  ${key}: { level: 5, due: ${addDays(localDay(new Date()), 30)} }\n`
 		);
 		await db.notes.put({ ...passage, source: learnt });
 		open(`/practice/${passage.id}`);

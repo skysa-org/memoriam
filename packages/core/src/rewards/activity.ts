@@ -13,7 +13,7 @@ import { joinPath } from '../paths.js';
  *
  * ```yaml
  * days:
- *   2026-10-13~k3fq9mab: { words: 120, passes: 9, reviews: 4, ms: 312000 }
+ *   2026-10-13~k3fq9mab: { words: 120, passes: 9, reviews: 4, started: 40, ms: 312000 }
  * badges:
  *   first-learnt: 2026-10-13
  * ```
@@ -33,6 +33,8 @@ export interface DayActivity {
 	readonly passes: number;
 	/** Chunks reviewed. */
 	readonly reviews: number;
+	/** Words in chunks practised for the first time: what the day's cap on new words counts. */
+	readonly started: number;
 	/** Time spent typing. */
 	readonly ms: number;
 }
@@ -43,9 +45,9 @@ export interface Activity {
 	readonly badges: ReadonlyMap<string, string>;
 }
 
-export const NO_DAY: DayActivity = { words: 0, passes: 0, reviews: 0, ms: 0 };
+export const NO_DAY: DayActivity = { words: 0, passes: 0, reviews: 0, started: 0, ms: 0 };
 
-const DAY_FIELDS = ['words', 'passes', 'reviews', 'ms'] as const;
+const DAY_FIELDS = ['words', 'passes', 'reviews', 'started', 'ms'] as const;
 
 /** Where a year's activity is kept. */
 export const activityPath = (year: number): string =>
@@ -66,6 +68,7 @@ const dayOf = (value: unknown): DayActivity | undefined =>
 				words: count(value.words),
 				passes: count(value.passes),
 				reviews: count(value.reviews),
+				started: count(value.started),
 				ms: count(value.ms),
 			}
 		: undefined;
@@ -101,6 +104,7 @@ const added = (before: DayActivity, more: DayActivity): DayActivity => ({
 	words: before.words + more.words,
 	passes: before.passes + more.passes,
 	reviews: before.reviews + more.reviews,
+	started: before.started + more.started,
 	ms: Math.round(before.ms + more.ms),
 });
 

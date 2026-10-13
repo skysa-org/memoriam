@@ -1,9 +1,9 @@
 import {
-	type Chunk,
 	type ChunkedPassage,
 	isLearnt,
 	type PassageWord,
 	type Progress,
+	type Span,
 } from '@memoriam/core';
 
 import { type ShownLine } from '../components/shownPassage.js';
@@ -24,8 +24,8 @@ export const nextToLearn = (
 	return order.find((at) => !isLearnt(progress.chunks.get(chunked.chunks[at]?.key ?? '')));
 };
 
-/** A chunk's words, line by line, each line's lead with it where the chunk starts the line. */
-export const chunkLines = (chunked: ChunkedPassage, chunk: Chunk): ShownLine[] =>
+/** A span's words, line by line, each line's lead with it where the span starts the line. */
+export const chunkLines = (chunked: ChunkedPassage, chunk: Span): ShownLine[] =>
 	chunked.sections
 		.flatMap((section) => section.lines)
 		.flatMap((line) => {
@@ -36,27 +36,28 @@ export const chunkLines = (chunked: ChunkedPassage, chunk: Chunk): ShownLine[] =
 			return [{ lead: words[0] === line.words[0] ? line.lead : '', words }];
 		});
 
-const lineOf = (chunked: ChunkedPassage, word: PassageWord): string => {
+/**
+ * What is shown above a span to start it from: the words before it on its
+ * line or, at a line's start, the line before — or, at a section's start, its
+ * label, and the passage's title for the first of all.
+ */
+export const contextBefore = (chunked: ChunkedPassage, start: number, title: string): string => {
+	const first = chunked.words[start];
+	const last = chunked.words[start - 1];
+	if (first === undefined) return title;
+	if (last === undefined || last.section !== first.section) {
+		return chunked.sections[first.section]?.label ?? title;
+	}
 	const line = chunked.sections
 		.flatMap((section) => section.lines)
-		.find((each) => each.line === word.line);
-	return line === undefined
-		? ''
-		: (line.lead + line.words.map((each) => each.text + each.after).join('')).trim();
+		.find((each) => each.line === last.line);
+	const before = line?.words.filter((word: PassageWord) => word.index < start) ?? [];
+	return (
+		(before[0] === line?.words[0] ? (line?.lead ?? '') : '') +
+		before.map((word) => word.text + word.after).join('')
+	).trim();
 };
 
-/**
- * What is shown above a chunk to start it from: the line before it — the end
- * of the chunk before, in its section — or, for a section's first, its label,
- * or the passage's title for the first of all.
- */
-export const contextFor = (chunked: ChunkedPassage, at: number, title: string): string => {
-	const chunk = chunked.chunks[at];
-	const before = chunked.chunks[at - 1];
-	if (chunk === undefined) return title;
-	if (before !== undefined && before.section === chunk.section) {
-		const last = chunked.words[before.end - 1];
-		return last === undefined ? title : lineOf(chunked, last);
-	}
-	return chunked.sections[chunk.section]?.label ?? title;
-};
+/** The context above chunk `at` (`contextBefore`). */
+export const contextFor = (chunked: ChunkedPassage, at: number, title: string): string =>
+	contextBefore(chunked, chunked.chunks[at]?.start ?? 0, title);

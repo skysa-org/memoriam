@@ -8,7 +8,8 @@ import { type WordResult } from './typing.js';
  * What a pass over a chunk being learnt does to its progress
  * (docs/ARCHITECTURE.md §4): its next level on the fade ladder, when it was
  * practised, and its misses word by word. A chunk learnt — a clean pass at the
- * top — is first due the next day, after sleep (`docs/research.md` §1).
+ * top — is first due the next day, after sleep (`docs/research.md` §1). One
+ * relearnt after a lapse is due when that review said (`schedule/fsrs.ts`).
  */
 
 export interface LearnedPass {
@@ -32,7 +33,10 @@ export const learningPass = (
 			level: faded.level,
 			reviewed: instant(now),
 			...(misses === undefined ? {} : { misses }),
-			...(faded.learnt ? { due: addDays(localDay(now), 1) } : {}),
+			// Relearnt after a lapse, it keeps the day its review gave it.
+			...(faded.learnt && before?.due === undefined
+				? { due: addDays(localDay(now), 1) }
+				: {}),
 		},
 		faded,
 		summary,

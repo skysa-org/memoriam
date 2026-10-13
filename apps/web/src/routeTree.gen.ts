@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LibraryRouteImport } from './routes/library'
 import { Route as NewRouteImport } from './routes/new'
+import { Route as SessionRouteImport } from './routes/session'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as EditIdRouteImport } from './routes/edit.$id'
 import { Route as PassageIdRouteImport } from './routes/passage.$id'
 import { Route as PracticeIdRouteImport } from './routes/practice.$id'
@@ -29,6 +31,16 @@ const LibraryRoute = LibraryRouteImport.update({
 const NewRoute = NewRouteImport.update({
   id: '/new',
   path: '/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SessionRoute = SessionRouteImport.update({
+  id: '/session',
+  path: '/session',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EditIdRoute = EditIdRouteImport.update({
@@ -51,6 +63,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/library': typeof LibraryRoute
   '/new': typeof NewRoute
+  '/session': typeof SessionRoute
+  '/settings': typeof SettingsRoute
   '/edit/$id': typeof EditIdRoute
   '/passage/$id': typeof PassageIdRoute
   '/practice/$id': typeof PracticeIdRoute
@@ -59,6 +73,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/library': typeof LibraryRoute
   '/new': typeof NewRoute
+  '/session': typeof SessionRoute
+  '/settings': typeof SettingsRoute
   '/edit/$id': typeof EditIdRoute
   '/passage/$id': typeof PassageIdRoute
   '/practice/$id': typeof PracticeIdRoute
@@ -68,6 +84,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/library': typeof LibraryRoute
   '/new': typeof NewRoute
+  '/session': typeof SessionRoute
+  '/settings': typeof SettingsRoute
   '/edit/$id': typeof EditIdRoute
   '/passage/$id': typeof PassageIdRoute
   '/practice/$id': typeof PracticeIdRoute
@@ -75,14 +93,31 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/library' | '/new' | '/edit/$id' | '/passage/$id' | '/practice/$id'
+    | '/'
+    | '/library'
+    | '/new'
+    | '/session'
+    | '/settings'
+    | '/edit/$id'
+    | '/passage/$id'
+    | '/practice/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/library' | '/new' | '/edit/$id' | '/passage/$id' | '/practice/$id'
+  to:
+    | '/'
+    | '/library'
+    | '/new'
+    | '/session'
+    | '/settings'
+    | '/edit/$id'
+    | '/passage/$id'
+    | '/practice/$id'
   id:
     | '__root__'
     | '/'
     | '/library'
     | '/new'
+    | '/session'
+    | '/settings'
     | '/edit/$id'
     | '/passage/$id'
     | '/practice/$id'
@@ -92,6 +127,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LibraryRoute: typeof LibraryRoute
   NewRoute: typeof NewRoute
+  SessionRoute: typeof SessionRoute
+  SettingsRoute: typeof SettingsRoute
   EditIdRoute: typeof EditIdRoute
   PassageIdRoute: typeof PassageIdRoute
   PracticeIdRoute: typeof PracticeIdRoute
@@ -118,6 +155,20 @@ declare module '@tanstack/react-router' {
       path: '/new'
       fullPath: '/new'
       preLoaderRoute: typeof NewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/session': {
+      id: '/session'
+      path: '/session'
+      fullPath: '/session'
+      preLoaderRoute: typeof SessionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/edit/$id': {
@@ -148,6 +199,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LibraryRoute: LibraryRoute,
   NewRoute: NewRoute,
+  SessionRoute: SessionRoute,
+  SettingsRoute: SettingsRoute,
   EditIdRoute: EditIdRoute,
   PassageIdRoute: PassageIdRoute,
   PracticeIdRoute: PracticeIdRoute,

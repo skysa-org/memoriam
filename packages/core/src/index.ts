@@ -164,3 +164,30 @@ export {
 	NO_DAY,
 	readActivity,
 } from './rewards/activity.js';
+
+export {
+	cardOf,
+	DEFAULT_RETENTION,
+	DEFAULT_SCHEDULE,
+	isDue,
+	isRelearning,
+	LAPSE_LEVEL,
+	MAX_INTERVAL,
+	recall,
+	type Retention,
+	RETENTIONS,
+	reviewed,
+	type ScheduleSettings,
+} from './schedule/fsrs.js';
+
+export {
+	DEFAULT_NEW_WORDS,
+	linkSpan,
+	planDay,
+	type PlanOptions,
+	type PlanPassage,
+	RUN_WORDS,
+	runSpan,
+	type Span,
+	type Step,
+} from './schedule/session.js';

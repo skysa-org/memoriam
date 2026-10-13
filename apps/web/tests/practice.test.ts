@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createDatabase, type MemoriamDatabase } from '../src/store/db.js';
 import { createPassage } from '../src/store/passages.js';
-import { type PassRecord, recordPass, usualPace } from '../src/store/practice.js';
+import { type PassRecord, recordPass, recordPractice, usualPace } from '../src/store/practice.js';
 
 let db: MemoriamDatabase;
 
@@ -108,9 +108,18 @@ describe('recordPass', () => {
 		await recordPass(db, pass(row.id, KEYS[1] ?? '', { level: 1 }), {}, NOW);
 		const year = await db.notes.where('path').equals('.memoriam/activity-2026.md').toArray();
 		expect(year).toHaveLength(1);
+		// Both chunks were begun: all 21 of their words count against the day's new ones.
 		expect([...readActivity(year[0]?.source ?? '').days]).toEqual([
-			['2026-10-13~k3fq9mab', { words: 34, passes: 2, reviews: 0, ms: 18000 }],
+			['2026-10-13~k3fq9mab', { words: 34, passes: 2, reviews: 0, started: 21, ms: 18000 }],
 		]);
+	});
+
+	it('counts a chunk begun once, on its first pass', async () => {
+		const row = await add();
+		await recordPass(db, pass(row.id, KEYS[0] ?? '', { level: 1 }), {}, NOW);
+		await recordPass(db, pass(row.id, KEYS[0] ?? '', { level: 2 }), {}, NOW);
+		const [year] = await db.notes.where('path').equals('.memoriam/activity-2026.md').toArray();
+		expect(readActivity(year?.source ?? '').days.get('2026-10-13~k3fq9mab')?.started).toBe(17);
 	});
 
 	it('says so when the passage’s words no longer have the chunk', async () => {
@@ -155,5 +164,23 @@ describe('recordPass', () => {
 		expect(await usualPace(db)).toBe(1000);
 		await recordPass(db, pass(row.id, KEYS[0] ?? '', { level: 1 }, { pace: 500 }), {}, NOW);
 		expect(await usualPace(db)).toBe(900);
+	});
+});
+
+describe('recordPractice', () => {
+	it('adds a pass that is no one chunk’s to the day, and changes no passage', async () => {
+		const row = await add();
+		const added = await recordPractice(
+			db,
+			{ activity: { words: 21, passes: 1, reviews: 0, ms: 7000 }, device: 'k3fq9mab' },
+			{},
+			NOW
+		);
+		expect(added).toBe(true);
+		expect(await fileOf(row.id)).toBe(row.source);
+		const [year] = await db.notes.where('path').equals('.memoriam/activity-2026.md').toArray();
+		expect([...readActivity(year?.source ?? '').days]).toEqual([
+			['2026-10-13~k3fq9mab', { words: 21, passes: 1, reviews: 0, started: 0, ms: 7000 }],
+		]);
 	});
 });
