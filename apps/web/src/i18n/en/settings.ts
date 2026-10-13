@@ -28,6 +28,43 @@ export const settings = {
 		label: 'Forgive slips of the finger',
 		hint: 'On a touch keyboard, a key next to the right one is not counted as a miss.',
 	},
+	backup: {
+		title: 'Backup',
+		hint: 'Your passages and progress are kept in this browser, on this device. Export a backup now and then, and keep it somewhere safe.',
+		export: 'Export a backup',
+		exporting: 'Exporting…',
+		exported: 'Saved as {name}.',
+		tooLarge: 'The library is too large to put in one archive.',
+		import: 'Import',
+		importing: 'Importing…',
+		importHint:
+			'Markdown or text files, or a backup’s .zip. A passage you already have keeps its words, and the progress made on both is merged.',
+		/** A passage imported beside one it differs from. */
+		copyTitle: '{title} (imported)',
+		added: {
+			one: '{count} passage added.',
+			other: '{count} passages added.',
+		},
+		merged: {
+			one: 'Progress merged into {count} passage.',
+			other: 'Progress merged into {count} passages.',
+		},
+		unchanged: {
+			one: '{count} passage was already up to date.',
+			other: '{count} passages were already up to date.',
+		},
+		copied: {
+			one: '{count} passage differed from yours, and was added beside it as a copy.',
+			other: '{count} passages differed from yours, and were added beside them as copies.',
+		},
+		records: 'Your practice records were brought in.',
+		skipped: {
+			one: '{count} file was not a passage, and was left out.',
+			other: '{count} files were not passages, and were left out.',
+		},
+		unreadable: 'These could not be read, and were left out: {names}.',
+		nothing: 'There was nothing to import.',
+	},
 	restDay: {
 		label: 'Rest day',
 		none: 'None',

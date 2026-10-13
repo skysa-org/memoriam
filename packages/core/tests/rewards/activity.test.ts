@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+	activityIsReadable,
 	activityPath,
 	addBadges,
 	addToDay,
 	dayKey,
 	dayTotals,
 	isActivityPath,
+	mergeActivity,
 	readActivity,
 	recordedBadges,
 } from '../../src/rewards/activity.js';
@@ -58,6 +60,13 @@ describe('activity', () => {
 		expect(text).toContain('2026-10-13~b: { words: 3, passes: 1, reviews: 0, ms: 900 }\n');
 		expect(text.endsWith('---\n\nA body.\n')).toBe(true);
 		expect(readActivity(text).badges).toEqual(new Map([['first-learnt', '2026-10-01']]));
+	});
+
+	it('says whether a file can be read and added to', () => {
+		expect(activityIsReadable(written(undefined, 'k'))).toBe(true);
+		expect(activityIsReadable('')).toBe(true);
+		expect(activityIsReadable('---\ndays: [a\n---\n')).toBe(false);
+		expect(activityIsReadable('---\nbadges: lots\n---\n')).toBe(false);
 	});
 
 	it('will not write over what it cannot read', () => {
@@ -140,6 +149,50 @@ describe('across files', () => {
 		expect(Object.fromEntries(recordedBadges([a, b]))).toEqual({
 			comeback: '2026-10-13',
 			'first-learnt': '2026-10-14',
+		});
+	});
+});
+
+describe('mergeActivity', () => {
+	const ours =
+		'---\n# kept\ndays:\n  2026-10-13~a: { words: 10, passes: 1, reviews: 0, started: 5, ms: 100 }\n  2026-10-14~a: { words: 4, passes: 1, reviews: 0, started: 0, ms: 50 }\nbadges:\n  comeback: 2026-10-14\n---\n';
+	const theirs = readActivity(
+		'---\ndays:\n  2026-10-13~a: { words: 25, passes: 2, reviews: 1, started: 5, ms: 90 }\n  2026-10-13~b: { words: 3, passes: 1, reviews: 0, started: 0, ms: 10 }\nbadges:\n  comeback: 2026-10-13\n  first-learnt: 2026-10-15\n---\n'
+	);
+
+	it('keeps every day, each count the larger, and every badge at its earlier day', () => {
+		const merged = mergeActivity(ours, theirs);
+		if (!merged.ok) throw new Error(merged.reason);
+		const activity = readActivity(merged.text);
+		expect(Object.fromEntries(activity.days)).toEqual({
+			'2026-10-13~a': { words: 25, passes: 2, reviews: 1, started: 5, ms: 100 },
+			'2026-10-14~a': { words: 4, passes: 1, reviews: 0, started: 0, ms: 50 },
+			'2026-10-13~b': { words: 3, passes: 1, reviews: 0, started: 0, ms: 10 },
+		});
+		expect(Object.fromEntries(activity.badges)).toEqual({
+			comeback: '2026-10-13',
+			'first-learnt': '2026-10-15',
+		});
+		expect(merged.text).toContain('# kept\n');
+	});
+
+	it('gives ours back as it was when the incoming one adds nothing to it', () => {
+		const partial =
+			'---\ndays:\n  2026-10-13~a: {words: 10, passes: 1}\nbadges:\n  comeback: 2026-10-01\n---\n';
+		const older = readActivity(
+			'---\ndays:\n  2026-10-13~a: { words: 9, passes: 1 }\nbadges:\n  comeback: 2026-10-02\n---\n'
+		);
+		expect(mergeActivity(partial, older)).toEqual({ ok: true, text: partial });
+		expect(mergeActivity(partial, readActivity(partial))).toEqual({ ok: true, text: partial });
+	});
+
+	it('makes a file of the incoming one where there is none, and leaves one it cannot read', () => {
+		const made = mergeActivity(undefined, theirs);
+		if (!made.ok) throw new Error(made.reason);
+		expect(readActivity(made.text).days.size).toBe(2);
+		expect(mergeActivity('---\ndays: [\n---\n', theirs)).toEqual({
+			ok: false,
+			reason: 'unreadable',
 		});
 	});
 });

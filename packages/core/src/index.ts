@@ -157,6 +157,7 @@ export { isLearnt, type LearnedPass, learningPass } from './practice/learn.js';
 export {
 	type Activity,
 	type ActivityWrite,
+	activityIsReadable,
 	activityPath,
 	addBadges,
 	addToDay,
@@ -164,6 +165,7 @@ export {
 	dayKey,
 	dayTotals,
 	isActivityPath,
+	mergeActivity,
 	NO_DAY,
 	readActivity,
 	recordedBadges,
@@ -181,6 +183,8 @@ export {
 } from './rewards/badges.js';
 
 export { type HeatDay, heatmap, type HeatWeek } from './rewards/heatmap.js';
+
+export { mergePassage, type PassageMerge } from './progress/merge.js';
 
 export { daysHeld, MASTERED_STABILITY, type Measure, measure } from './rewards/mastery.js';
 

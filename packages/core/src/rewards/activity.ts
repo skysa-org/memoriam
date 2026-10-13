@@ -141,6 +141,17 @@ const editable = (
 	return isMap(doc.contents) ? { doc, body } : undefined;
 };
 
+/** Whether the app can read and add to a year's activity file as it is. */
+export const activityIsReadable = (text: string): boolean => {
+	const open = editable(text);
+	if (open === undefined) return false;
+	const days = open.doc.get('days', true);
+	const badges = open.doc.get('badges', true);
+	const fits = (node: unknown) =>
+		node === undefined || isMap(node) || (isScalar(node) && node.value === null);
+	return fits(days) && fits(badges);
+};
+
 /** `text` with `more` added to the day `key`, or a new file for none. */
 export const addToDay = (
 	text: string | undefined,
@@ -202,3 +213,68 @@ export const recordedBadges = (activities: readonly Activity[]): Map<string, str
 			const was = found.get(badge);
 			return was !== undefined && was <= day ? found : new Map(found).set(badge, day);
 		}, new Map<string, string>());
+
+/** The more of each count: two copies of one device's day agree on what each saw. */
+const most = (a: DayActivity, b: DayActivity): DayActivity => ({
+	words: Math.max(a.words, b.words),
+	passes: Math.max(a.passes, b.passes),
+	reviews: Math.max(a.reviews, b.reviews),
+	started: Math.max(a.started, b.started),
+	ms: Math.max(a.ms, b.ms),
+});
+
+const sameDay = (a: DayActivity, b: DayActivity): boolean =>
+	DAY_FIELDS.every((field) => a[field] === b[field]);
+
+/**
+ * Two copies of a year's activity made one (docs/ARCHITECTURE.md §10): every
+ * day either has, each count the larger of the two, since a day has one
+ * writing device and the larger is the later; every badge either has, at the
+ * earlier day. Ours is rewritten only where theirs adds to it, keeping what it
+ * has that the app does not know, and is given back as it was when theirs adds
+ * nothing; one that cannot be read is left as it was.
+ */
+export const mergeActivity = (ours: string | undefined, theirs: Activity): ActivityWrite => {
+	const open = editable(ours);
+	if (open === undefined) return { ok: false, reason: 'unreadable' };
+	const { doc, body } = open;
+	const days = theirs.days.size === 0 ? undefined : mappingOf(doc, 'days');
+	const badges = theirs.badges.size === 0 ? undefined : mappingOf(doc, 'badges');
+	if (
+		(theirs.days.size > 0 && days === undefined) ||
+		(theirs.badges.size > 0 && badges === undefined)
+	) {
+		return { ok: false, reason: 'unreadable' };
+	}
+	const clash = [...theirs.days.keys()].some((key) => {
+		const before = days?.get(key, true);
+		return before !== undefined && !isMap(before);
+	});
+	if (clash) return { ok: false, reason: 'unreadable' };
+	const newDays = [...theirs.days].flatMap(([key, day]) => {
+		const before = days?.get(key, true);
+		const was = isMap(before) ? dayOf(before.toJSON()) : undefined;
+		if (was === undefined) return [[key, day] as const];
+		const now = most(was, day);
+		return sameDay(now, was) ? [] : [[key, now] as const];
+	});
+	const newBadges = [...theirs.badges].filter(([badge, day]) => {
+		const before: unknown = badges?.get(badge);
+		return typeof before !== 'string' || day < before;
+	});
+	if (ours !== undefined && newDays.length === 0 && newBadges.length === 0) {
+		return { ok: true, text: ours };
+	}
+	newDays.forEach(([key, day]) => {
+		const node = doc.createNode(
+			Object.fromEntries(DAY_FIELDS.map((field) => [field, day[field]]))
+		);
+		// eslint-disable-next-line functional/immutable-data -- a node made here, set before it is used
+		node.flow = true;
+		days?.set(key, node);
+	});
+	newBadges.forEach(([badge, day]) => {
+		badges?.set(badge, day);
+	});
+	return { ok: true, text: joinFrontmatter(doc.toString({ lineWidth: 0 }), body) };
+};
