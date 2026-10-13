@@ -83,3 +83,34 @@ export {
 	readProgress,
 	writeProgress,
 } from './progress/codec.js';
+
+export {
+	type Chunk,
+	type ChunkedPassage,
+	chunkKeys,
+	chunkPassage,
+	keyText,
+	knowsChunker,
+} from './passage/chunk.js';
+
+export {
+	chunksWithWords,
+	commonWords,
+	type EditedProgress,
+	editedProgress,
+	fillGaps,
+	KEEPS_PROGRESS,
+	type NewChunk,
+	type OldChunk,
+	remapProgress,
+} from './passage/remap.js';
+
+export {
+	type PassageLine,
+	type PassageText,
+	type PassageWord,
+	readPassage,
+	type Section,
+} from './passage/text.js';
+
+export { firstKey, foldKey, type LineWords, tokenizeLine, type Word } from './passage/tokenize.js';

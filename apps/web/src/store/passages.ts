@@ -1,6 +1,7 @@
 import {
 	basename,
 	CURRENT_CHUNKER,
+	editedProgress,
 	foldName,
 	frontmatterIsEditable,
 	joinPath,
@@ -163,9 +164,66 @@ export type Edited =
 	| Readonly<{ ok: false; reason: 'missing' }>
 	/**
 	 * Its frontmatter is YAML the parser had to repair, which the app never
-	 * rewrites, so a change to its details would not reach the file.
+	 * rewrites, or YAML the writer will not take apart (an anchor on a key it
+	 * would change): a change to its details or its progress would not reach
+	 * the file.
 	 */
 	| Readonly<{ ok: false; reason: 'unreadable' }>;
+
+/** An edit to a passage's file. */
+interface Edit {
+	readonly title: string;
+	/** Empty for none. */
+	readonly reference: string;
+	/** The new words, as they are kept (`keptText`); none for the same words. */
+	readonly text?: string;
+	/** When, for an edit to the words or details; none for a move alone. */
+	readonly at?: number;
+}
+
+/**
+ * A passage's file with an edit made, or `undefined` where the edit would not
+ * reach it whole: frontmatter the app never rewrites, or a block the writer
+ * hands back as it came (an anchor on a key it would change). New words under
+ * the old progress would leave that progress keyed to words the passage no
+ * longer has, so the edit is refused rather than half made.
+ */
+const editedSource = (
+	row: NoteRecord,
+	{ title, reference, text, at }: Edit
+): string | undefined => {
+	const { frontmatter, body } = splitFrontmatter(row.source);
+	if (!frontmatterIsEditable(frontmatter)) return undefined;
+	const parsed = parsePassageFile(row.source);
+	const progress =
+		text === undefined
+			? ({ changed: false } as const)
+			: editedProgress(body, text, parsed.chunker ?? CURRENT_CHUNKER, parsed.progress);
+	// The blank line under the block is kept, as `\n`: the words are, and a
+	// line ending of another kind ahead of them would leave the file in two.
+	const lead = LEADING_BLANK.exec(body)?.[0] === '' ? '' : '\n';
+	const source = serializePassageFile({
+		frontmatter,
+		body: text === undefined ? body : `${lead}${text}`,
+		metadata: {
+			// A file another tool wrote gains what one the app wrote has:
+			// none of these is written over a value the file already has.
+			id: row.id,
+			created: new Date(row.createdAt).toISOString(),
+			...(parsed.chunker === undefined ? { chunker: CURRENT_CHUNKER } : {}),
+			title,
+			source: reference === '' ? undefined : reference,
+			...(at === undefined ? {} : { updated: new Date(at).toISOString() }),
+			...(progress.changed ? { progress: progress.block } : {}),
+		},
+	});
+	const back = parsePassageFile(source);
+	const whole =
+		back.title === title &&
+		(back.source ?? '') === reference &&
+		(!progress.changed || JSON.stringify(back.progress) === JSON.stringify(progress.block));
+	return whole ? source : undefined;
+};
 
 /**
  * Change a passage's words or details. What did not change is not written:
@@ -173,6 +231,10 @@ export type Edited =
  *
  * A new title, or another collection, moves the file: its name is the title's
  * slug, as a new passage's is.
+ *
+ * New words carry the passage's progress with them, in the same write
+ * (`editedProgress`): a chunk whose words mostly survived keeps what was learnt
+ * of it, under its new key.
  */
 export const updatePassage = (
 	db: MemoriamDatabase,
@@ -194,37 +256,24 @@ export const updatePassage = (
 		const moved = retitled || foldName(details.collection) !== foldName(parentPath(row.path));
 		if (!worded && !detailed && !moved) return { ok: true, passage: row } as const;
 
-		const { frontmatter, body } = splitFrontmatter(row.source);
-		if (!frontmatterIsEditable(frontmatter))
-			return { ok: false, reason: 'unreadable' } as const;
-		const { chunker } = parsePassageFile(row.source);
+		const edited = worded || detailed;
+		const source = editedSource(row, {
+			title,
+			reference,
+			...(worded ? { text } : {}),
+			...(edited ? { at: now } : {}),
+		});
+		if (source === undefined) return { ok: false, reason: 'unreadable' } as const;
 
-		// The blank line under the block is kept, as `\n`: the words are, and a
-		// line ending of another kind ahead of them would leave the file in two.
-		const lead = LEADING_BLANK.exec(body)?.[0] === '' ? '' : '\n';
 		const taken = namesIn(await rowsOf(db, connectionId), details.collection, id);
 		const name = basename(row.path);
 		const keepsName = !retitled && !taken.some((each) => foldName(each) === foldName(name));
-		const edited = worded || detailed;
 		const next = rowFor({
 			...row,
 			path: moved
 				? joinPath(details.collection, keepsName ? name : uniqueFilename(title, taken))
 				: row.path,
-			source: serializePassageFile({
-				frontmatter,
-				body: worded ? `${lead}${text}` : body,
-				metadata: {
-					// A file another tool wrote gains what one the app wrote has:
-					// none of these is written over a value the file already has.
-					id: row.id,
-					created: new Date(row.createdAt).toISOString(),
-					...(chunker === undefined ? { chunker: CURRENT_CHUNKER } : {}),
-					title,
-					source: reference === '' ? undefined : reference,
-					...(edited ? { updated: new Date(now).toISOString() } : {}),
-				},
-			}),
+			source,
 			updatedAt: edited ? now : row.updatedAt,
 		});
 		await ensureCollections(db, [details.collection], connectionId, now);

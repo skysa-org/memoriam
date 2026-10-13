@@ -1,4 +1,11 @@
-import { parsePassageFile, ROOT } from '@memoriam/core';
+import {
+	chunkPassage,
+	type ChunkProgress,
+	parsePassageFile,
+	readProgress,
+	ROOT,
+	writeProgress,
+} from '@memoriam/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -190,6 +197,73 @@ describe('editing a passage', () => {
 
 	it('says so when the passage has gone', async () => {
 		expect(await updatePassage(db, 'nope', PSALM)).toEqual({ ok: false, reason: 'missing' });
+	});
+});
+
+describe('editing a passage’s words', () => {
+	/** The key of a text's one chunk. */
+	const keyOf = (text: string): string => chunkPassage(text, 1)?.chunks[0]?.key ?? '';
+
+	const learn = async (row: NoteRecord, entries: [string, ChunkProgress][]) => {
+		const written = writeProgress(row.source, { chunks: new Map(entries), opaque: {} });
+		if (!written.ok) throw new Error(written.reason);
+		await db.notes.put({ ...row, source: written.text });
+	};
+
+	const progressOf = async (id: string) =>
+		readProgress(parsePassageFile((await db.notes.get(['local', id]))?.source ?? '').progress)
+			.chunks;
+
+	// "shepherd", the fifth word, was missed twice.
+	const MISSES = [0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+	it('carries what was learnt to the chunk’s new key, misses with their words', async () => {
+		const row = await createPassage(db, PSALM, {}, OCT_13);
+		await learn(row, [[keyOf(PSALM.text), { level: 4, reps: 3, misses: MISSES }]]);
+		const text = PSALM.text.replace('He makes me lie', 'He maketh me to lie');
+		expect((await updatePassage(db, row.id, { ...PSALM, text }, {}, OCT_14)).ok).toBe(true);
+		const progress = await progressOf(row.id);
+		expect([...progress.keys()]).toEqual([keyOf(text)]);
+		expect(progress.get(keyOf(text))).toEqual({
+			level: 4,
+			reps: 3,
+			misses: [...MISSES, 0],
+		});
+	});
+
+	it('lets go of progress for words rewritten past recognition', async () => {
+		const row = await createPassage(db, PSALM, {}, OCT_13);
+		await learn(row, [[keyOf(PSALM.text), { level: 4 }]]);
+		await updatePassage(db, row.id, { ...PSALM, text: 'Something else entirely.\n' });
+		expect((await db.notes.get(['local', row.id]))?.source).not.toContain('progress:');
+	});
+
+	it('leaves progress as it is for a chunker this build does not have', async () => {
+		const row = await createPassage(db, PSALM, {}, OCT_13);
+		const later = row.source.replace(
+			'chunker: 1\n',
+			'chunker: 9\nprogress:\n  zzzzzzz: { level: 3 }\n'
+		);
+		await db.notes.put({ ...row, source: later });
+		await updatePassage(db, row.id, { ...PSALM, text: 'Other words.\n' });
+		expect((await db.notes.get(['local', row.id]))?.source).toContain(
+			'chunker: 9\nprogress:\n  zzzzzzz: { level: 3 }\n'
+		);
+	});
+
+	it('refuses new words it could not carry the progress to', async () => {
+		const row = await createPassage(db, PSALM, {}, OCT_13);
+		const anchored = row.source.replace(
+			'chunker: 1\n',
+			`chunker: 1\nprogress: &p\n  ${keyOf(PSALM.text)}: { level: 3 }\nalso: *p\n`
+		);
+		await db.notes.put({ ...row, source: anchored });
+		const text = PSALM.text.replace('makes', 'maketh');
+		expect(await updatePassage(db, row.id, { ...PSALM, text })).toEqual({
+			ok: false,
+			reason: 'unreadable',
+		});
+		expect((await db.notes.get(['local', row.id]))?.source).toBe(anchored);
 	});
 });
 

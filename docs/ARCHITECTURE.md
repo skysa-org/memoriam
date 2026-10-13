@@ -32,11 +32,25 @@ III.i"), optional tags, and a body.
 
 **Structure is kept.** Line breaks and stanzas are kept, because they are part of what is learnt.
 
-**Scripts.** Words are found with `Intl.Segmenter`, so any script whose words are typed letter by
-letter works: Latin, Greek, Cyrillic, Hebrew, Arabic and others. Chinese, Japanese, Korean and Thai
-are typed through an input method that composes characters, and have no first letter to type.
-They are not supported in v1, and the editor says so when a passage has none of the words it can
-practise.
+**Words.** A word is a run of letters, marks and digits. An apostrophe between letters
+(`don’t`, `shepherd’s`) or a point or comma between digits (`3.14`, `1,000`) holds it together. A
+hyphen parts two words: `well-known` is typed `w`, `k`. Everything else (spaces, quotes, dashes,
+punctuation) is shown and never typed. A word's key is its first letter or digit, lowercased,
+without accents, and folded (`ß` is `s`, `æ` is `a`, `ς` is `σ`, Hebrew final forms are their
+letters).
+
+**Words are found by a fixed regular expression over Unicode properties, not by
+`Intl.Segmenter`.** Chunk keys are hashes of the words, and `chunker` promises that the same text
+is cut into the same chunks on every device, now and later. `Intl.Segmenter` is each engine's ICU,
+and engines differ in version and tailoring: the same line could be split two ways on two devices,
+and each would orphan the other's progress. A property escape answers the same wherever the
+character is assigned.
+
+**Scripts.** Any script whose words are typed letter by letter works: Latin, Greek, Cyrillic,
+Hebrew, Arabic and others. Chinese, Japanese, Korean, Thai, Lao, Khmer, Myanmar and Tibetan are
+typed through an input method that composes characters, and have no first letter to type. Their
+words are shown as text between the words that are typed. They are not supported in v1, and the
+editor says so when a passage has none of the words it can practise.
 
 ## 3. Files
 
@@ -76,8 +90,9 @@ He makes me lie down in green pastures.
 **The body is plain text, not markdown:**
 - A blank line separates sections: stanzas or paragraphs.
 - A line starting with `#` labels a section and is not practised.
-- `*emphasis*` and `_emphasis_` markers are kept in the file but are not part of the words to
-  type.
+- `*emphasis*`, `**emphasis**` and `_emphasis_` markers are kept in the file but are neither
+  shown nor typed. A run of `*` or `_` with a space or the line's edge on both sides is not a
+  marker, and is shown: the `* * *` that parts two stanzas.
 
 **Chunk keys:**
 - 7 characters of base32 from a synchronous 53-bit hash (cyrb53) of the chunk's normalised words.
@@ -88,6 +103,20 @@ He makes me lie down in green pastures.
 **`chunker: 1`.** This pins the chunking algorithm a passage was first split with. Every chunker
 version stays in the code as a frozen pure function. A better chunker can then never change an
 existing passage's keys and orphan its progress.
+
+**Chunker 1** cuts each section on its own, so a chunk never crosses a blank line or a label. It
+picks the cheapest cutting of the section by dynamic programming:
+- Each chunk costs `((words − 20) / 10)²`: twenty words is best, ten to thirty is good, and more
+  than 45 is never allowed.
+- Each cut costs by what it ends on. A line end that is also a sentence end costs nothing. A line
+  end at a clause costs 0.5, and a bare line end or a sentence end mid-line costs 1.5. A clause mark
+  mid-line (`,` `;` `:` a dash, a spaced hyphen) costs 3. A cut with no pause costs 8, and is
+  there only for a line too long to be one chunk.
+- Ties go to the shorter chunk.
+
+Its output on four fixtures (Psalm 23, Sonnet 18, the Gettysburg Address, "Hope is the thing with
+feathers") is pinned in `packages/core/tests/passage/chunk.test.ts`. A change there is a new
+chunker, not a fix.
 
 **The `progress` map:**
 - One flow-style line per chunk, in passage order.
@@ -108,8 +137,12 @@ existing passage's keys and orphan its progress.
 - An editor outside the app (Obsidian, a provider's web page) can leave keys that no longer match
   any chunk. Within each gap between keys that still match, those keys are paired with unmatched
   chunks by order, where the counts agree. Otherwise they are dropped on the next write.
-- If a passage's YAML cannot be edited safely (it fails to parse, or uses anchors), recording a
-  pass refuses and says so. It never drops the pass silently.
+- A passage cut by a chunker this build does not have keeps its `progress` as it is through an
+  edit: its keys are not this build's to work out.
+- If a passage's YAML cannot be edited safely (it fails to parse, or an anchor sits on a key the
+  write would change), recording a pass refuses and says so. It never drops the pass silently. An
+  edit to the words or details refuses the same way, rather than write new words over progress
+  it could not carry to them.
 
 **`activity-YYYY.md`.** Its frontmatter has two maps:
 - `days`, keyed `YYYY-MM-DD~<deviceId>`, giving `{ words, passes, reviews, ms }`;

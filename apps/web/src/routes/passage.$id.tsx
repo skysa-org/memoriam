@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 
+import { ChunkedText } from '../components/ChunkedText.js';
 import { ErrorScreen } from '../components/ErrorScreen.js';
 import { Icon } from '../components/Icon.js';
 import { MissingPassage } from '../components/MissingPassage.js';
@@ -7,9 +8,12 @@ import { useNotices } from '../components/Notices.js';
 import { t } from '../i18n/t.js';
 import { db } from '../store/db.js';
 import { usePassage } from '../store/hooks.js';
-import { deletePassage, passageText, restorePassages } from '../store/passages.js';
+import { deletePassage, restorePassages } from '../store/passages.js';
 
-/** One passage: its words, where they are from, and what can be done with it. */
+/**
+ * One passage: its words, as the chunks they are learnt in, where they are
+ * from, and what can be done with it.
+ */
 
 const Passage = () => {
 	const { id } = Route.useParams();
@@ -66,7 +70,7 @@ const Passage = () => {
 			{passage.reference !== undefined && (
 				<p className="passage-reference">{passage.reference}</p>
 			)}
-			<article className="passage-text">{passageText(passage.source)}</article>
+			<ChunkedText source={passage.source} />
 		</main>
 	);
 };

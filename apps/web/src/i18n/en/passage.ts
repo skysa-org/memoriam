@@ -4,6 +4,9 @@ export const passage = {
 	edit: 'Edit',
 	delete: 'Delete',
 	deleted: '“{title}” deleted.',
+	/** How long a passage is, and how many parts it is learnt in: shown together, as "113 words · 5 parts". */
+	words: { one: '{count} word', other: '{count} words' },
+	parts: { one: '{count} part', other: '{count} parts' },
 	/** A link to a passage that is no longer there, or an address typed wrong. */
 	missing: {
 		title: 'Not in your library',
@@ -25,7 +28,7 @@ export const passage = {
 		save: 'Save',
 		add: 'Add to library',
 		unreadable:
-			'The details of this passage cannot be changed here, because the top of its file has a formatting problem. Fix it in a text editor, or change only the words.',
+			'This passage cannot be changed here, because the top of its file is written in a way the app does not change. Fix it in a text editor first.',
 		discard: {
 			title: 'Discard your changes?',
 			text: 'What you typed here has not been saved.',
