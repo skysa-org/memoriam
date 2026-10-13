@@ -35,7 +35,7 @@ describe('the day’s plan', () => {
 		const plan = planFor(await rows(), { ...DEFAULT_SETTINGS, newWords: 20 }, NOW);
 		// The first chunk is 17 words; the next, 4 more, would pass the cap of 20.
 		expect(plan.steps).toEqual([{ kind: 'learn', id: expect.any(String) as string, chunk: 0 }]);
-		expect(planCounts(plan)).toEqual({ reviews: 0, newWords: 17 });
+		expect(planCounts(plan)).toEqual({ reviews: 0, newWords: 17, fresh: 17 });
 	});
 
 	it('counts the words begun today against the cap, on every device', async () => {
@@ -57,6 +57,7 @@ describe('the day’s plan', () => {
 		const plan = planFor(await rows(), { ...DEFAULT_SETTINGS, newWords: 20 }, NOW);
 		// The chunk begun goes on; no new one is begun past the cap.
 		expect(plan.steps.map((step) => step.kind)).toEqual(['learn']);
+		expect(planCounts(plan)).toEqual({ reviews: 0, newWords: 17, fresh: 0 });
 		expect(plan.startedToday).toBe(17);
 	});
 
@@ -72,7 +73,7 @@ describe('the day’s plan', () => {
 			{ kind: 'review', id: row.id, chunks: [0] },
 			{ kind: 'relearn', id: row.id, chunk: 1 },
 		]);
-		expect(planCounts(plan)).toEqual({ reviews: 2, newWords: 0 });
+		expect(planCounts(plan)).toEqual({ reviews: 2, newWords: 0, fresh: 0 });
 		expect([...plan.passages.keys()]).toEqual([row.id]);
 	});
 });

@@ -4,16 +4,31 @@ export const today = {
 	/** Before any passage has been added. */
 	empty: 'Nothing to learn yet. Add a passage to your library to begin.',
 	add: 'Add a passage',
+	streak: {
+		one: '{count}-day streak',
+		other: '{count}-day streak',
+	},
+	freezes: {
+		one: '{count} freeze held',
+		other: '{count} freezes held',
+	},
+	/** A day missed with no freeze: the way to keep the streak, never a scolding. */
+	repair: {
+		one: 'Your streak can carry on: type {count} word by the end of {day}.',
+		other: 'Your streak can carry on: type {count} words by the end of {day}.',
+	},
+	goal: 'Today’s goal',
 	reviews: {
-		one: '{count} part to review.',
-		other: '{count} parts to review.',
+		one: '{done} of {count} review',
+		other: '{done} of {count} reviews',
 	},
 	newWords: {
-		one: '{count} new word to learn.',
-		other: '{count} new words to learn.',
+		one: '{done} of {count} new word',
+		other: '{done} of {count} new words',
 	},
+	goalDone: 'Today’s goal is done.',
 	start: 'Start',
 	done: 'You are done for today. Each part you have learnt comes back for review when it is due.',
-	more: 'To learn more today, open a passage in your library and practise it.',
+	beyond: 'To learn more today, open a passage in your library and practise it.',
 	open: 'Open the library',
 } as const;

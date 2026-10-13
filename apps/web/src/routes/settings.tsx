@@ -3,6 +3,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useId } from 'react';
 
 import { ErrorScreen } from '../components/ErrorScreen.js';
+import { weekdayName } from '../i18n/dates.js';
 import { t } from '../i18n/t.js';
 import { db } from '../store/db.js';
 import {
@@ -11,6 +12,7 @@ import {
 	saveSetting,
 	type Settings,
 	useSettings,
+	WEEKDAYS,
 } from '../store/settings.js';
 
 /** How practice is scheduled and typed, on this device (docs/ARCHITECTURE.md §5). */
@@ -32,12 +34,14 @@ const SettingsScreen = () => {
 		newWords: `${id}-new-words`,
 		maxInterval: `${id}-max-interval`,
 		slips: `${id}-slips`,
+		restDay: `${id}-rest-day`,
 	};
 	const hints = {
 		retention: `${id}-retention-hint`,
 		newWords: `${id}-new-words-hint`,
 		maxInterval: `${id}-max-interval-hint`,
 		slips: `${id}-slips-hint`,
+		restDay: `${id}-rest-day-hint`,
 	};
 	return (
 		<main className="screen">
@@ -128,6 +132,28 @@ const SettingsScreen = () => {
 				</div>
 				<p id={hints.slips} className="field-hint">
 					{t('settings.slips.hint')}
+				</p>
+			</div>
+			<div className="field-row">
+				<label htmlFor={ids.restDay}>{t('settings.restDay.label')}</label>
+				<select
+					id={ids.restDay}
+					className="field"
+					aria-describedby={hints.restDay}
+					value={settings.restDay === undefined ? '' : String(settings.restDay)}
+					onChange={(event) => {
+						void saveSetting(db, 'restDay', pick(WEEKDAYS, event.target.value));
+					}}
+				>
+					<option value="">{t('settings.restDay.none')}</option>
+					{WEEKDAYS.map((day) => (
+						<option key={day} value={String(day)}>
+							{weekdayName(day)}
+						</option>
+					))}
+				</select>
+				<p id={hints.restDay} className="field-hint">
+					{t('settings.restDay.hint')}
 				</p>
 			</div>
 		</main>

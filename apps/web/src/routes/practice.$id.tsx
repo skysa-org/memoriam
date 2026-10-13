@@ -9,7 +9,9 @@ import { t } from '../i18n/t.js';
 import { Finished } from '../practice/Finished.js';
 import { Session, type Tally } from '../practice/Session.js';
 import { runThrough, type Task, tasksOf } from '../practice/tasks.js';
+import { db } from '../store/db.js';
 import { usePassage } from '../store/hooks.js';
+import { recordBadges } from '../store/rewards.js';
 import { type Readied, readied } from '../store/schedule.js';
 import { type Settings, useSettings } from '../store/settings.js';
 
@@ -37,6 +39,10 @@ const Practise = ({
 	const [tasks, setTasks] = useState<readonly Task[]>(() => planned(passage));
 	// A fresh session for each run through.
 	const [round, setRound] = useState(0);
+	const through = round > 0;
+	/** Every run of a run through the passage, and none with a miss. */
+	const perfect = (tally: Tally): boolean =>
+		through && tally.runs === tasks.length && tally.cleanRuns === tally.runs;
 	const chunks = passage?.chunked.chunks ?? [];
 	const allLearnt =
 		passage !== undefined &&
@@ -48,7 +54,20 @@ const Practise = ({
 	})();
 
 	const ending = (tally?: Tally) => (
-		<Finished title={title} tally={tally} message={message}>
+		<Finished
+			title={title}
+			tally={tally}
+			message={message}
+			note={
+				tally !== undefined &&
+				perfect(tally) && (
+					<p className="practice-learnt">
+						<Icon name="check" />
+						{t('session.perfect')}
+					</p>
+				)
+			}
+		>
 			{allLearnt && (
 				<button
 					type="button"
@@ -90,6 +109,11 @@ const Practise = ({
 				</Link>
 			}
 			finished={ending}
+			onFinish={(tally) => {
+				if (perfect(tally)) {
+					void recordBadges(db, new Map([['clean-run', localDay(new Date())]]));
+				}
+			}}
 		/>
 	);
 };

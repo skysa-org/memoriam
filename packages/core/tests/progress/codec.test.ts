@@ -63,6 +63,7 @@ describe('readProgress', () => {
 			k3fq9ma: {
 				level: 5,
 				due: '2026-10-20',
+				learnt: '2026-10-13',
 				stability: 6.21,
 				difficulty: 4.1,
 				reps: 3,
@@ -75,6 +76,7 @@ describe('readProgress', () => {
 		expect(chunks.get('k3fq9ma')).toEqual({
 			level: 5,
 			due: '2026-10-20',
+			learnt: '2026-10-13',
 			stability: 6.21,
 			difficulty: 4.1,
 			reps: 3,

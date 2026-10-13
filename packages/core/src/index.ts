@@ -150,7 +150,7 @@ export {
 	type WordResult,
 } from './practice/typing.js';
 
-export { addDays, instant, localDay } from './day.js';
+export { addDays, daysBetween, instant, localDay, weekday } from './day.js';
 
 export { isLearnt, type LearnedPass, learningPass } from './practice/learn.js';
 
@@ -158,12 +158,46 @@ export {
 	type Activity,
 	type ActivityWrite,
 	activityPath,
+	addBadges,
 	addToDay,
 	type DayActivity,
 	dayKey,
+	dayTotals,
+	isActivityPath,
 	NO_DAY,
 	readActivity,
+	recordedBadges,
 } from './rewards/activity.js';
+
+export {
+	type Badge,
+	type BadgeInput,
+	BADGES,
+	earnedBadges,
+	HELD_BADGES,
+	isBadge,
+	STREAK_BADGES,
+	WORD_BADGES,
+} from './rewards/badges.js';
+
+export { type HeatDay, heatmap, type HeatWeek } from './rewards/heatmap.js';
+
+export { daysHeld, MASTERED_STABILITY, type Measure, measure } from './rewards/mastery.js';
+
+export {
+	BREAK_DAYS,
+	FREEZE_EVERY,
+	type Kept,
+	MAX_FREEZES,
+	NO_STREAK,
+	REPAIR_DAYS,
+	REPAIR_FLOOR,
+	repairWords,
+	type Streak,
+	STREAK_MILESTONES,
+	streakOf,
+	type StreakOptions,
+} from './rewards/streak.js';
 
 export {
 	cardOf,

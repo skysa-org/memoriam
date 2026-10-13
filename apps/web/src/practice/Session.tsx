@@ -55,12 +55,27 @@ interface Run {
 	readonly learnt: readonly Learnt[];
 	readonly ranRuns: boolean;
 	readonly reviewed: number;
+	/** Runs through a section, and of those, runs without a miss. */
+	readonly runs: number;
+	readonly cleanRuns: number;
 	/** Counts passes, so each is recorded once. */
 	readonly count: number;
 	readonly started: boolean;
 }
 
-export type Tally = Readonly<{ learnt: number; reviewed: number }>;
+export type Tally = Readonly<{
+	learnt: number;
+	reviewed: number;
+	runs: number;
+	cleanRuns: number;
+}>;
+
+const tallyOf = (run: Run): Tally => ({
+	learnt: run.learnt.length,
+	reviewed: run.reviewed,
+	runs: run.runs,
+	cleanRuns: run.cleanRuns,
+});
 
 type Action = TypingEvent | Readonly<{ type: 'start'; keys: readonly string[]; at: number }>;
 
@@ -133,6 +148,13 @@ const after = (
 					})
 				: run.queue;
 		return { queue, more: { reviewed: run.reviewed + 1 } };
+	}
+	if (task.kind === 'run') {
+		const clean = ended.missed.every((missed) => !missed);
+		return {
+			queue: run.queue,
+			more: { runs: run.runs + 1, cleanRuns: run.cleanRuns + (clean ? 1 : 0) },
+		};
 	}
 	if ('span' in task) return { queue: run.queue, more: {} };
 	const { faded } = ended;
@@ -264,7 +286,10 @@ const Outcome = ({
 				})}
 			</p>
 			{learning && faded !== undefined && (
-				<p>{t(nextStep(faded, pass.level, task.kind === 'relearn'))}</p>
+				<p className={faded.learnt ? 'practice-learnt' : undefined}>
+					{faded.learnt && <Icon name="check" />}
+					{t(nextStep(faded, pass.level, task.kind === 'relearn'))}
+				</p>
 			)}
 			{review && graded === 'again' && <p>{t('session.forgot')}</p>}
 			{review && graded !== 'again' && due !== undefined && (
@@ -290,6 +315,7 @@ export const Session = ({
 	settings,
 	stop,
 	finished,
+	onFinish,
 }: Readonly<{
 	/** What the session was given to do; read once, as it starts. */
 	tasks: readonly Task[];
@@ -300,6 +326,8 @@ export const Session = ({
 	stop: ReactNode;
 	/** What is shown once every task is done. */
 	finished: (tally: Tally) => ReactNode;
+	/** Told once, as the last task is done. */
+	onFinish?: (tally: Tally) => void;
 }>) => {
 	const [run, setRun] = useState<Run>(() => {
 		const opening = firstPass(tasks, passages);
@@ -309,6 +337,8 @@ export const Session = ({
 			learnt: [],
 			ranRuns: false,
 			reviewed: 0,
+			runs: 0,
+			cleanRuns: 0,
 			count: 0,
 			started: false,
 		};
@@ -412,10 +442,10 @@ export const Session = ({
 		const found = fromQueue ?? fromRuns;
 		const ranRuns = run.ranRuns || fromQueue === undefined;
 		if (found === undefined) {
-			setRun((current) => {
-				const { pass: _, ...rest } = current;
-				return { ...rest, ...more, queue: [], ranRuns };
-			});
+			const { pass: _, ...rest } = run;
+			const ended = { ...rest, ...more, queue: [], ranRuns };
+			setRun(ended);
+			onFinish?.(tallyOf(ended));
 			return;
 		}
 		begin(found.pass, found.rest, { ...more, ranRuns });
@@ -434,7 +464,7 @@ export const Session = ({
 	};
 
 	if (pass === undefined || passage === undefined) {
-		return <>{finished({ learnt: run.learnt.length, reviewed: run.reviewed })}</>;
+		return <>{finished(tallyOf(run))}</>;
 	}
 
 	const { chunked } = passage;

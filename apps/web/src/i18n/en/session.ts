@@ -33,4 +33,5 @@ export const session = {
 	back: 'Back to Today',
 	/** A passage learnt through: practised whole, section by section. */
 	runThrough: 'Run through it',
+	perfect: 'Word perfect: you ran through the whole passage without a miss.',
 } as const;

@@ -8,11 +8,14 @@ export const Finished = ({
 	title,
 	tally,
 	message,
+	note,
 	children,
 }: Readonly<{
 	title: string;
 	tally?: Tally | undefined;
 	message: string;
+	/** Anything more to say of the session, above the message. */
+	note?: ReactNode;
 	/** The ways on. */
 	children: ReactNode;
 }>) => (
@@ -27,6 +30,7 @@ export const Finished = ({
 			{tally !== undefined && tally.learnt > 0 && (
 				<p>{t('session.learnt', { count: tally.learnt })}</p>
 			)}
+			{note}
 			<p className="empty">{message}</p>
 		</div>
 		<div className="form-actions">{children}</div>

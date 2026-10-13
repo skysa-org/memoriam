@@ -66,7 +66,7 @@ describe('Today', () => {
 		const user = userEvent.setup();
 		await add();
 		open('/');
-		expect(await screen.findByText('2 new words to learn.')).toBeTruthy();
+		expect(await screen.findByText('0 of 2 new words')).toBeTruthy();
 		await user.click(screen.getByRole('link', { name: 'Start' }));
 		expect(await screen.findByText(/Learning · Part 1 of 1/)).toBeTruthy();
 	});
@@ -84,7 +84,7 @@ describe('the day’s session', () => {
 		const user = userEvent.setup();
 		const passage = await add(`{ level: 5, due: ${today()} }`);
 		open('/');
-		expect(await screen.findByText('1 part to review.')).toBeTruthy();
+		expect(await screen.findByText('0 of 1 review')).toBeTruthy();
 		await user.click(screen.getByRole('link', { name: 'Start' }));
 		expect(await screen.findByText(/Review · Part 1 of 1/)).toBeTruthy();
 		// Bare: nothing to see until it is typed.

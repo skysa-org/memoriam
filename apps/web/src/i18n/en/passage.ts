@@ -1,5 +1,12 @@
 /** One passage: reading it, and adding or editing one. */
 export const passage = {
+	/** A word marked on the passage's page for how often it has been missed. */
+	missed: {
+		one: 'Missed {count} time',
+		other: 'Missed {count} times',
+	},
+	missedHint:
+		'Underlined words are the ones you have missed: the darker the line, the more often.',
 	back: 'Back to the library',
 	edit: 'Edit',
 	practise: 'Practise',

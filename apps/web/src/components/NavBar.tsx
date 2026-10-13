@@ -10,10 +10,15 @@ import { Icon } from './Icon.js';
  * A passage's own screens, and the editor, are in the Library, and say so: the
  * bar shows where a screen belongs, not only which one is open.
  */
-const sectionOf = (pathname: string): 'today' | 'library' | 'settings' => {
-	if (pathname === '/' || pathname === '/session') return 'today';
-	return pathname === '/settings' ? 'settings' : 'library';
+const SECTIONS: Readonly<Record<string, 'today' | 'stats' | 'settings'>> = {
+	'/': 'today',
+	'/session': 'today',
+	'/stats': 'stats',
+	'/settings': 'settings',
 };
+
+const sectionOf = (pathname: string): 'today' | 'library' | 'stats' | 'settings' =>
+	SECTIONS[pathname] ?? 'library';
 
 export const NavBar = () => {
 	const pathname = useRouterState({ select: (state) => state.location.pathname });
@@ -35,6 +40,14 @@ export const NavBar = () => {
 			>
 				<Icon name="library" size={20} />
 				<span>{t('shell.nav.library')}</span>
+			</Link>
+			<Link
+				to="/stats"
+				className="nav-item"
+				aria-current={section === 'stats' ? 'page' : undefined}
+			>
+				<Icon name="stats" size={20} />
+				<span>{t('shell.nav.stats')}</span>
 			</Link>
 			<Link
 				to="/settings"

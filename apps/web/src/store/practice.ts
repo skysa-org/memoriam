@@ -1,5 +1,6 @@
 import {
 	activityPath,
+	type ActivityWrite,
 	addToDay,
 	chunkPassage,
 	type ChunkProgress,
@@ -76,22 +77,26 @@ const notePace = async (db: MemoriamDatabase, pace: number): Promise<void> => {
 	await db.prefs.put({ key: PACE_KEY, value: String(Math.round(next)) });
 };
 
-/** Add to today's line in the year's activity file; false where it cannot be read. */
-const addActivity = async (
+/**
+ * Change this year's activity file, made if there is none; false where it
+ * cannot be read, and is left as it was. Run it inside a transaction on
+ * `notes`, so it changes the file as it is when the write is made.
+ */
+export const changeActivity = async (
 	db: MemoriamDatabase,
-	{ connectionId, device }: Readonly<{ connectionId: string; device: string }>,
-	activity: DayActivity,
-	now: Date
+	connectionId: string,
+	now: Date,
+	change: (text: string | undefined) => ActivityWrite
 ): Promise<boolean> => {
-	const day = localDay(now);
 	const path = activityPath(now.getFullYear());
 	const row = await db.notes.where('[connectionId+path]').equals([connectionId, path]).first();
-	const written = addToDay(row?.source, dayKey(day, device), activity);
+	const written = change(row?.source);
 	if (!written.ok) return false;
+	if (written.text === row?.source) return true;
 	const at = now.getTime();
 	await db.notes.put(
 		rowFor({
-			id: row?.id ?? `activity-${day.slice(0, 4)}`,
+			id: row?.id ?? `activity-${String(now.getFullYear())}`,
 			connectionId,
 			path,
 			source: written.text,
@@ -101,6 +106,17 @@ const addActivity = async (
 	);
 	return true;
 };
+
+/** Add to today's line in the year's activity file; false where it cannot be read. */
+const addActivity = (
+	db: MemoriamDatabase,
+	{ connectionId, device }: Readonly<{ connectionId: string; device: string }>,
+	activity: DayActivity,
+	now: Date
+): Promise<boolean> =>
+	changeActivity(db, connectionId, now, (text) =>
+		addToDay(text, dayKey(localDay(now), device), activity)
+	);
 
 /**
  * Record practice that is no one chunk's: a link pass, a run through a

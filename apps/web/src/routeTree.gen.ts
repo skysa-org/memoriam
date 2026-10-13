@@ -14,6 +14,7 @@ import { Route as LibraryRouteImport } from './routes/library'
 import { Route as NewRouteImport } from './routes/new'
 import { Route as SessionRouteImport } from './routes/session'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as StatsRouteImport } from './routes/stats'
 import { Route as EditIdRouteImport } from './routes/edit.$id'
 import { Route as PassageIdRouteImport } from './routes/passage.$id'
 import { Route as PracticeIdRouteImport } from './routes/practice.$id'
@@ -43,6 +44,11 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StatsRoute = StatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EditIdRoute = EditIdRouteImport.update({
   id: '/edit/$id',
   path: '/edit/$id',
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/new': typeof NewRoute
   '/session': typeof SessionRoute
   '/settings': typeof SettingsRoute
+  '/stats': typeof StatsRoute
   '/edit/$id': typeof EditIdRoute
   '/passage/$id': typeof PassageIdRoute
   '/practice/$id': typeof PracticeIdRoute
@@ -75,6 +82,7 @@ export interface FileRoutesByTo {
   '/new': typeof NewRoute
   '/session': typeof SessionRoute
   '/settings': typeof SettingsRoute
+  '/stats': typeof StatsRoute
   '/edit/$id': typeof EditIdRoute
   '/passage/$id': typeof PassageIdRoute
   '/practice/$id': typeof PracticeIdRoute
@@ -86,6 +94,7 @@ export interface FileRoutesById {
   '/new': typeof NewRoute
   '/session': typeof SessionRoute
   '/settings': typeof SettingsRoute
+  '/stats': typeof StatsRoute
   '/edit/$id': typeof EditIdRoute
   '/passage/$id': typeof PassageIdRoute
   '/practice/$id': typeof PracticeIdRoute
@@ -98,6 +107,7 @@ export interface FileRouteTypes {
     | '/new'
     | '/session'
     | '/settings'
+    | '/stats'
     | '/edit/$id'
     | '/passage/$id'
     | '/practice/$id'
@@ -108,6 +118,7 @@ export interface FileRouteTypes {
     | '/new'
     | '/session'
     | '/settings'
+    | '/stats'
     | '/edit/$id'
     | '/passage/$id'
     | '/practice/$id'
@@ -118,6 +129,7 @@ export interface FileRouteTypes {
     | '/new'
     | '/session'
     | '/settings'
+    | '/stats'
     | '/edit/$id'
     | '/passage/$id'
     | '/practice/$id'
@@ -129,6 +141,7 @@ export interface RootRouteChildren {
   NewRoute: typeof NewRoute
   SessionRoute: typeof SessionRoute
   SettingsRoute: typeof SettingsRoute
+  StatsRoute: typeof StatsRoute
   EditIdRoute: typeof EditIdRoute
   PassageIdRoute: typeof PassageIdRoute
   PracticeIdRoute: typeof PracticeIdRoute
@@ -171,6 +184,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/stats': {
+      id: '/stats'
+      path: '/stats'
+      fullPath: '/stats'
+      preLoaderRoute: typeof StatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/edit/$id': {
       id: '/edit/$id'
       path: '/edit/$id'
@@ -201,6 +221,7 @@ const rootRouteChildren: RootRouteChildren = {
   NewRoute: NewRoute,
   SessionRoute: SessionRoute,
   SettingsRoute: SettingsRoute,
+  StatsRoute: StatsRoute,
   EditIdRoute: EditIdRoute,
   PassageIdRoute: PassageIdRoute,
   PracticeIdRoute: PracticeIdRoute,
