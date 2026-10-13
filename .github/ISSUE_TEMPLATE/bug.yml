@@ -1,0 +1,69 @@
+name: Bug report
+description: Something does not work the way it should.
+labels: [bug]
+body:
+    - type: markdown
+      attributes:
+          value: |
+              **Not for security problems.** [`SECURITY.md`](https://github.com/skysa-org/memoriam/blob/main/SECURITY.md)
+              says how to report one privately.
+
+              Passages live in your browser's IndexedDB. Nothing you paste here
+              needs to contain a passage you are memorizing — if reproducing it
+              needs a specific one, describe its shape (how many lines, stanzas,
+              unusual punctuation or script) rather than its text.
+
+    - type: textarea
+      id: what
+      attributes:
+          label: What happened
+          description: What you did, what you expected, and what happened instead.
+      validations:
+          required: true
+
+    - type: textarea
+      id: steps
+      attributes:
+          label: Steps to reproduce
+          placeholder: |
+              1. Add a passage with…
+              2. Start a practice session and type…
+              3. …
+      validations:
+          required: true
+
+    - type: input
+      id: commit
+      attributes:
+          label: Which commit
+          description: >-
+              There are no releases yet, so this is the commit you deployed or
+              checked out. `git rev-parse --short HEAD`.
+      validations:
+          required: true
+
+    - type: input
+      id: browser
+      attributes:
+          label: Browser and OS
+          placeholder: Safari on iOS 26, installed to the home screen; which keyboard, if typing is involved
+
+    - type: textarea
+      id: console
+      attributes:
+          label: Anything in the console
+          description: >-
+              Errors from the browser console. Redact anything that looks like a
+              token or a credential.
+          render: text
+
+    - type: checkboxes
+      id: offline
+      attributes:
+          label: Does it still happen offline?
+          description: >-
+              Optional. It separates a network or caching problem from an app
+              problem.
+          options:
+              - label: I tried it offline
+              - label: It still happens offline

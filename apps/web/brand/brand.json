@@ -1,0 +1,12 @@
+{
+	"$schema": "./brand.schema.json",
+	"name": "Memoriam",
+	"shortName": "Memoriam",
+	"description": "Learn passages by heart, one word at a time, and keep them.",
+	"colors": {
+		"light": { "brand": "#4338CA", "onBrand": "#FFFFFF", "theme": "#FFFFFF" },
+		"dark": { "brand": "#A5B4FC", "onBrand": "#1E1B4B", "theme": "#111827" },
+		"background": "#FFFFFF"
+	},
+	"icons": "icons"
+}
