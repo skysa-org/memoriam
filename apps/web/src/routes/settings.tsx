@@ -2,6 +2,7 @@ import { DEFAULT_RETENTION, RETENTIONS } from '@memoriam/core';
 import { createFileRoute } from '@tanstack/react-router';
 import { useId } from 'react';
 
+import { Backup } from '../components/Backup.js';
 import { ErrorScreen } from '../components/ErrorScreen.js';
 import { weekdayName } from '../i18n/dates.js';
 import { t } from '../i18n/t.js';
@@ -156,6 +157,7 @@ const SettingsScreen = () => {
 					{t('settings.restDay.hint')}
 				</p>
 			</div>
+			<Backup />
 		</main>
 	);
 };

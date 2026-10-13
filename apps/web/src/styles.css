@@ -1386,3 +1386,37 @@ textarea.field {
 .passage-missed-hint {
 	margin: calc(-1 * var(--space-s)) 0 var(--space-m);
 }
+
+/* ---- Settings ------------------------------------------------------------- */
+
+.settings-section {
+	margin-block-start: var(--space-2xl);
+	padding-block-start: var(--space-l);
+	border-block-start: 1px solid var(--border);
+}
+
+.settings-section h2 {
+	margin: 0 0 var(--space-s);
+	font-size: 1.125rem;
+}
+
+.settings-section .form-actions {
+	margin-block: var(--space-m) var(--space-s);
+}
+
+/* Chosen through the Import button, never seen. */
+.file-picker {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.settings-said {
+	margin-top: var(--space-m);
+}
+
+.settings-said p {
+	margin: var(--space-xs) 0 0;
+}

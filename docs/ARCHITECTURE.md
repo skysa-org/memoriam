@@ -54,8 +54,8 @@ editor says so when a passage has none of the words it can practise.
 
 ## 3. Files
 
-**Layout.** The library has the same layout whether it is a zip export or a provider's app
-folder:
+**Layout.** The library has the same layout whether it is a zip export (§7, "Export and import")
+or a provider's app folder:
 
 ```
 Psalms/                       collections are folders
@@ -376,6 +376,34 @@ earn it.
 Two tabs practising at once therefore cannot overwrite each other: each changes only its own
 chunk's entry, in the file as it is when the write is made.
 
+**Export and import** (`apps/web/src/archive/`, on the Settings screen). Until sync, the only
+copy of the library is the one in this browser, so a backup is a file the user keeps.
+- **Export** writes a ZIP of every row at its path, byte for byte, the activity files included
+  (§3, "Layout"). An empty collection gets a folder entry of its own. Entries are stored, not
+  deflated: passages are small, and a stored archive needs no compressor. Names are UTF-8. A name
+  that a case-insensitive disk would take for another is numbered, `name (2).md`, though the
+  library's own naming already keeps them apart. The archive is named `memoriam-YYYY-MM-DD.zip`,
+  for the day on the user's clock.
+- **Import** takes `.md`, `.markdown` and `.txt` files and ZIPs, several at once, in one
+  transaction:
+  - **Reading.** A ZIP's stored and deflated entries are read, the latter through the browser's
+    own `DecompressionStream`. What an operating system adds (`__MACOSX/`, `.DS_Store`) is
+    dropped. An export unpacked and compressed again as a folder is read from the folder that
+    holds `.memoriam/`. A file that is not UTF-8, or an entry that is damaged or encrypted, is
+    named to the user and left out.
+  - **A passage the library has** is found by its `id`, or by its path when it has none. If
+    `mergePassage` finds the same words and details, the progress is merged and `updatedAt` stays
+    where it was, since practice is not an edit. If they differ, the incoming file is added as a
+    copy in the same collection, with a new `id` and its title followed by "(imported)".
+  - **A passage the library lacks** is added at its own path and with its own `id` where they are
+    free, and under a free name and a new `id` where they are not.
+  - **A year's activity** is merged into the library's with `mergeActivity`, or added where the
+    library has none. One that cannot be read is named and left out. Other files under
+    `.memoriam/` are left out.
+  - **A `.txt` file** becomes a new passage, titled from the file's name.
+  - The user is told, in sentences, how many passages were added, merged, already up to date or
+    copied, whether practice records came in, and what was left out.
+
 **The app's words.** Every word the user reads comes from the catalog: `t('…')` in
 `apps/web/src/i18n/t.ts`.
 - Messages are whole sentences with `{placeholders}`, and `{ one, other }` plurals.
@@ -446,7 +474,10 @@ before that rule, through a `merge` option on the engine:
 - Days: union, with the maximum of each field.
 - Badges: union, keeping the earliest date.
 
-The same merges also handle a backup imported over an existing library in Phase 1.
+The same merges already handle a backup imported over an existing library (§7, "Export and
+import"). `mergePassage` is in `packages/core/src/progress/merge.ts`. `mergeActivity` sits with
+the rest of the activity codec in `rewards/activity.ts`, and writes nothing when the incoming file
+adds nothing.
 
 **Other changes:**
 - **Hidden files.** `isHidden` gets an exception for `.memoriam/activity-YYYY.md` only, as
@@ -477,10 +508,10 @@ apps/web/              the PWA
 packages/core/         framework-free TypeScript: browser, Node and Workers
   src/
     passage/           body grammar, tokenizer, chunker, remap
-    progress/          frontmatter codec, merges
+    progress/          frontmatter codec, passage merge
     practice/          hiding, typing reducer, grading, fading
     schedule/          FSRS, the session planner
-    rewards/           activity, streaks, mastery, badges
+    rewards/           activity and its merge, streaks, mastery, badges
     markdown/          frontmatter (ported from skysa-notes)
 docs/
   ARCHITECTURE.md      this file
