@@ -17,8 +17,8 @@ If you run a modified version of this program as a network service, section 13
 of the licence requires you to offer its users the source of your modified
 version.
 
-Much of this program's shell is ported from skysa-notes, Copyright (C) 2026
-Skysa, under the same licence.
+Much of this program's shell, and its sync, is ported from skysa-notes,
+Copyright (C) 2026 Skysa, under the same licence.
 
 ---
 
