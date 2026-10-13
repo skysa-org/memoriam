@@ -262,6 +262,272 @@ button.icon:disabled {
 	line-height: 1.6;
 }
 
+/* ---- The bar of screens -------------------------------------------------- */
+
+/* Across the top of a wide window; across the bottom of a phone (below). */
+.nav-bar {
+	position: sticky;
+	z-index: 10;
+	inset-block-start: 0;
+	display: flex;
+	justify-content: center;
+	gap: var(--space-2xs);
+	padding: var(--space-xs) var(--gutter);
+	border-block-end: 1px solid var(--border);
+	background: color-mix(in srgb, var(--bg) 92%, transparent);
+	backdrop-filter: blur(8px);
+}
+
+.nav-item {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-xs);
+	padding: var(--space-xs) var(--space-m);
+	border-radius: var(--radius-s);
+	color: var(--muted);
+	font-weight: 500;
+	text-decoration: none;
+}
+
+.nav-item[aria-current='page'] {
+	color: var(--brand);
+	background: var(--brand-wash);
+}
+
+@media (hover: hover) {
+	.nav-item:not([aria-current='page']):hover {
+		color: var(--fg);
+		background: var(--hover-bg);
+	}
+}
+
+@media (max-width: 48rem) {
+	.nav-bar {
+		position: fixed;
+		inset-block: auto 0;
+		inset-inline: 0;
+		padding: var(--space-2xs) var(--space-s)
+			calc(var(--space-2xs) + env(safe-area-inset-bottom));
+		border-block-end: none;
+		border-block-start: 1px solid var(--border);
+	}
+
+	.nav-item {
+		flex: 1;
+		flex-direction: column;
+		gap: var(--space-3xs);
+		max-width: 8rem;
+		padding: var(--space-xs) var(--space-s);
+		font-size: 0.75rem;
+	}
+
+	.nav-item[aria-current='page'] {
+		background: none;
+	}
+
+	/* Room under the last of a screen for the bar over it. */
+	.screen {
+		padding-block-end: calc(5rem + env(safe-area-inset-bottom));
+	}
+}
+
+/* ---- The library ---------------------------------------------------------- */
+
+.screen-header .button {
+	flex: none;
+}
+
+a.icon-link {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 2rem;
+	border-radius: var(--radius-s);
+	color: var(--muted);
+}
+
+@media (hover: hover) {
+	a.icon-link:hover {
+		color: var(--fg);
+		background: var(--hover-bg);
+	}
+}
+
+.new-collection {
+	margin-block-start: var(--space-l);
+	padding-inline: var(--space-s);
+}
+
+.collection + .collection {
+	margin-block-start: var(--space-xl);
+}
+
+.collection-header {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2xs);
+	margin-block-end: var(--space-xs);
+}
+
+.collection-name {
+	margin: 0;
+	font-size: 1rem;
+	font-weight: 600;
+}
+
+.collection-header .collection-name {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.collection-count {
+	flex: 1;
+	margin-inline-start: var(--space-xs);
+	color: var(--muted);
+	font-size: 0.875rem;
+	white-space: nowrap;
+}
+
+.collection > .collection-name {
+	margin-block-end: var(--space-xs);
+}
+
+.collection .empty {
+	margin: 0;
+	padding: var(--space-s) 0;
+	font-size: 0.9rem;
+}
+
+.passage-list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-m);
+	background: var(--surface-raised);
+	overflow: hidden;
+}
+
+.passage-list li + li {
+	border-block-start: 1px solid var(--border);
+}
+
+.passage-row {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3xs);
+	padding: var(--space-m) var(--space-l);
+	color: var(--fg);
+	text-decoration: none;
+}
+
+@media (hover: hover) {
+	.passage-row:hover {
+		background: var(--hover-bg);
+	}
+}
+
+.passage-row-title {
+	font-weight: 500;
+}
+
+.passage-row-reference {
+	color: var(--muted);
+	font-size: 0.875rem;
+}
+
+/* ---- A passage ------------------------------------------------------------ */
+
+.passage-reference {
+	margin: calc(-1 * var(--space-s)) 0 var(--space-l);
+	color: var(--muted);
+}
+
+.passage-text {
+	font-family: var(--font-text);
+	font-size: 1.125rem;
+	line-height: 1.7;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+/* ---- Forms ---------------------------------------------------------------- */
+
+.field-row {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2xs);
+	margin-block-end: var(--space-l);
+}
+
+.field-row label {
+	font-weight: 500;
+}
+
+.field {
+	width: 100%;
+	min-height: 2.5rem;
+	padding: var(--space-xs) var(--space-m);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-s);
+	background: var(--surface-raised);
+	/* 16px at least, or iOS zooms the page in on focus. */
+	font-size: max(1rem, 16px);
+}
+
+.field[aria-invalid='true'] {
+	border-color: var(--bad);
+}
+
+textarea.field {
+	resize: vertical;
+	line-height: 1.6;
+}
+
+.passage-field {
+	font-family: var(--font-text);
+	font-size: max(1.0625rem, 16px);
+}
+
+.field-hint {
+	margin: 0;
+	color: var(--muted);
+	font-size: 0.85rem;
+	line-height: 1.5;
+}
+
+.field-problem,
+.form-problem {
+	margin: var(--space-xs) 0 0;
+	padding: var(--space-xs) var(--space-m);
+	border-inline-start: 4px solid var(--bad);
+	border-radius: var(--radius-s);
+	background: color-mix(in srgb, var(--bad) 10%, transparent);
+	font-size: 0.9rem;
+}
+
+.form-problem {
+	margin-block-end: var(--space-l);
+}
+
+.form-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-s);
+}
+
+.modal .field {
+	margin-block-end: var(--space-l);
+}
+
+.modal .field-problem {
+	margin-block: calc(-1 * var(--space-s)) var(--space-l);
+}
+
 /* ---- Notices ------------------------------------------------------------ */
 
 .banner {
@@ -294,6 +560,28 @@ button.icon:disabled {
 	border: 1px solid var(--border);
 	background: var(--bg);
 	cursor: pointer;
+}
+
+/* Over the bottom of the screen, newest last, above everything but a dialog. */
+.toast-stack {
+	position: fixed;
+	z-index: 30;
+	inset-block-end: calc(var(--space-l) + env(safe-area-inset-bottom));
+	inset-inline: var(--space-l);
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-s);
+	max-width: 28rem;
+	margin-inline: auto;
+	pointer-events: none;
+}
+
+.toast-stack > * {
+	pointer-events: auto;
+}
+
+.toast-error {
+	border-inline-start: 4px solid var(--bad);
 }
 
 /* The new-build notice and the toasts are the same shape. */
@@ -445,4 +733,13 @@ button.icon:disabled {
 .tab-stale-bar {
 	inset-block-start: var(--space-l);
 	inset-block-end: auto;
+}
+
+/* On a phone the bar of screens is along the bottom, and what is raised from
+   the bottom is raised above it. Last, to come after where each is placed. */
+@media (max-width: 48rem) {
+	.update-prompt,
+	.toast-stack {
+		inset-block-end: calc(4.5rem + env(safe-area-inset-bottom));
+	}
 }

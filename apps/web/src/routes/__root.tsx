@@ -2,6 +2,8 @@ import { createRootRoute, Outlet } from '@tanstack/react-router';
 
 import { CommandsProvider, useShortcuts } from '../commands/context.js';
 import { ErrorScreen } from '../components/ErrorScreen.js';
+import { NavBar } from '../components/NavBar.js';
+import { NoticesProvider } from '../components/Notices.js';
 import { UpdatePrompt } from '../components/UpdatePrompt.js';
 import { InstallBanner } from '../install/InstallBanner.js';
 
@@ -13,11 +15,14 @@ const Shortcuts = () => {
 const RootLayout = () => (
 	<CommandsProvider>
 		<Shortcuts />
-		<div className="app">
-			<InstallBanner />
-			<Outlet />
-			<UpdatePrompt />
-		</div>
+		<NoticesProvider>
+			<div className="app">
+				<InstallBanner />
+				<NavBar />
+				<Outlet />
+				<UpdatePrompt />
+			</div>
+		</NoticesProvider>
 	</CommandsProvider>
 );
 

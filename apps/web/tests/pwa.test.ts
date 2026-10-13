@@ -1,11 +1,10 @@
 import { readFileSync } from 'node:fs';
 
-import { createRouter } from '@tanstack/react-router';
 import { describe, expect, it } from 'vitest';
 
 import { loadBrand } from '../brand.js';
 import { PWA_WORKBOX, pwaManifest, pwaOptions } from '../pwa.js';
-import { routeTree } from '../src/routeTree.gen';
+import { createAppRouter } from '../src/router.js';
 
 /**
  * The installability checklist.
@@ -125,11 +124,16 @@ describe('the service worker', () => {
 	});
 
 	it('answers every route the router has with the shell', () => {
-		// So a route added under `src/routes` cannot be left out of the allowlist.
-		const paths = Object.keys(createRouter({ routeTree }).routesByPath);
-		expect(paths).not.toHaveLength(0);
+		// Each screen is a fragment on `/`, which is all the request carries,
+		// so a route added under `src/routes` opens offline with nothing to add
+		// to the allowlist.
+		const router = createAppRouter();
+		const paths = Object.keys(router.routesByPath);
+		expect(paths).toContain('/library');
 		paths.forEach((path) => {
-			expect(shellAnswers(path), path).toBe(true);
+			const requested = new URL(router.history.createHref(path), 'https://memoriam.test');
+			expect(`${requested.pathname}${requested.search}`, path).toBe('/');
+			expect(shellAnswers(requested.pathname), path).toBe(true);
 		});
 	});
 

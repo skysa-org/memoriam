@@ -231,10 +231,16 @@ separately, except a badge's date, so they sync for free.
 ## 7. Local store and the app
 
 **IndexedDB through Dexie** (`apps/web/src/store/db.ts`):
-- The tables mirror skysa-notes': `notes` keyed `[connectionId+id]`, `folders`, `opQueue`,
-  `prefs`. A "note" is any markdown file in the library: a passage, or a year's activity.
+- The tables mirror skysa-notes': `notes` keyed `[connectionId+id]`, `folders`, `prefs`. A
+  "note" is any markdown file in the library: a passage, or a year's activity.
 - Every row has `connectionId = 'local'` until sync arrives.
-- Writers queue their operations from the start, so sync has a queue to send when it comes.
+- Each row also keeps its title and source read out of the file, so a list need not parse every
+  file.
+- There is no queue of writes owed to a provider yet. Sync brings skysa-notes' queue in a schema
+  version of its own. A first connection queues the whole library afresh anyway, as skysa-notes'
+  does, so a queue kept before then would have no reader. Writes set `dirty` from the start.
+- Deleting a passage or a collection removes its rows, and an undo notice puts them back. Once
+  there is sync, a delete leaves a tombstone until it has been sent, as in skysa-notes.
 - Until the first release, version 1 of the schema may still change. After it, a version only
   adds, and an upgrade carries forward what an older build wrote.
 
@@ -255,7 +261,10 @@ Two tabs practising at once therefore cannot overwrite each other.
 tab flushes what it holds, closes its database for good, and says it is out of date. A frozen tab
 lets go of the database (`store/frozenTab.ts`).
 
-**Where the app is.** The location lives in the URL hash, in a single route.
+**Where the app is.** The location lives in the URL hash: TanStack Router with hash history, a
+file route for each screen (`#/library`, `#/passage/<id>`). The server is only ever asked for `/`,
+so the service worker's one fallback covers every screen offline, and no passage's id or name is
+sent to a server.
 
 **Keyboard.** Commands are registered by the components that own them
 (`apps/web/src/commands/`), and the palette and the shortcuts read the same list. Shortcuts need a
@@ -332,7 +341,7 @@ apps/web/              the PWA
   pwa.ts               manifest and service worker
   public/_headers      CSP and HSTS
   src/
-    routes/            TanStack Router (one route; the place is in the hash)
+    routes/            TanStack Router, a file route per screen (hash history)
     components/        the shell and shared UI
     practice/          the practice screen and keystroke capture
     store/             Dexie: every local read and write

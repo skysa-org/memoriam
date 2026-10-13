@@ -100,14 +100,24 @@ export interface SplitDocument {
  * start of the vocabulary below; see `PassageFrontmatter`.
  */
 const KNOWN_KEYS = ['id', 'title', 'created', 'updated', 'tags'] as const;
+type KnownKeyOf = (typeof KNOWN_KEYS)[number];
 
 /**
- * The fields the app may write: those, and a passage's own (docs/ARCHITECTURE.md
- * §3). `source` and `progress` are not in the vocabulary below, since `Source:
+ * The fields the app may write, in the order a new block lists them: those, and
+ * a passage's own (docs/ARCHITECTURE.md §3). `source` and `progress` are not in the vocabulary below, since `Source:
  * the Psalms` and `Progress: slow` can open a note; `chunker` is a word only
  * this app says, and is.
  */
-const WRITTEN_KEYS = [...KNOWN_KEYS, 'source', 'chunker', 'progress'] as const;
+const WRITTEN_KEYS = [
+	'id',
+	'title',
+	'source',
+	'created',
+	'updated',
+	'tags',
+	'chunker',
+	'progress',
+] as const satisfies readonly (KnownKeyOf | 'source' | 'chunker' | 'progress')[];
 
 /**
  * Keys that mean "this block is metadata", used to settle one question only:
