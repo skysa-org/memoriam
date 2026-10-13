@@ -32,11 +32,25 @@ III.i"), optional tags, and a body.
 
 **Structure is kept.** Line breaks and stanzas are kept, because they are part of what is learnt.
 
-**Scripts.** Words are found with `Intl.Segmenter`, so any script whose words are typed letter by
-letter works: Latin, Greek, Cyrillic, Hebrew, Arabic and others. Chinese, Japanese, Korean and Thai
-are typed through an input method that composes characters, and have no first letter to type.
-They are not supported in v1, and the editor says so when a passage has none of the words it can
-practise.
+**Words.** A word is a run of letters, marks and digits. An apostrophe between letters
+(`don’t`, `shepherd’s`) or a point or comma between digits (`3.14`, `1,000`) holds it together. A
+hyphen parts two words: `well-known` is typed `w`, `k`. Everything else (spaces, quotes, dashes,
+punctuation) is shown and never typed. A word's key is its first letter or digit, lowercased,
+without accents, and folded (`ß` is `s`, `æ` is `a`, `ς` is `σ`, Hebrew final forms are their
+letters).
+
+**Words are found by a fixed regular expression over Unicode properties, not by
+`Intl.Segmenter`.** Chunk keys are hashes of the words, and `chunker` promises that the same text
+is cut into the same chunks on every device, now and later. `Intl.Segmenter` is each engine's ICU,
+and engines differ in version and tailoring: the same line could be split two ways on two devices,
+and each would orphan the other's progress. A property escape answers the same wherever the
+character is assigned.
+
+**Scripts.** Any script whose words are typed letter by letter works: Latin, Greek, Cyrillic,
+Hebrew, Arabic and others. Chinese, Japanese, Korean, Thai, Lao, Khmer, Myanmar and Tibetan are
+typed through an input method that composes characters, and have no first letter to type. Their
+words are shown as text between the words that are typed. They are not supported in v1, and the
+editor says so when a passage has none of the words it can practise.
 
 ## 3. Files
 
@@ -76,11 +90,13 @@ He makes me lie down in green pastures.
 **The body is plain text, not markdown:**
 - A blank line separates sections: stanzas or paragraphs.
 - A line starting with `#` labels a section and is not practised.
-- `*emphasis*` and `_emphasis_` markers are kept in the file but are not part of the words to
-  type.
+- `*emphasis*`, `**emphasis**` and `_emphasis_` markers are kept in the file but are neither
+  shown nor typed. A run of `*` or `_` with a space or the line's edge on both sides is not a
+  marker, and is shown: the `* * *` that parts two stanzas.
 
 **Chunk keys:**
 - 7 characters of base32 from a synchronous 53-bit hash (cyrb53) of the chunk's normalised words.
+  The alphabet is Crockford's, lowercased, so no `i`, `l`, `o` or `u` to misread.
 - A key always starts with a letter, so YAML never reads it as a number.
 - A repeated chunk, such as a refrain, gets an occurrence suffix: `k3fq9ma.2`.
 
@@ -88,11 +104,29 @@ He makes me lie down in green pastures.
 version stays in the code as a frozen pure function. A better chunker can then never change an
 existing passage's keys and orphan its progress.
 
+**Chunker 1** cuts each section on its own, so a chunk never crosses a blank line or a label. It
+picks the cheapest cutting of the section by dynamic programming:
+- Each chunk costs `((words − 20) / 10)²`: twenty words is best, ten to thirty is good, and more
+  than 45 is never allowed.
+- Each cut costs by what it ends on. A line end that is also a sentence end costs nothing. A line
+  end at a clause costs 0.5, and a bare line end or a sentence end mid-line costs 1.5. A clause mark
+  mid-line (`,` `;` `:` a dash, a spaced hyphen) costs 3. A cut with no pause costs 8, and is
+  there only for a line too long to be one chunk.
+- Ties go to the shorter chunk.
+
+Its output on four fixtures (Psalm 23, Sonnet 18, the Gettysburg Address, "Hope is the thing with
+feathers") is pinned in `packages/core/tests/passage/chunk.test.ts`. A change there is a new
+chunker, not a fix.
+
 **The `progress` map:**
 - One flow-style line per chunk, in passage order.
 - Floats are rounded to two places, and the rounded value in the file is the truth, so devices
   agree.
 - `misses` counts misses per word, comma-separated.
+- Read leniently, since any tool may have edited the file:
+  - a field the app does not recognise as its own (a newer build's) is kept;
+  - a field of the wrong shape (`level: 9`) is passed over, and the next pass rewrites it;
+  - an entry that is not a mapping is kept as it is.
 
 **Writes:**
 - A completed pass rewrites only the `progress` block. Every other byte stays the same, including
@@ -103,8 +137,12 @@ existing passage's keys and orphan its progress.
 - An editor outside the app (Obsidian, a provider's web page) can leave keys that no longer match
   any chunk. Within each gap between keys that still match, those keys are paired with unmatched
   chunks by order, where the counts agree. Otherwise they are dropped on the next write.
-- If a passage's YAML cannot be edited safely (it fails to parse, or uses anchors), recording a
-  pass refuses and says so. It never drops the pass silently.
+- A passage cut by a chunker this build does not have keeps its `progress` as it is through an
+  edit: its keys are not this build's to work out.
+- If a passage's YAML cannot be edited safely (it fails to parse, or an anchor sits on a key the
+  write would change), recording a pass refuses and says so. It never drops the pass silently. An
+  edit to the words or details refuses the same way, rather than write new words over progress
+  it could not carry to them.
 
 **`activity-YYYY.md`.** Its frontmatter has two maps:
 - `days`, keyed `YYYY-MM-DD~<deviceId>`, giving `{ words, passes, reviews, ms }`;
@@ -120,24 +158,27 @@ Each day key has exactly one writing device, so two devices' copies can be merge
 |---|---|
 | L0 | Every word visible; type the first letters to copy it |
 | L1 | About 25% of words hidden, shown as placeholders of their length |
-| L2 | About 50% hidden, alternating complementary halves on each pass |
+| L2 | About 50% hidden, mostly the half shown on the pass before |
 | L3 | About 75% hidden |
 | L4 | Every word hidden, with placeholders |
 | L5 | Bare: no placeholders, only a line of context before the chunk (or the title, for the first chunk) |
 
-**Which words are hidden:**
-- Words are rotated so that every word is hidden within a few passes.
-- Words recalled last time are more likely to be hidden.
+**Which words are hidden** (`practice/hide.ts`):
+- Words take turns: those hidden least so far this session are hidden first, so every word is
+  hidden within a few passes (five at L1, three at L2, two at L3).
+- Among words hidden as often, one missed less over time (`progress.misses`) is likelier to be
+  hidden: what is known loses its cue first.
 - A missed word is shown on the next pass and hidden again on the pass after.
-- At L1 and L2, no more than 2–3 hidden words in a row.
-- The random choice is seeded, so a pass can be replayed exactly.
+- No more than 2 hidden words in a row at L1, or 3 at L2. So two L2 passes are not always exact
+  complements: a run of four shown words cannot all be hidden next time.
+- The random choice is seeded (mulberry32), so a pass can be replayed exactly.
 
 **Moving between levels:**
 
 | A pass | Then |
 |---|---|
 | At least 90% correct, no hints | Up one level |
-| 100% correct at a fluent pace | Up two |
+| 100% correct with no hesitations | Up two |
 | 70–89% correct | The same level again, with the missed words shown once |
 | Below 70% | Down one level |
 
@@ -151,10 +192,13 @@ into the next state:
 - A wrong one shows the correct word in red. The user must then type its letter, and it is one
   miss however many keys follow.
 - A slip onto an adjacent key, on a touch keyboard, is shown the same way but logged as a slip,
-  not a miss.
-- About 5 seconds idle shows a faint outline of the word, then the word itself. Either counts as a
-  miss.
-- A hesitation is a gap longer than max(2 s, 2.5× the user's median time per word).
+  not a miss. Neighbours are worked out from where a phone puts the keys; QWERTY is the only layout
+  so far.
+- 5 seconds idle on a word shows a faint outline of it, and 8 seconds the word itself. Either
+  counts as a miss, and the word is still typed to go on. A hint can also be asked for.
+- A key that is no letter or digit (a space, a full stop) is passed over.
+- A hesitation is a wait before a word's first key, right or wrong, longer than max(2 s, 2.5× the
+  user's median time per word).
 
 **First letters.** A word's first letter is its first letter or digit, case-folded and with
 diacritics removed. Ligatures (æ, œ) and ß are folded, final sigma and Hebrew final forms are
@@ -226,10 +270,16 @@ separately, except a badge's date, so they sync for free.
 ## 7. Local store and the app
 
 **IndexedDB through Dexie** (`apps/web/src/store/db.ts`):
-- The tables mirror skysa-notes': `notes` keyed `[connectionId+id]`, `folders`, `opQueue`,
-  `prefs`. A "note" is any markdown file in the library: a passage, or a year's activity.
+- The tables mirror skysa-notes': `notes` keyed `[connectionId+id]`, `folders`, `prefs`. A
+  "note" is any markdown file in the library: a passage, or a year's activity.
 - Every row has `connectionId = 'local'` until sync arrives.
-- Writers queue their operations from the start, so sync has a queue to send when it comes.
+- Each row also keeps its title and source read out of the file, so a list need not parse every
+  file.
+- There is no queue of writes owed to a provider yet. Sync brings skysa-notes' queue in a schema
+  version of its own. A first connection queues the whole library afresh anyway, as skysa-notes'
+  does, so a queue kept before then would have no reader. Writes set `dirty` from the start.
+- Deleting a passage or a collection removes its rows, and an undo notice puts them back. Once
+  there is sync, a delete leaves a tombstone until it has been sent, as in skysa-notes.
 - Until the first release, version 1 of the schema may still change. After it, a version only
   adds, and an upgrade carries forward what an older build wrote.
 
@@ -250,7 +300,10 @@ Two tabs practising at once therefore cannot overwrite each other.
 tab flushes what it holds, closes its database for good, and says it is out of date. A frozen tab
 lets go of the database (`store/frozenTab.ts`).
 
-**Where the app is.** The location lives in the URL hash, in a single route.
+**Where the app is.** The location lives in the URL hash: TanStack Router with hash history, a
+file route for each screen (`#/library`, `#/passage/<id>`). The server is only ever asked for `/`,
+so the service worker's one fallback covers every screen offline, and no passage's id or name is
+sent to a server.
 
 **Keyboard.** Commands are registered by the components that own them
 (`apps/web/src/commands/`), and the palette and the shortcuts read the same list. Shortcuts need a
@@ -327,7 +380,7 @@ apps/web/              the PWA
   pwa.ts               manifest and service worker
   public/_headers      CSP and HSTS
   src/
-    routes/            TanStack Router (one route; the place is in the hash)
+    routes/            TanStack Router, a file route per screen (hash history)
     components/        the shell and shared UI
     practice/          the practice screen and keystroke capture
     store/             Dexie: every local read and write

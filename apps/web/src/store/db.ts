@@ -32,42 +32,31 @@ export interface NoteRecord {
 	/** Stable across renames and moves, and written into the frontmatter. */
 	id: string;
 	connectionId: string;
-	/** Path within the library, `.md` included: `Psalms/Psalm 23.md`. */
+	/** Path within the library, `.md` included: `psalms/psalm-23.md`. */
 	path: string;
-	title: string;
 	/** The file's whole text, byte for byte: the one source of truth. */
 	source: string;
-	/** Set on a write sync has not sent yet. */
+	/** Read from `source` whenever it is written, so a list need not parse every file. */
+	title: string;
+	/** The frontmatter's `source`: where the words are from. Read as `title` is. */
+	reference?: string;
+	tags: string[];
+	/**
+	 * Set on every write the user made, for sync to send once there is sync
+	 * (§10). Nothing reads it before then; it is kept from the start so the
+	 * first connection knows what is owed without guessing.
+	 */
 	dirty: Flag;
-	/** A delete sync has not sent yet: the row is gone from every list. */
-	deletedLocally: Flag;
-	/** Hash of `source`, for telling whether a write changed anything. */
-	contentHash: string;
-	/** What sync last saw of the remote, once there is one. */
-	syncedHash?: string;
-	remoteId?: string;
-	remoteVersion?: string;
-	createdAt: string;
-	/** When the text was last edited. Practice never moves it. */
-	updatedAt: string;
+	createdAt: number;
+	/** When the words or details were last edited. Practice never moves it. */
+	updatedAt: number;
 }
 
-/** A collection: a folder in the library. */
+/** A collection: a folder in the library, kept even while it holds nothing. */
 export interface FolderRecord {
 	connectionId: string;
 	path: string;
-	createdAt: string;
-}
-
-/** A write sync has yet to send, in the order it was made. */
-export interface OpQueueRecord {
-	seq?: number;
-	connectionId: string;
-	kind: 'write' | 'delete' | 'move' | 'createFolder' | 'deleteFolder';
-	noteId?: string;
-	path: string;
-	toPath?: string;
-	queuedAt: string;
+	createdAt: number;
 }
 
 export interface PreferenceRecord {
@@ -78,7 +67,6 @@ export interface PreferenceRecord {
 export type MemoriamDatabase = Dexie & {
 	notes: Table<NoteRecord, [string, string]>;
 	folders: Table<FolderRecord, [string, string]>;
-	opQueue: Table<OpQueueRecord, number>;
 	prefs: Table<PreferenceRecord, string>;
 };
 
@@ -99,13 +87,18 @@ export const noteKey = (note: Pick<NoteRecord, 'connectionId' | 'id'>): NoteKey 
 export const createDatabase = (name: string = DATABASE_NAME): MemoriamDatabase => {
 	const db = new Dexie(name) as MemoriamDatabase;
 
-	// `[connectionId+path]` is not declared unique: a tombstone keeps its path
-	// until its delete has been sent, so a passage made where a deleted one was
-	// is two rows at one key, by design. Writers keep live paths apart.
+	// `[connectionId+path]` is not declared unique, as skysa-notes' is not: once
+	// there is sync, a deleted passage's row stays at its path until the delete
+	// has been sent, and a new one may be made there meanwhile. Writers keep live
+	// paths apart (`store/passages.ts`).
+	//
+	// No queue of writes owed to a provider yet. Sync brings skysa-notes' with
+	// it, in a version of its own; until then nothing would read one, and a
+	// first connection queues the whole library afresh, as skysa-notes' does
+	// (§10).
 	db.version(1).stores({
-		notes: '[connectionId+id], id, connectionId, path, [connectionId+path], dirty, deletedLocally, updatedAt, remoteId',
+		notes: '[connectionId+id], id, connectionId, path, [connectionId+path], dirty, updatedAt',
 		folders: '[connectionId+path], connectionId, path',
-		opQueue: '++seq, connectionId, noteId, path',
 		prefs: 'key',
 	});
 

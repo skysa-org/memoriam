@@ -27,3 +27,10 @@ export const HIDDEN_PREFIX = '.';
  * synced like any passage.
  */
 export const APP_DATA_FOLDER = '.memoriam';
+
+/**
+ * The chunker a new passage is pinned to (docs/ARCHITECTURE.md §3,
+ * "`chunker: 1`"). Raised only when a new chunker is added; a passage already
+ * pinned keeps the one it has, so its progress stays keyed as it was.
+ */
+export const CURRENT_CHUNKER = 1;
