@@ -81,6 +81,7 @@ He makes me lie down in green pastures.
 
 **Chunk keys:**
 - 7 characters of base32 from a synchronous 53-bit hash (cyrb53) of the chunk's normalised words.
+  The alphabet is Crockford's, lowercased, so no `i`, `l`, `o` or `u` to misread.
 - A key always starts with a letter, so YAML never reads it as a number.
 - A repeated chunk, such as a refrain, gets an occurrence suffix: `k3fq9ma.2`.
 
@@ -93,6 +94,10 @@ existing passage's keys and orphan its progress.
 - Floats are rounded to two places, and the rounded value in the file is the truth, so devices
   agree.
 - `misses` counts misses per word, comma-separated.
+- Read leniently, since any tool may have edited the file:
+  - a field the app does not recognise as its own (a newer build's) is kept;
+  - a field of the wrong shape (`level: 9`) is passed over, and the next pass rewrites it;
+  - an entry that is not a mapping is kept as it is.
 
 **Writes:**
 - A completed pass rewrites only the `progress` block. Every other byte stays the same, including
