@@ -1,5 +1,5 @@
 import { PASSAGE_EXTENSION } from '../config.js';
-import { foldName } from './slug.js';
+import { isPassageName } from './slug.js';
 
 /**
  * A passage's title is frontmatter `title`, else its filename, else
@@ -22,7 +22,7 @@ export const UNTITLED_TITLE = 'Untitled';
 
 /** Strip the extension and turn slug separators back into spaces. */
 export const titleFromFilename = (filename: string): string => {
-	const withoutExtension = foldName(filename).endsWith(PASSAGE_EXTENSION)
+	const withoutExtension = isPassageName(filename)
 		? filename.slice(0, -PASSAGE_EXTENSION.length)
 		: filename;
 	return withoutExtension.replace(/[-_]+/g, ' ').trim();

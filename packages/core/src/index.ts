@@ -147,6 +147,7 @@ export {
 	extensionAt,
 	fitBytes,
 	foldName,
+	isPassageName,
 	MAX_NAME_BYTES,
 	normalizeTag,
 	passageFilename,

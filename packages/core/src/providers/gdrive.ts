@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-import { APP_FOLDER_NAME, MARKER_FILE, PASSAGE_EXTENSION } from '../config.js';
-import { foldName } from '../markdown/slug.js';
+import { APP_FOLDER_NAME, MARKER_FILE } from '../config.js';
+import { isPassageName } from '../markdown/slug.js';
 import { buildMarker, serializeMarker } from '../marker.js';
 import { basename, joinPath, normalizePath, parentPath, pathSegments, ROOT } from '../paths.js';
 import {
@@ -246,9 +246,6 @@ const byAge = (files: readonly DriveFile[]): DriveFile[] =>
 
 const earliest = (files: readonly DriveFile[]): DriveFile | undefined => byAge(files)[0];
 
-/** A note by its name, folded as the engine asks it (`decide`), so `Report.MD` is one. */
-const isNoteName = (name: string): boolean => foldName(name).endsWith(PASSAGE_EXTENSION);
-
 /**
  * Two files at one name with the same bytes: one is a copy of the other, and
  * the copy can go to the trash without anything of the user's going with it.
@@ -264,7 +261,7 @@ const isNoteName = (name: string): boolean => foldName(name).endsWith(PASSAGE_EX
 const sameBytes = (canonical: DriveFile, other: DriveFile): boolean =>
 	!isFolder(canonical) &&
 	!isFolder(other) &&
-	!isNoteName(other.name ?? '') &&
+	!isPassageName(other.name ?? '') &&
 	canonical.md5Checksum !== undefined &&
 	canonical.md5Checksum === other.md5Checksum &&
 	canonical.size === other.size;
@@ -277,7 +274,7 @@ const sameBytes = (canonical: DriveFile, other: DriveFile): boolean =>
  */
 const nameBeside = (file: DriveFile, name: string, at: Date, taken: readonly string[]): string => {
 	if (isFolder(file)) return conflictFolderName(name, at, taken);
-	return isNoteName(name)
+	return isPassageName(name)
 		? conflictFilename(name, at, taken)
 		: conflictNameKeepingExtension(name, at, taken);
 };

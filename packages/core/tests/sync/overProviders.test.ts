@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { PASSAGE_EXTENSION } from '../../src/config.js';
-import { foldName } from '../../src/markdown/slug.js';
+import { isPassageName } from '../../src/markdown/slug.js';
 import {
 	ancestorPaths,
 	basename,
@@ -439,9 +438,6 @@ const remoteFiles = (remote: Remote): Record<string, string> =>
 			})
 	);
 
-/** A note, by the engine's rule: `.md`, in any case. */
-const isNotePath = (path: string): boolean => foldName(path).endsWith(PASSAGE_EXTENSION);
-
 /**
  * The files the remote holds that no device can read, which each device lists
  * for its user instead (skysa-notes' docs/ARCHITECTURE.md §7). Only what would have been a note.
@@ -453,7 +449,7 @@ const remoteUnreadable = (remote: Remote): string[] =>
 			(entry) =>
 				entry.kind === 'file' &&
 				!isHidden(entry.path) &&
-				isNotePath(entry.path) &&
+				isPassageName(entry.path) &&
 				remote.backing.contentAt(entry.path) === undefined
 		)
 		.map((entry) => entry.path)
@@ -473,7 +469,7 @@ const remoteAttachments = (remote: Remote): Place[] =>
 	remote.backing
 		.snapshot()
 		.filter(
-			(entry) => entry.kind === 'file' && !isHidden(entry.path) && !isNotePath(entry.path)
+			(entry) => entry.kind === 'file' && !isHidden(entry.path) && !isPassageName(entry.path)
 		)
 		.map((entry) => ({ path: entry.path, remoteId: entry.remoteId, size: entry.size }))
 		.sort(byPlace);

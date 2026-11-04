@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+	isPassageName,
 	passageFilename,
 	sanitizeFolderName,
 	slugify,
@@ -240,5 +241,18 @@ describe('sanitizeFolderName', () => {
 	it('sidesteps COM0, LPT0 and the superscript digits', () => {
 		expect(sanitizeFolderName('LPT0')).toBe('LPT0 folder');
 		expect(sanitizeFolderName('COM\u00b2')).toBe('COM\u00b2 folder');
+	});
+});
+
+describe('isPassageName', () => {
+	it.each([
+		['psalms/Psalm-23.md', true],
+		['Sonnet.MD', true],
+		['Ünïcode.Md', true],
+		['photo.png', false],
+		['readme.mdx', false],
+		['md', false],
+	])('%s is a passage: %s', (name, passage) => {
+		expect(isPassageName(name)).toBe(passage);
 	});
 });

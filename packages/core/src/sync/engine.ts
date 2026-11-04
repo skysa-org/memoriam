@@ -1,8 +1,8 @@
-import { APP_DATA_FOLDER, PASSAGE_EXTENSION } from '../config.js';
+import { APP_DATA_FOLDER } from '../config.js';
 import { contentTypeOf } from '../files.js';
 import { contentHash } from '../hash.js';
 import { parsePassageFile } from '../markdown/passage.js';
-import { foldName } from '../markdown/slug.js';
+import { foldName, isPassageName } from '../markdown/slug.js';
 import {
 	ancestorPaths,
 	basename,
@@ -222,7 +222,7 @@ const isNoteEntry = (entry: ChangeEntry): entry is RemoteEntry =>
 	entry.deleted !== true &&
 	entry.kind === 'file' &&
 	!unsynced(entry.path) &&
-	foldName(entry.path).endsWith(PASSAGE_EXTENSION);
+	isPassageName(entry.path);
 
 /** The message of an unknown throw, without letting a non-Error crash the log. */
 const messageOf = (error: unknown): string =>
@@ -2873,7 +2873,7 @@ export const createSyncEngine = (options: SyncEngineOptions): SyncEngine => {
 		//
 		// It is a row of its own (skysa-notes' docs/ARCHITECTURE.md §7, "Files beside
 		// notes"): mirrored, never read.
-		if (!foldName(entry.path).endsWith(PASSAGE_EXTENSION)) {
+		if (!isPassageName(entry.path)) {
 			return [
 				...unlisted(),
 				...(await noteNoLonger(entry, decided)),

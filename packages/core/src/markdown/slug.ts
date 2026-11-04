@@ -245,6 +245,13 @@ export const passageFilename = (title: string): string => `${slugify(title)}${PA
 export const foldName = (name: string): string => name.normalize('NFC').toLowerCase();
 
 /**
+ * Whether a name or path is a passage's: its extension folded as `foldName`
+ * folds, so `Psalm-23.MD` from a Windows tool is one. The engine, the providers
+ * and the app all ask this, and must answer it the same way.
+ */
+export const isPassageName = (name: string): boolean => foldName(name).endsWith(PASSAGE_EXTENSION);
+
+/**
  * Disambiguate against names already in the folder by appending `-2`, `-3`, and
  * so on — the convention every file manager uses.
  */
