@@ -27,3 +27,5 @@ The shared building blocks of `components/` are in `components/ui/`, and the app
 A command is not registered again for a new `run` on every render, so the palette is not told of a change that is none; it runs the latest `run`.
 
 `useEscapeKey` replaces `useEscape`: it answers only an Escape nothing nearer has, and not one ending a composition.
+
+The command palette closes on a press begun and let go on the page around it, as a dialog's way out, rather than on any press that starts there; it, the confirm and the name dialogs give the focus back through one `useFocusBack`.
