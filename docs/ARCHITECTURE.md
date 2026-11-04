@@ -547,11 +547,13 @@ drive the engine through the adapter, held back in S1, are restored. Where it di
     them: placed, adopted, gone, clashing), `batch.ts` (what a batch's decisions are reached against, and its
     readings that no decision changes), `cascade.ts` (what a folder's deletion takes with it, and
     the folders above a kept passage it must not), `deletions.ts` (a deletion believed or not by
-    the rest of the batch, and what it takes with it), `files.ts` (where each file that is not a passage is,
+    the rest of the batch, and what it takes with it), `decided.ts` (what a batch's decisions have
+    spoken for: written back, a `merge-note` among them, or said anything about), `files.ts` (where each file that is not a passage is,
     replayed through a batch's decisions), `folders.ts` (folders, as a pull decides them: made,
     moved, moved over, deleted once rescued), `notes.ts` (passages, as a pull decides them:
     matched, read, merged or reconciled, moved aside, let go of), `occupancy.ts` (which passages end up in or under a
-    folder, and the names a copy there must not take), `replay.ts` (where a passage, a folder or an unreadable
+    folder, and the names a copy there must not take), `reconcile.ts` (a scan's last word on what
+    it never mentioned), `replay.ts` (where a passage, a folder or an unreadable
     file is once the decisions so far are applied, a `merge-note` among them).
   - `sync/push/`, the push's: `conflicts.ts` (a write the remote would not take: set aside under a
     conflict name, merged, or reconciled by the conflict rule), `drain.ts` (the queue drained in
