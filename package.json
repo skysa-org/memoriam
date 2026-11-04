@@ -12,6 +12,7 @@
 		"build": "pnpm --filter @memoriam/core run build && pnpm --filter @memoriam/web run build && pnpm --filter @memoriam/api run build",
 		"test": "pnpm -r run test",
 		"coverage": "vitest run --coverage --testTimeout=20000",
+		"size": "pnpm --filter @memoriam/web run size",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
 		"knip": "knip",

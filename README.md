@@ -43,6 +43,7 @@ pnpm verify     # format check, lint, typecheck, tests: run before every commit
 pnpm coverage   # the same tests as one run with coverage, against vitest.config.ts's thresholds
 pnpm knip       # unused files, exports and dependencies (CI reports it; it does not gate yet)
 pnpm build
+pnpm size       # the built web app against its size budget (after pnpm build)
 ```
 
 ## Contributing
