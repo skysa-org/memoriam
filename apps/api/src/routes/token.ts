@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 
 import type { AppEnv } from '../app.js';
-import { openOAuthSecret, sealOAuthSecret } from '../crypto.js';
+import { openOAuthSecret, sealedOf, sealOAuthSecret, secretColumns } from '../crypto.js';
 import { schema } from '../db/client.js';
 import { fail, tooMany } from '../http.js';
 import { logFailure } from '../log.js';
@@ -46,11 +46,9 @@ export const tokenRoutes = (doFetch: FetchLike) => {
 		// A row sealed under a key this deployment no longer holds cannot be
 		// recovered here, and the client can do nothing about it by retrying. It
 		// is the same answer as a revoked grant: reconnect.
-		const secret = await openOAuthSecret(c.get('secretKey'), {
-			ciphertext: connection.secretCiphertext,
-			iv: connection.secretIv,
-			keyId: connection.secretKeyId,
-		}).catch(() => undefined);
+		const secret = await openOAuthSecret(c.get('secretKey'), sealedOf(connection)).catch(
+			() => undefined
+		);
 		if (secret === undefined) return fail(c, 'reauthorize_required', 401);
 
 		const refreshed = await client
@@ -85,13 +83,7 @@ export const tokenRoutes = (doFetch: FetchLike) => {
 			.update(schema.connections)
 			.set({
 				lastUsedAt: new Date(),
-				...(rotated === undefined
-					? {}
-					: {
-							secretCiphertext: rotated.ciphertext,
-							secretIv: rotated.iv,
-							secretKeyId: rotated.keyId,
-						}),
+				...(rotated === undefined ? {} : secretColumns(rotated)),
 			})
 			.where(eq(schema.connections.id, connection.id));
 
