@@ -25,7 +25,9 @@ There is no server yet. Everything runs in the browser against IndexedDB.
 pnpm verify   # format:check + lint + typecheck + test
 ```
 
-CI runs the same checks, plus `pnpm build`, plus `pnpm audit --prod` for information only.
+CI runs the same checks, plus `pnpm build`, a check that the generated files (the route tree, the
+Worker's types, the migration snapshots) match their sources, the tests again on Node 22.13, and
+`pnpm audit --prod` for information only.
 
 What a change is expected to carry:
 
