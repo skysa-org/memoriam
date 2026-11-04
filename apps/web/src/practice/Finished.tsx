@@ -1,7 +1,7 @@
-import { type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import { t } from '../i18n/t.js';
-import { type Tally } from './Session.js';
+import type { Tally } from './Session.js';
 
 /** The end of a session, or a session with nothing in it: what came of it, and where next. */
 export const Finished = ({

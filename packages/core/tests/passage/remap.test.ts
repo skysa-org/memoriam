@@ -8,7 +8,7 @@ import {
 	fillGaps,
 	remapProgress,
 } from '../../src/passage/remap.js';
-import { type ChunkProgress, type Progress } from '../../src/progress/codec.js';
+import type { ChunkProgress, Progress } from '../../src/progress/codec.js';
 
 const cut = (body: string): ChunkedPassage => {
 	const chunked = chunkPassage(body, 1);

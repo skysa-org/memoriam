@@ -1,5 +1,5 @@
 import { daysBetween, localDay } from '../day.js';
-import { type ChunkedPassage } from '../passage/chunk.js';
+import type { ChunkedPassage } from '../passage/chunk.js';
 import { type ChunkProgress, MAX_LEVEL, type Progress } from '../progress/codec.js';
 import { recall } from '../schedule/fsrs.js';
 

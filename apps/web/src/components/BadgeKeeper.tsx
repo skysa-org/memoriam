@@ -1,4 +1,4 @@
-import { type Badge } from '@memoriam/core';
+import type { Badge } from '@memoriam/core';
 import { Link } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
 

@@ -1,12 +1,7 @@
 import { ancestorPaths, foldName, isWithin, parentPath, pathSegments } from '@memoriam/core';
 import Dexie, { type PromiseExtended } from 'dexie';
 
-import {
-	type FileRecord,
-	type MemoriamDatabase,
-	type NoteRecord,
-	type OpQueueRecord,
-} from './db.js';
+import type { FileRecord, MemoriamDatabase, NoteRecord, OpQueueRecord } from './db.js';
 
 /**
  * The push queue: what the sync engine owes the remote, in the order it has to

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { fade } from '../../src/practice/fade.js';
-import { type PassSummary } from '../../src/practice/pass.js';
+import type { PassSummary } from '../../src/practice/pass.js';
 
 const pass = (missed: number, over: Partial<PassSummary> = {}): PassSummary => ({
 	words: 20,

@@ -1,5 +1,5 @@
-import { type ProviderKind } from '@memoriam/core';
-import { type PromiseExtended } from 'dexie';
+import type { ProviderKind } from '@memoriam/core';
+import type { PromiseExtended } from 'dexie';
 
 import { type CredentialRecord, type MemoriamDatabase, PENDING_CREDENTIAL_ID } from './db.js';
 

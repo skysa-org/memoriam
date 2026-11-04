@@ -1,5 +1,5 @@
-import { type ProviderKind } from '@memoriam/core';
-import { type PromiseExtended } from 'dexie';
+import type { ProviderKind } from '@memoriam/core';
+import type { PromiseExtended } from 'dexie';
 
 import {
 	isLive,

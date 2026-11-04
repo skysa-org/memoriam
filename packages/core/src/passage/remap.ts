@@ -1,4 +1,4 @@
-import { type ProgressBlock } from '../markdown/frontmatter.js';
+import type { ProgressBlock } from '../markdown/frontmatter.js';
 import {
 	type ChunkProgress,
 	type Progress,
@@ -6,7 +6,7 @@ import {
 	readProgress,
 } from '../progress/codec.js';
 import { type Chunk, type ChunkedPassage, chunkPassage, keyText } from './chunk.js';
-import { type PassageWord } from './text.js';
+import type { PassageWord } from './text.js';
 
 /**
  * Progress carried across a change to a passage's words (docs/ARCHITECTURE.md

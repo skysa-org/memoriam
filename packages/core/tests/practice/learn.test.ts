@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { isLearnt, learningPass } from '../../src/practice/learn.js';
-import { type WordResult } from '../../src/practice/typing.js';
+import type { WordResult } from '../../src/practice/typing.js';
 
 const word = (missed = false): WordResult => ({
 	missed,

@@ -1,7 +1,7 @@
 import { isAuthError } from '@memoriam/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { type ApiClient } from '../src/api/client.js';
+import type { ApiClient } from '../src/api/client.js';
 import { bindLibrary, unbindLibrary } from '../src/store/connection.js';
 import { forgetCredential, keepCredential } from '../src/store/credentials.js';
 import { createDatabase, type MemoriamDatabase } from '../src/store/db.js';

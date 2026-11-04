@@ -1,4 +1,4 @@
-import { type PassSummary } from './pass.js';
+import type { PassSummary } from './pass.js';
 
 /**
  * A pass's grade for the scheduler, worked out from how it went and never

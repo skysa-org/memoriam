@@ -1,4 +1,4 @@
-import { type ProviderKind } from '@memoriam/core';
+import type { ProviderKind } from '@memoriam/core';
 import Dexie, { type Table } from 'dexie';
 
 import { letGoWhenFrozen } from './frozenTab.js';
