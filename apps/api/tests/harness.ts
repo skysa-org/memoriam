@@ -8,7 +8,7 @@ import {
 	toBase64Url,
 } from '../src/crypto.js';
 import { type AppConfig, parseEnv } from '../src/env.js';
-import { answerCookieName, flowCookieName } from '../src/session.js';
+import { answerCookieName, flowCookieName } from '../src/flowCookies.js';
 import { createD1 } from './d1.js';
 
 /**
