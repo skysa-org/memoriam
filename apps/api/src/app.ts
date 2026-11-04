@@ -8,6 +8,7 @@ import { type Bearer, bearerFrom, grantHolder } from './credentials.js';
 import { importSecretKey, type SecretKey, signingKey } from './crypto.js';
 import { createDb, type Database } from './db/client.js';
 import type { AppConfig } from './env.js';
+import { fail } from './http.js';
 import { neverLimited, type RateLimiter } from './limits.js';
 
 /**
@@ -186,10 +187,10 @@ export const createApp = (options: CreateAppOptions) => {
 	 */
 	const requireBearer = createMiddleware<AppEnv>(async (c, next) => {
 		const credential = bearerFrom(c.req.header('authorization'));
-		if (credential === undefined) return c.json({ error: 'credential_required' }, 401);
+		if (credential === undefined) return fail(c, 'credential_required', 401);
 
 		const bearer = await grantHolder(c.get('db'), credential);
-		if (bearer === undefined) return c.json({ error: 'credential_revoked' }, 401);
+		if (bearer === undefined) return fail(c, 'credential_revoked', 401);
 
 		c.set('bearer', bearer);
 		await next();
@@ -203,7 +204,7 @@ export const createApp = (options: CreateAppOptions) => {
 	app.route('/', tokenRoutes(doFetch));
 	app.route('/', connectionRoutes(doFetch));
 
-	app.notFound((c) => c.json({ error: 'not_found' }, 404));
+	app.notFound((c) => fail(c, 'not_found', 404));
 
 	app.onError((err, c) => {
 		// A middleware that already decided on an answer — the CSRF check, say —
@@ -212,7 +213,7 @@ export const createApp = (options: CreateAppOptions) => {
 		if (err instanceof HTTPException) return err.getResponse();
 
 		console.error(summarize(err));
-		return c.json({ error: 'internal_error' }, 500);
+		return fail(c, 'internal_error', 500);
 	});
 
 	return app;

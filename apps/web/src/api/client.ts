@@ -1,4 +1,4 @@
-import { PROVIDER_KINDS, type ProviderKind } from '@memoriam/core';
+import { type ApiErrorCode, PROVIDER_KINDS, type ProviderKind } from '@memoriam/core';
 import { z } from 'zod';
 
 /**
@@ -125,23 +125,21 @@ export interface ApiClientOptions {
  * nothing at all: revoked from another device, or the account disconnected.
  * Either way the credential is spent for ever and the only answer is to throw
  * it away (docs/ARCHITECTURE.md §10, "The sync client").
+ *
+ * Each is one of core's `API_ERROR_CODES`, the list the server answers from,
+ * so a code taken off it does not compile here. skysa-notes' client also reads
+ * `not_entitled`, its operator's policy saying no; this server has no policy to
+ * say it, and an answer with it is a failure like any other code.
  */
-export type Refusal =
-	| 'credential_required'
-	| 'credential_revoked'
-	| 'reauthorize_required'
-	| 'not_entitled'
-	| 'not_found'
-	| 'forbidden_origin';
-
-const REFUSALS: readonly Refusal[] = [
+const REFUSALS = [
 	'credential_required',
 	'credential_revoked',
 	'reauthorize_required',
-	'not_entitled',
 	'not_found',
 	'forbidden_origin',
-];
+] as const satisfies readonly ApiErrorCode[];
+
+export type Refusal = (typeof REFUSALS)[number];
 
 export type Result<T> = { ok: true; value: T } | { ok: false; refusal: Refusal };
 
@@ -247,9 +245,8 @@ export const createApiClient = (options: ApiClientOptions = {}): ApiClient => {
 
 		if (!response.ok) {
 			const refusal = errorSchema.safeParse(body);
-			if (refusal.success && (REFUSALS as readonly string[]).includes(refusal.data.error)) {
-				return { ok: false, refusal: refusal.data.error as Refusal };
-			}
+			const known = REFUSALS.find((code) => code === refusal.data?.error);
+			if (known !== undefined) return { ok: false, refusal: known };
 			throw new ApiError(
 				`${init.method ?? 'GET'} ${path} failed with ${String(response.status)}`,
 				response.status

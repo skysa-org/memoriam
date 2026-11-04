@@ -68,7 +68,7 @@ describe('the mirror of the client', () => {
 		expect(schemas.filter((definition) => !client.includes(definition))).toEqual([]);
 
 		const refusals = (source: string) =>
-			/REFUSALS:readonly\w+\[\]=(\[[^\]]*\])/.exec(source)?.[1];
+			/REFUSALS(?::readonly\w+\[\])?=(\[[^\]]*\])/.exec(source)?.[1];
 		expect(refusals(mirror)).toBeDefined();
 		expect(refusals(client)).toBe(refusals(mirror));
 	});
@@ -260,8 +260,9 @@ describe('the refusals the client answers in words', () => {
 	});
 
 	it('never not_entitled, which this server has no policy to answer', async () => {
-		// The client knows the word, from skysa-notes; this server never says
-		// it. Every connected device mints.
+		// skysa-notes' server says it, and its client knows the word; this
+		// one never says it, and the client here does not read it. Every
+		// connected device mints.
 		const app = buildApp();
 		const devices = [await app.connect(), await app.connect()];
 

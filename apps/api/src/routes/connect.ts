@@ -1,3 +1,4 @@
+import type { ApiErrorCode } from '@memoriam/core';
 import { and, desc, eq, notInArray } from 'drizzle-orm';
 import { type Context, Hono } from 'hono';
 import { z } from 'zod';
@@ -7,7 +8,7 @@ import { isCredentialHash, MAX_GRANTS_PER_CONNECTION } from '../credentials.js';
 import { randomBase64Url, type SealedSecret, sealOAuthSecret } from '../crypto.js';
 import { type Database, schema } from '../db/client.js';
 import { deviceLabel } from '../device.js';
-import { sameOrigin, tooMany } from '../http.js';
+import { fail, sameOrigin, tooMany } from '../http.js';
 import { logFailure } from '../log.js';
 import { createPkcePair, createState } from '../oauth/pkce.js';
 import { oauthFor, type OAuthProviderKind } from '../oauth/providers.js';
@@ -67,8 +68,8 @@ const back = (returnTo: string, outcome: Outcome): string =>
  */
 const refusal = (
 	c: Context<AppEnv>,
-	error: 'unsupported_provider' | 'provider_not_configured'
-): Response => c.json({ error }, error === 'unsupported_provider' ? 404 : 501);
+	error: Extract<ApiErrorCode, 'unsupported_provider' | 'provider_not_configured'>
+): Response => fail(c, error, error === 'unsupported_provider' ? 404 : 501);
 
 const startBody = z.object({
 	/** base64url SHA-256 of the credential the device has already written down. */
@@ -88,7 +89,7 @@ export const connectRoutes = (doFetch: FetchLike) => {
 	app.post('/auth/connect/:provider/start', async (c) => {
 		const config = c.get('config');
 		const cookies = { secure: config.cookiesSecure };
-		if (!sameOrigin(c, config.appOrigin)) return c.json({ error: 'forbidden_origin' }, 403);
+		if (!sameOrigin(c, config.appOrigin)) return fail(c, 'forbidden_origin', 403);
 
 		const resolved = oauthFor(config, c.req.param('provider'));
 		if (!resolved.ok) return refusal(c, resolved.error);
@@ -101,7 +102,7 @@ export const connectRoutes = (doFetch: FetchLike) => {
 		if (!limit.allowed) return tooMany(c, limit.retryAfter);
 
 		const parsed = startBody.safeParse(await c.req.json().catch(() => undefined));
-		if (!parsed.success) return c.json({ error: 'invalid_request' }, 400);
+		if (!parsed.success) return fail(c, 'invalid_request', 400);
 
 		const { verifier, challenge } = await createPkcePair();
 		const state = createState();
@@ -175,7 +176,7 @@ export const connectRoutes = (doFetch: FetchLike) => {
 		if (denied !== undefined) return answer('denied');
 
 		const code = c.req.query('code');
-		if (code === undefined) return c.json({ error: 'missing_code' }, 400);
+		if (code === undefined) return fail(c, 'missing_code', 400);
 
 		// The flow cookie got past the signature check, so this is a browser that
 		// started a flow here — but a code exchange is still an outbound call the
