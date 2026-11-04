@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { type ReactNode, useState } from 'react';
 
-import { ErrorScreen } from '../components/ErrorScreen.js';
 import { Icon } from '../components/Icon.js';
 import { useNotices } from '../components/Notices.js';
+import { ErrorScreen } from '../components/shell/ErrorScreen.js';
 import { formatMoment } from '../i18n/dates.js';
 import { t } from '../i18n/t.js';
 import {

@@ -1,10 +1,10 @@
 import { BADGES } from '@memoriam/core';
 import { createFileRoute, Link } from '@tanstack/react-router';
 
-import { ErrorScreen } from '../components/ErrorScreen.js';
 import { Heatmap } from '../components/Heatmap.js';
 import { Icon } from '../components/Icon.js';
 import { MasteryBar } from '../components/MasteryBar.js';
+import { ErrorScreen } from '../components/shell/ErrorScreen.js';
 import { formatDay } from '../i18n/dates.js';
 import { t } from '../i18n/t.js';
 import { type Rewards, useRewards } from '../store/rewards.js';

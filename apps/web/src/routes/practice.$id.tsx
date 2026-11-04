@@ -2,9 +2,9 @@ import { isLearnt, localDay, planDay } from '@memoriam/core';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
 
-import { ErrorScreen } from '../components/ErrorScreen.js';
 import { Icon } from '../components/Icon.js';
 import { MissingPassage } from '../components/MissingPassage.js';
+import { ErrorScreen } from '../components/shell/ErrorScreen.js';
 import { t } from '../i18n/t.js';
 import { Finished } from '../practice/Finished.js';
 import { Session, type Tally } from '../practice/Session.js';

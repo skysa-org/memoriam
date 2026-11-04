@@ -6,8 +6,8 @@ import { parseChord } from '../commands/chord.js';
 import { useCommand } from '../commands/context.js';
 import { t } from '../i18n/t.js';
 import { db } from '../store/db.js';
-import { CommandPalette } from './CommandPalette.js';
 import { useNotices } from './Notices.js';
+import { CommandPalette } from './shell/CommandPalette.js';
 
 /**
  * What the app can be asked to do from anywhere in it, and the palette that

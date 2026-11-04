@@ -3,10 +3,10 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState } from 'react';
 
 import { ConflictsBanner } from '../components/ConflictsBanner.js';
-import { ErrorScreen } from '../components/ErrorScreen.js';
 import { Icon } from '../components/Icon.js';
 import { MasteryBar } from '../components/MasteryBar.js';
 import { useNotices } from '../components/Notices.js';
+import { ErrorScreen } from '../components/shell/ErrorScreen.js';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog.js';
 import { NameDialog } from '../components/ui/NameDialog.js';
 import { t } from '../i18n/t.js';

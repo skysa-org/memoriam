@@ -1,8 +1,8 @@
 import { ROOT } from '@memoriam/core';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 
-import { ErrorScreen } from '../components/ErrorScreen.js';
 import { PassageEditor } from '../components/PassageEditor.js';
+import { ErrorScreen } from '../components/shell/ErrorScreen.js';
 import { t } from '../i18n/t.js';
 import { db } from '../store/db.js';
 import { useLibrary } from '../store/hooks.js';

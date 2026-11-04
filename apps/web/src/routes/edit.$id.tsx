@@ -2,9 +2,9 @@ import { parentPath } from '@memoriam/core';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 
-import { ErrorScreen } from '../components/ErrorScreen.js';
 import { MissingPassage } from '../components/MissingPassage.js';
 import { PassageEditor } from '../components/PassageEditor.js';
+import { ErrorScreen } from '../components/shell/ErrorScreen.js';
 import { t } from '../i18n/t.js';
 import { db } from '../store/db.js';
 import { useLibrary, usePassage } from '../store/hooks.js';

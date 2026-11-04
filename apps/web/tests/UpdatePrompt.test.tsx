@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { UpdatePrompt } from '../src/components/UpdatePrompt.js';
+import { UpdatePrompt } from '../src/components/shell/UpdatePrompt.js';
 import { deferred } from './support/scheduler.js';
 
 /**

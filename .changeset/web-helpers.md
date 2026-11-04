@@ -21,3 +21,5 @@ The store names its key types (`FileKey`, `FolderKey`) and the connection a call
 The web's sync/ and the API hold their changing values in `cell()` too, and the lint rule covers them.
 
 The lint rule for `cell()` covers every package's source, and the rest of the web holds its changing values that way.
+
+The shared building blocks of `components/` are in `components/ui/`, and the app's frame (the bar, the palette, the error, stale-tab and update screens) in `components/shell/`.

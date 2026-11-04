@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useId } from 'react';
 
 import { Backup } from '../components/Backup.js';
-import { ErrorScreen } from '../components/ErrorScreen.js';
+import { ErrorScreen } from '../components/shell/ErrorScreen.js';
 import { SyncSettings } from '../components/SyncSettings.js';
 import { weekdayName } from '../i18n/dates.js';
 import { t } from '../i18n/t.js';

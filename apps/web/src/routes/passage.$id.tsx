@@ -2,11 +2,11 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 
 import { useCommand } from '../commands/context.js';
 import { ChunkedText } from '../components/ChunkedText.js';
-import { ErrorScreen } from '../components/ErrorScreen.js';
 import { Icon } from '../components/Icon.js';
 import { MasteryBar } from '../components/MasteryBar.js';
 import { MissingPassage } from '../components/MissingPassage.js';
 import { useNotices } from '../components/Notices.js';
+import { ErrorScreen } from '../components/shell/ErrorScreen.js';
 import { t } from '../i18n/t.js';
 import { db } from '../store/db.js';
 import { usePassage } from '../store/hooks.js';

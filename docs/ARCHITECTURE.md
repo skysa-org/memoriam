@@ -427,7 +427,7 @@ sent to a server.
 **Keyboard.** Commands are registered by the components that own them
 (`apps/web/src/commands/`), and the palette and the shortcuts read the same list. Shortcuts need a
 modifier, so they never collide with typing during practice.
-- `Mod+K` opens the palette (`components/CommandPalette.tsx`, ported from skysa-notes). It is the
+- `Mod+K` opens the palette (`components/shell/CommandPalette.tsx`, ported from skysa-notes). It is the
   only chord: the screens are a tap away in the bar, and the chords a browser keeps for itself
   (`Mod+N`, `Mod+T`) cannot be taken.
 - `components/AppCommands.tsx` registers what can be done from anywhere: go to each screen, start
@@ -895,7 +895,8 @@ apps/web/              the PWA
   public/_headers      CSP and HSTS
   src/
     routes/            TanStack Router, a file route per screen (hash history)
-    components/        the screens' parts; ui/ for the building blocks they share
+    components/        the screens' parts; shell/ for the app's frame (the bar, the palette, the
+                       error, stale-tab and update screens), ui/ for the building blocks they share
     hooks/             React hooks the UI shares that hold no app state (from skysa-notes)
     practice/          the practice screen and keystroke capture
     store/             Dexie: every local read and write, the push queue, credentials
