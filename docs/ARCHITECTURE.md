@@ -546,7 +546,8 @@ drive the engine through the adapter, held back in S1, are restored. Where it di
   - `sync/pull/`, the pull's: `attachments.ts` (files that are not passages, as a pull decides
     them: placed, adopted, gone, clashing), `batch.ts` (what a batch's decisions are reached against, and its
     readings that no decision changes), `cascade.ts` (what a folder's deletion takes with it, and
-    the folders above a kept passage it must not), `deletions.ts` (a deletion believed or not by
+    the folders above a kept passage it must not), `decide.ts` (a batch decided entry by entry,
+    each sent to the part for its kind), `deletions.ts` (a deletion believed or not by
     the rest of the batch, and what it takes with it), `decided.ts` (what a batch's decisions have
     spoken for: written back, a `merge-note` among them, or said anything about), `files.ts` (where each file that is not a passage is,
     replayed through a batch's decisions), `folders.ts` (folders, as a pull decides them: made,
