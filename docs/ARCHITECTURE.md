@@ -948,7 +948,7 @@ apps/api/              the Worker (S5): OAuth, per-connection credentials, token
     context.ts         AppEnv (a request's bindings and db), AuthedEnv (+ bearer), RouteDeps
     routes/            connect, token, connections
     oauth/             Dropbox, OneDrive, Google Drive, and what the three share (common.ts)
-    db/                the D1 schema (drizzle)
+    db/                the D1 schema (drizzle), and the writes with a race to get right
     flowCookies.ts     the signed OAuth flow cookies (there are no sessions)
     http.ts            fail(), tooMany, requireSameOrigin, jsonBody
     json.ts            parseJson (outside JSON checked by a zod schema), formatIssues
