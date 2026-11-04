@@ -822,6 +822,11 @@ any of them out. The one Worker serves the app as well, so `/api` and the app sh
   its place. So `main.tsx` reads the outcome out of the real query before the router is made, puts
   the address back without it, and opens Settings (`sync/connectReturn.ts`). Settings says the
   outcome once.
+- **The callback never answers in JSON**, since a browser is on it. With no flow of this browser's
+  it sends it to `/?connect=expired`. Any other failure goes back to the flow's path with
+  `?connect=failed`, and is logged: a provider turned off since the flow started, a callback with
+  neither a code nor an error, or the callback's rate limit. These are checked after the flow, so
+  asking again is told the same. `/start` is a fetch from the app, and still answers them in JSON.
 - **Keeping the binding in step** (`components/SyncKeeper.tsx`, in the root layout). Once a page
   load, it takes up a connection a flow has just consented to, or asks after the bound one
   (`claimConnection`). When the scheduler is told the credential reaches nothing, it asks again,
