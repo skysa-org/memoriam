@@ -51,17 +51,18 @@ export {
 
 export { messageOf } from './sync/outcome.js';
 
-export type {
-	ConflictResolution,
-	OpOutcome,
-	PullBatch,
-	PullChange,
-	SyncFile,
-	SyncFolder,
-	SyncNote,
-	SyncOp,
-	SyncStore,
-	UnreadableFile,
+export {
+	type ConflictResolution,
+	isFileChange,
+	type OpOutcome,
+	type PullBatch,
+	type PullChange,
+	type SyncFile,
+	type SyncFolder,
+	type SyncNote,
+	type SyncOp,
+	type SyncStore,
+	type UnreadableFile,
 } from './sync/store.js';
 
 export { contentHash } from './hash.js';

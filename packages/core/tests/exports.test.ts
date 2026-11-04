@@ -59,6 +59,7 @@ const SURFACE = [
 	'isActivityPath',
 	'isAuthError',
 	'isBadge',
+	'isFileChange',
 	'isHidden',
 	'isLearnt',
 	'isRateLimitError',

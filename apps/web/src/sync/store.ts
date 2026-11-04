@@ -3,6 +3,7 @@ import {
 	conflictContent,
 	type ConflictResolution,
 	foldName,
+	isFileChange,
 	isWithin,
 	normalizePath,
 	type OpOutcome,
@@ -127,20 +128,6 @@ const toSyncFile = (file: FileRecord): SyncFile => ({
 	...(file.remoteVersion === undefined ? {} : { remoteVersion: file.remoteVersion }),
 	size: file.size,
 });
-
-type FileChange = Extract<
-	PullChange,
-	{ kind: 'upsert-file' | 'displace-file' | 'delete-file' | 'reupload-file' }
->;
-
-const FILE_CHANGES: ReadonlySet<PullChange['kind']> = new Set([
-	'upsert-file',
-	'displace-file',
-	'delete-file',
-	'reupload-file',
-]);
-
-const isFileChange = (change: PullChange): change is FileChange => FILE_CHANGES.has(change.kind);
 
 type FileOutcome = Extract<OpOutcome, { kind: 'uploaded' | 'moved-file' | 'lost-file' }>;
 
