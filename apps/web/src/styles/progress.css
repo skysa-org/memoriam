@@ -10,7 +10,7 @@
 
 .stats-card h2 {
 	margin: 0 0 var(--space-m);
-	font-size: 1rem;
+	font-size: var(--text-body);
 }
 
 .stats-card p {
@@ -25,7 +25,7 @@
 }
 
 .stats-big {
-	font-size: 1.25rem;
+	font-size: var(--text-xl);
 	font-weight: 600;
 }
 
@@ -72,7 +72,7 @@
 .heatmap-cell {
 	display: block;
 	aspect-ratio: 1;
-	border-radius: 2px;
+	border-radius: var(--radius-xs);
 	background: var(--surface);
 }
 
@@ -106,7 +106,7 @@
 	gap: 2px;
 	margin-block-start: var(--space-s);
 	color: var(--muted);
-	font-size: 0.75rem;
+	font-size: var(--text-xs);
 }
 
 .heatmap-legend .heatmap-cell {
@@ -160,6 +160,6 @@
 .badge-how,
 .badge-when {
 	color: var(--muted);
-	font-size: 0.8125rem;
+	font-size: var(--text-s);
 	line-height: 1.4;
 }

@@ -6,7 +6,7 @@
 .palette-backdrop {
 	position: fixed;
 	inset: 0;
-	z-index: 90;
+	z-index: var(--z-palette);
 	display: flex;
 	justify-content: center;
 	align-items: flex-start;
@@ -24,7 +24,7 @@
 	border: 1px solid var(--border);
 	border-radius: var(--radius-m);
 	background: var(--bg);
-	box-shadow: 0 1rem 2.5rem rgb(0 0 0 / 25%);
+	box-shadow: var(--shadow-xl);
 }
 
 .palette-field {
@@ -88,7 +88,7 @@
 
 .palette-group {
 	flex: none;
-	font-size: 0.75rem;
+	font-size: var(--text-xs);
 	color: var(--muted);
 }
 
@@ -96,7 +96,7 @@
 	flex: none;
 	padding: 0.1rem 0.35rem;
 	font-family: inherit;
-	font-size: 0.75rem;
+	font-size: var(--text-xs);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-s);
 	color: var(--muted);

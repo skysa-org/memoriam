@@ -8,7 +8,7 @@
 .passage-size {
 	margin: calc(-1 * var(--space-s)) 0 var(--space-l);
 	color: var(--muted);
-	font-size: 0.875rem;
+	font-size: var(--text-m);
 }
 
 .passage-reference + .passage-size {
@@ -17,7 +17,7 @@
 
 .passage-text {
 	font-family: var(--font-text);
-	font-size: 1.125rem;
+	font-size: var(--text-l);
 	line-height: 1.7;
 	white-space: pre-wrap;
 	overflow-wrap: break-word;
@@ -31,7 +31,7 @@
 	margin: 0 0 var(--space-2xs);
 	color: var(--muted);
 	font-family: var(--font-sans);
-	font-size: 0.8125rem;
+	font-size: var(--text-s);
 	font-weight: 600;
 	letter-spacing: 0.04em;
 	text-transform: uppercase;

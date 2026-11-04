@@ -40,7 +40,7 @@ a.icon-link {
 
 .collection-name {
 	margin: 0;
-	font-size: 1rem;
+	font-size: var(--text-body);
 	font-weight: 600;
 }
 
@@ -55,7 +55,7 @@ a.icon-link {
 	flex: 1;
 	margin-inline-start: var(--space-xs);
 	color: var(--muted);
-	font-size: 0.875rem;
+	font-size: var(--text-m);
 	white-space: nowrap;
 }
 
@@ -104,5 +104,5 @@ a.icon-link {
 
 .passage-row-reference {
 	color: var(--muted);
-	font-size: 0.875rem;
+	font-size: var(--text-m);
 }

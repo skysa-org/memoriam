@@ -46,7 +46,7 @@
 
 .today-goal h2 {
 	margin: 0 0 var(--space-s);
-	font-size: 1rem;
+	font-size: var(--text-body);
 }
 
 /* The reminder to back up (`BackupReminder.tsx`): below the day's practice, never in its way. */
@@ -82,7 +82,7 @@
 	width: 100%;
 	height: 0.5rem;
 	border: 0;
-	border-radius: 999px;
+	border-radius: var(--radius-pill);
 	background: var(--border);
 	appearance: none;
 	overflow: hidden;
@@ -90,18 +90,18 @@
 
 .today-meter progress::-webkit-progress-bar,
 .mastery-bar::-webkit-progress-bar {
-	border-radius: 999px;
+	border-radius: var(--radius-pill);
 	background: var(--border);
 }
 
 .today-meter progress::-webkit-progress-value,
 .mastery-bar::-webkit-progress-value {
-	border-radius: 999px;
+	border-radius: var(--radius-pill);
 	background: var(--brand);
 }
 
 .today-meter progress::-moz-progress-bar,
 .mastery-bar::-moz-progress-bar {
-	border-radius: 999px;
+	border-radius: var(--radius-pill);
 	background: var(--brand);
 }

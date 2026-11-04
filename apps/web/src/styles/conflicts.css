@@ -28,7 +28,7 @@
 
 .conflict h2 {
 	margin: 0 0 var(--space-m);
-	font-size: 1.125rem;
+	font-size: var(--text-l);
 }
 
 /* Side by side where there is room, one above the other on a phone. */
@@ -48,11 +48,11 @@
 }
 
 .conflict-text {
-	font-size: 1rem;
+	font-size: var(--text-body);
 }
 
 .conflict-text mark {
 	color: inherit;
 	background: var(--brand-wash);
-	border-radius: 2px;
+	border-radius: var(--radius-xs);
 }

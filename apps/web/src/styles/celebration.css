@@ -3,7 +3,7 @@
 /* Above the bar of screens on a phone; out of the way of the practice stage. */
 .celebration-region {
 	position: fixed;
-	z-index: 30;
+	z-index: var(--z-float);
 	inset-inline: var(--gutter);
 	inset-block-end: calc(4.5rem + env(safe-area-inset-bottom));
 	display: flex;
@@ -20,7 +20,7 @@
 	border: 1px solid color-mix(in srgb, var(--brand) 40%, var(--border));
 	border-radius: var(--radius-m);
 	background: var(--surface-raised);
-	box-shadow: var(--shadow);
+	box-shadow: var(--shadow-l);
 	pointer-events: auto;
 	animation: rise var(--duration-xl) var(--ease-out);
 }
@@ -42,7 +42,7 @@
 
 .celebration-text a {
 	color: var(--brand);
-	font-size: 0.875rem;
+	font-size: var(--text-m);
 }
 
 .practice-learnt {

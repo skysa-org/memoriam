@@ -6,7 +6,7 @@
 	justify-content: space-between;
 	margin: calc(-1 * var(--space-s)) 0 var(--space-m);
 	color: var(--muted);
-	font-size: 0.875rem;
+	font-size: var(--text-m);
 }
 
 /* The fade ladder, a dot a level: filled up to the chunk's own. */
@@ -56,7 +56,7 @@
 .chunk-view {
 	min-height: 6lh;
 	font-family: var(--font-text);
-	font-size: 1.25rem;
+	font-size: var(--text-xl);
 	line-height: 1.8;
 	white-space: pre-wrap;
 	overflow-wrap: break-word;
@@ -150,7 +150,7 @@
 
 .practice-left {
 	color: var(--muted);
-	font-size: 0.875rem;
+	font-size: var(--text-m);
 	white-space: nowrap;
 }
 
@@ -160,7 +160,7 @@
 
 .today-counts {
 	margin-block-end: var(--space-l);
-	font-size: 1.125rem;
+	font-size: var(--text-l);
 }
 
 .today-counts p {

@@ -421,6 +421,13 @@ each part of the app, which `styles/index.css` imports in the order they cascade
 the same specificity wins, so the order is part of what is drawn. The split cut the single
 `styles.css` into slices in its own order, and the CSS it builds was byte for byte the same.
 `tests/styles.test.ts` holds the folder to the imports.
+- **Tokens.** `styles/tokens.css` names the steps everything is drawn in: spacing (`--space-*`),
+  corners (`--radius-*`), how far something is lifted (`--shadow-*`), sizes of words (`--text-*`)
+  and what is over what (`--z-*`). A test checks that every variable the sheet uses is declared,
+  and that every step is declared in `tokens.css`.
+- **Brand defaults.** `--brand` and `--on-brand` have defaults there, the default brand's colours,
+  under `:where(:root)`. It weighs nothing, so the brand's stylesheet wins whichever loads first,
+  and a page without it still has its colours. A test keeps them equal to `brand/brand.json`.
 
 **A newer build in another tab ends this one.** As skysa-notes (`store/staleTab.ts`): the older
 tab flushes what it holds, closes its database for good, and says it is out of date. A frozen tab

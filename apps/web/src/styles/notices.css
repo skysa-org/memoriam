@@ -3,7 +3,7 @@
 .banner {
 	margin: 0;
 	padding: var(--space-s) var(--gutter);
-	font-size: 0.875rem;
+	font-size: var(--text-m);
 	color: var(--muted);
 	border-block-end: 1px solid var(--border);
 	background: var(--surface);
@@ -35,7 +35,7 @@
 /* Over the bottom of the screen, newest last, above everything but a dialog. */
 .toast-stack {
 	position: fixed;
-	z-index: 30;
+	z-index: var(--z-float);
 	inset-block-end: calc(var(--space-l) + env(safe-area-inset-bottom));
 	inset-inline: var(--space-l);
 	display: flex;
@@ -64,14 +64,14 @@
 	border: 1px solid var(--border);
 	border-radius: var(--radius-m);
 	background: var(--surface-raised);
-	box-shadow: var(--shadow);
+	box-shadow: var(--shadow-l);
 	--arrive-y: 0.5rem;
 	animation: arrive var(--duration-l) var(--ease-out);
 }
 
 .update-prompt {
 	position: fixed;
-	z-index: 50;
+	z-index: var(--z-prompt);
 	inset-block-end: calc(var(--space-l) + env(safe-area-inset-bottom));
 	inset-inline: var(--space-l);
 	margin-inline: auto;

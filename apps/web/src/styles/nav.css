@@ -3,7 +3,7 @@
 /* Across the top of a wide window; across the bottom of a phone (below). */
 .nav-bar {
 	position: sticky;
-	z-index: 10;
+	z-index: var(--z-bar);
 	inset-block-start: 0;
 	display: flex;
 	justify-content: center;
@@ -54,7 +54,7 @@
 		gap: var(--space-3xs);
 		max-width: 8rem;
 		padding: var(--space-xs) var(--space-s);
-		font-size: 0.75rem;
+		font-size: var(--text-xs);
 	}
 
 	.nav-item[aria-current='page'] {

@@ -8,7 +8,7 @@
 
 .settings-section h2 {
 	margin: 0 0 var(--space-s);
-	font-size: 1.125rem;
+	font-size: var(--text-l);
 }
 
 /* Sync has stopped until the account is connected again (`needsReconnect`):
@@ -38,7 +38,7 @@
 	min-width: 0;
 	margin: 0;
 	color: var(--muted);
-	font-size: 0.8125rem;
+	font-size: var(--text-s);
 	white-space: nowrap;
 }
 

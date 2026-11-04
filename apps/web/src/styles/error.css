@@ -9,7 +9,7 @@
 
 .error-screen h1 {
 	margin: 0 0 var(--space-s);
-	font-size: 1.25rem;
+	font-size: var(--text-xl);
 }
 
 .error-actions {
