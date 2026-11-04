@@ -16,7 +16,7 @@ import {
 } from '../sync/account.js';
 import { type ConnectOutcome, connectReturn as appConnectReturn } from '../sync/connectReturn.js';
 import { isLongRun } from '../sync/progress.js';
-import { syncScheduler, useSyncStatus } from '../sync/runtime.js';
+import { needsReconnect, syncScheduler, useSyncStatus } from '../sync/runtime.js';
 import type { SchedulerStatus, SyncScheduler } from '../sync/scheduler.js';
 import { ConfirmDialog } from './ConfirmDialog.js';
 import { ConflictsBanner } from './ConflictsBanner.js';
@@ -141,9 +141,7 @@ const statusLine = (status: SchedulerStatus, provider: string, now: number): str
 		case 'retrying':
 			return t('sync.status.retrying', { error });
 		case 'attention':
-			if (status.refusal === 'reauthorize_required') {
-				return t('sync.status.reconnect', { provider });
-			}
+			if (needsReconnect(status)) return t('sync.status.reconnect', { provider });
 			return status.stuck === undefined
 				? t('sync.status.attention', { error })
 				: t('sync.status.stuck', {
@@ -189,6 +187,7 @@ const Connected = ({
 	tell: (said: string) => void;
 }>) => {
 	const status = useSyncStatus(scheduler);
+	const reconnect = needsReconnect(status);
 	const [asking, setAsking] = useState(false);
 	const [held, setHeld] = useState<Held | undefined>(undefined);
 	const provider = PROVIDER_LABELS[kind];
@@ -216,7 +215,9 @@ const Connected = ({
 					? t('sync.settings.syncsWith', { provider })
 					: t('sync.settings.syncsWithAccount', { provider, account: bound.displayName })}
 			</p>
-			<p className="field-hint" role="status">
+			{/* Sync has stopped until the account is connected again: said in the
+			    colour of an error. */}
+			<p className={reconnect ? 'field-hint sync-problem' : 'field-hint'} role="status">
 				{statusLine(status, provider, now)}
 			</p>
 			{/* A run long enough to count: its bar, and the file it is on. A
@@ -225,7 +226,7 @@ const Connected = ({
 				<RunProgress status={status} label={t('sync.settings.progress')} />
 			)}
 			<div className="form-actions">
-				{status.refusal === 'reauthorize_required' && (
+				{reconnect && (
 					<button
 						type="button"
 						className="button primary"

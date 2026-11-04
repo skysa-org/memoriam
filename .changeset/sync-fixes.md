@@ -20,3 +20,5 @@ On Google Drive, a collection moved, renamed or deleted on one device no longer 
 Google Drive reads the whole library again when its change feed runs longer than that would take, rather than paging through other apps' hidden changes for minutes, and confirms the app's folder once a round rather than before every page. A passage deleted here is never taken over by another device's file at its name, which a re-scan could do, and its delete then sent for that file.
 
 No adapter, nor the fake, leaves the app's own folder (`leaveFolder`), by its path or its id: it would hide the folder from the app that owns it.
+
+Settings says a connection needs connecting again, and offers Connect again, for every problem that answers (the server or the provider wanting the account asked again, or a credential that reaches nothing), not only one, and draws that sentence in the colour of an error.

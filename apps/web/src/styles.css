@@ -1414,6 +1414,12 @@ textarea.field {
 	font-size: 1.125rem;
 }
 
+/* Sync has stopped until the account is connected again (`needsReconnect`):
+   an error, said in the colour of one. */
+.settings-section .sync-problem {
+	color: var(--bad);
+}
+
 /* How far a long sync has got, under its status line in Settings
    (`RunProgress`): a bar in the app's own colour, and the file it is on. A
    `progress` with no value is the browser's own "cannot say how far"

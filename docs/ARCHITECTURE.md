@@ -766,8 +766,10 @@ any of them out. The one Worker serves the app as well, so `/api` and the app sh
     (`PROGRESS_FROM` in `sync/progress.ts`) it says how many it has found, received or sent. A
     run of a few is not counted, so an edit's sync does not flash a number;
   - paused, or offline, or retrying;
-  - what needs attention, with the change that is stuck, or "Connect again" when the provider
-    must be asked again (`reauthorize_required`).
+  - what needs attention, with the change that is stuck, or "Connect again" when connecting the
+    account again is the answer (`needsReconnect` in `sync/runtime.ts`, as skysa-notes': the
+    server or the provider wants the account asked again, or the credential reaches nothing).
+    That sentence is drawn in the colour of an error, since sync has stopped until it is done.
 
   Sync now runs a sync and tries again a stuck change. While a sync goes, a long run draws its bar
   and the file it is on under the line (`RunProgress`), and **Pause syncing** stops it. Paused,

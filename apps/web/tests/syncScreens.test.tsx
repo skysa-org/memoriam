@@ -334,16 +334,42 @@ describe('connected', () => {
 			leave,
 		});
 
-		expect(
-			await screen.findByText(
-				'Dropbox needs to be connected again before your library can sync.'
-			)
-		).toBeTruthy();
+		const said = await screen.findByText(
+			'Dropbox needs to be connected again before your library can sync.'
+		);
+		// In the colour of an error: sync has stopped until it is.
+		expect(said.classList.contains('sync-problem')).toBe(true);
 		await user.click(screen.getByRole('button', { name: 'Connect again' }));
 		await waitFor(() => {
 			expect(leave).toHaveBeenCalled();
 		});
 		expect(startConnect).toHaveBeenCalledWith('dropbox', expect.any(String), '/');
+	});
+
+	it('asks for the provider again for every problem connecting again answers, and for none other', async () => {
+		await bound();
+		const { client } = fakes();
+		const reconnecting: Partial<SchedulerStatus>[] = [
+			{ phase: 'attention', refusal: 'credential_required' },
+			{ phase: 'attention', refusal: 'credential_revoked' },
+			// The provider refused a fresh token too (the engine's `paused`).
+			{ phase: 'attention', error: 'authorization required' },
+		];
+		await reconnecting.reduce(async (prior, status) => {
+			await prior;
+			showSettings({ client, scheduler: schedulerShowing(status), connectReturn: holding() });
+			expect(await screen.findByRole('button', { name: 'Connect again' })).toBeTruthy();
+			cleanup();
+		}, Promise.resolve());
+
+		showSettings({
+			client,
+			scheduler: schedulerShowing({ phase: 'attention', error: 'quota' }),
+			connectReturn: holding(),
+		});
+		const said = await screen.findByText('Sync needs attention: quota');
+		expect(said.classList.contains('sync-problem')).toBe(false);
+		expect(screen.queryByRole('button', { name: 'Connect again' })).toBeNull();
 	});
 
 	it('disconnects on the server, then here, keeping every passage', async () => {
