@@ -8,8 +8,12 @@ Memoriam is built on the foundations of skysa-notes (same organisation, same lic
 It uses skysa-notes' stack, conventions and much of its shell code, ported selectively.
 Where a section says "as skysa-notes", that project's `docs/ARCHITECTURE.md` has the longer reasoning.
 
+Each section has an anchor that does not change with its number or its wording, such as `ARCHITECTURE.md#sync`, and its number as well (`#s10`).
+Cite by anchor from now on; a citation such as `§10, "Push timing"` still works, and a test (`apps/web/tests/docs.test.ts`) checks that each one leads somewhere.
+
 ---
 
+<a id="decisions"></a><a id="s1"></a>
 ## 1. Decisions
 
 | Topic | Decision |
@@ -25,6 +29,7 @@ Where a section says "as skysa-notes", that project's `docs/ARCHITECTURE.md` has
 | Rewards | Moderate, and informational rather than controlling (`docs/research.md` §5): a forgiving streak, mastery and memory health per passage, a due queue, an activity heat map, milestone badges |
 | Licence | AGPL-3.0-only, with a CLA (§13) |
 
+<a id="content"></a><a id="s2"></a>
 ## 2. Content
 
 **Any text.** A passage has a title, an optional source or reference ("Psalm 23, ESV", "Hamlet III.i"), optional tags, and a body.
@@ -47,6 +52,7 @@ Chinese, Japanese, Korean, Thai, Lao, Khmer, Myanmar and Tibetan are typed throu
 Their words are shown as text between the words that are typed.
 They are not supported in v1, and the editor says so when a passage has none of the words it can practise.
 
+<a id="files"></a><a id="s3"></a>
 ## 3. Files
 
 **Layout.** The library has the same layout whether it is a zip export (§7, "Export and import") or a provider's app folder:
@@ -144,6 +150,7 @@ A change there is a new chunker, not a fix.
 
 Each day key has exactly one writing device, so two devices' copies can be merged exactly (§10).
 
+<a id="practice"></a><a id="s4"></a>
 ## 4. Practice
 
 **The fade ladder.** Hiding adapts per chunk (`docs/research.md` §2.1):
@@ -211,6 +218,7 @@ Punctuation and symbols are never typed.
 
 **After a pass,** the user repairs only the lines that had misses, until each is clean once.
 
+<a id="scheduling"></a><a id="s5"></a>
 ## 5. Scheduling
 
 **One FSRS card per chunk.** ts-fsrs, FSRS-6:
@@ -265,6 +273,7 @@ A value that is none of the choices reads as the default.
 A library would have to be large for this to be slow.
 If one is, a `cards` table can index every chunk's state for the due queue, derived from the frontmatter in the same transaction as any write that changes a passage, and always able to be dropped and rebuilt.
 
+<a id="rewards"></a><a id="s6"></a>
 ## 6. Rewards
 
 All of these are worked out afresh from the passages' progress and the activity files, each time either changes (`packages/core/src/rewards/`, `apps/web/src/store/rewards.ts`).
@@ -311,6 +320,7 @@ Both keep still under `prefers-reduced-motion`.
 
 **Progress screen:** the streak and freezes, the practice heat map, totals (words and passages learnt, minutes, passes), each passage's mastery and health, and every badge, earned or how to earn it.
 
+<a id="local-store-and-the-app"></a><a id="s7"></a>
 ## 7. Local store and the app
 
 **IndexedDB through Dexie** (`apps/web/src/store/db.ts`):
@@ -400,6 +410,7 @@ A command is registered again only when what the palette shows of it changes (it
 - `components/AppCommands.tsx` registers what can be done from anywhere: go to each screen, start today's practice, add a passage, export a backup.
   A passage's page adds practising and editing that passage while it is open.
 
+<a id="pwa"></a><a id="s8"></a>
 ## 8. PWA
 
 - **Generated service worker.** vite-plugin-pwa (`apps/web/pwa.ts`) precaches the shell, so the app starts offline.
@@ -434,6 +445,7 @@ A command is registered again only when what the palette shows of it changes (it
     An export from anywhere notes the day.
     A library that syncs is not reminded: it is kept in the user's own storage as well.
 
+<a id="security"></a><a id="s9"></a>
 ## 9. Security
 
 The Content-Security-Policy in `apps/web/public/_headers`, checked by `tests/csp.test.ts`:
@@ -445,6 +457,7 @@ The Content-Security-Policy in `apps/web/public/_headers`, checked by `tests/csp
   Nothing else leaves the device.
 - `src/jitless.ts` stops zod probing for `new Function`.
 
+<a id="sync"></a><a id="s10"></a>
 ## 10. Sync (Phase 2)
 
 Sync is skysa-notes' engine, ported:
@@ -787,6 +800,7 @@ Fixing it means changing which row keeps which id in the engine's conflict rule,
 - **The id rule above.**
 - **The devices list.** The server lists the devices holding a connection and signs any of them out (`grants`, `revokeGrant`), but Settings does not show them yet.
 
+<a id="repository-layout"></a><a id="s11"></a>
 ## 11. Repository layout
 
 ```
@@ -876,6 +890,7 @@ Neither `packages/core` nor the Worker may import a Node built-in, and the list 
 The apps import `@memoriam/core`, which names what it offers rather than everything its modules export; their tests may also import `@memoriam/core/testing`, and their source may not, nor any path into a `tests` folder.
 Source files past 600 lines of code draw a warning, which marks the long files ported from skysa-notes until they are split.
 
+<a id="roadmap"></a><a id="s12"></a>
 ## 12. Roadmap
 
 Phase 1 is delivered in milestones, each one pull request with `pnpm verify` green:
@@ -911,6 +926,7 @@ Phase 3, later:
 - an optional mode that learns a passage from its end;
 - a memory-palace image per section.
 
+<a id="licence-and-contributions"></a><a id="s13"></a>
 ## 13. Licence and contributions
 
 - **Licence:** AGPL-3.0-only (`LICENSE`, `NOTICE`), as skysa-notes, whose code much of this is ported from.
