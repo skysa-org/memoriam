@@ -19,9 +19,10 @@ import {
 } from '@memoriam/core';
 
 import { ensureCollections } from './collections.js';
-import { isLive, LOCAL_CONNECTION_ID, type MemoriamDatabase, type NoteRecord } from './db.js';
+import { LOCAL_CONNECTION_ID, type MemoriamDatabase, type NoteRecord } from './db.js';
 import { isBound, queueDelete, queueMove, queueRestore, queueWrite } from './queue.js';
 import { rowsOf } from './rows.js';
+import { isLive } from './rowStates.js';
 import { writerTables } from './scopes.js';
 
 /**

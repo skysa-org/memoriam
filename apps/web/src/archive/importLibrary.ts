@@ -23,15 +23,11 @@ import {
 
 import { t } from '../i18n/t.js';
 import { addCollections } from '../store/collections.js';
-import {
-	isLive,
-	LOCAL_CONNECTION_ID,
-	type MemoriamDatabase,
-	type NoteRecord,
-} from '../store/db.js';
+import { LOCAL_CONNECTION_ID, type MemoriamDatabase, type NoteRecord } from '../store/db.js';
 import { keptText, rowFor, titleFromText } from '../store/passages.js';
 import { queueByNotebook } from '../store/queue.js';
 import { rowsOf } from '../store/rows.js';
+import { isLive } from '../store/rowStates.js';
 import { writerTables } from '../store/scopes.js';
 import { readZip } from './readZip.js';
 

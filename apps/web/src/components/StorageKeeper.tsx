@@ -1,8 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useRef } from 'react';
 
-import { db as appDatabase, isLive, type MemoriamDatabase } from '../store/db.js';
+import { db as appDatabase, type MemoriamDatabase } from '../store/db.js';
 import { browserStorage, keepIfDue, type StorageApi } from '../store/persistence.js';
+import { isLive } from '../store/rowStates.js';
 
 /**
  * Asks the browser to keep the library once there is a passage in it

@@ -1,8 +1,9 @@
 import { localDay } from '@memoriam/core';
 
 import { noteExported } from '../store/backup.js';
-import { isLive, LOCAL_CONNECTION_ID, type MemoriamDatabase } from '../store/db.js';
+import { LOCAL_CONNECTION_ID, type MemoriamDatabase } from '../store/db.js';
 import { rowsOf } from '../store/rows.js';
+import { isLive } from '../store/rowStates.js';
 import { zipParts, type ZipWrite } from './zip.js';
 
 /**

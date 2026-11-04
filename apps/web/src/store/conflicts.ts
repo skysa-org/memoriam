@@ -13,7 +13,6 @@ import { useLiveQuery } from 'dexie-react-hooks';
 
 import {
 	db as appDatabase,
-	isLive,
 	LOCAL_CONNECTION_ID,
 	type MemoriamDatabase,
 	type NoteRecord,
@@ -28,6 +27,7 @@ import {
 } from './passages.js';
 import { queueMove, queueWrite } from './queue.js';
 import { rowsOf } from './rows.js';
+import { isLive } from './rowStates.js';
 import { writerTables } from './scopes.js';
 
 /**

@@ -1,8 +1,9 @@
 import { isHidden } from '@memoriam/core';
 
-import { isLive, LOCAL_CONNECTION_ID, type MemoriamDatabase } from './db.js';
+import { LOCAL_CONNECTION_ID, type MemoriamDatabase } from './db.js';
 import { getPreference, setPreference } from './prefs.js';
 import { rowsOf } from './rows.js';
+import { isLive } from './rowStates.js';
 
 /**
  * Asking the browser to keep the library (docs/ARCHITECTURE.md §8, "Keeping

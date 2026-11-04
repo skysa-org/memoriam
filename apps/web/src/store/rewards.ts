@@ -19,13 +19,13 @@ import { useLiveQuery } from 'dexie-react-hooks';
 
 import {
 	db as defaultDb,
-	isLive,
 	LOCAL_CONNECTION_ID,
 	type MemoriamDatabase,
 	type NoteRecord,
 } from './db.js';
 import { changeActivity } from './practice.js';
 import { rowsOf } from './rows.js';
+import { isLive } from './rowStates.js';
 import { readied } from './schedule.js';
 import { writerTables } from './scopes.js';
 import { readSettings, type Settings } from './settings.js';

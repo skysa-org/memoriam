@@ -12,7 +12,6 @@ import {
 import { t } from '../i18n/t.js';
 import {
 	type FolderRecord,
-	isLive,
 	LOCAL_CONNECTION_ID,
 	type MemoriamDatabase,
 	type NoteRecord,
@@ -20,6 +19,7 @@ import {
 import { buryOrDrop, restorePassages } from './passages.js';
 import { queueMkdir, queueMove, queueMoveFile, queueRmdir, withdrawMkdirs } from './queue.js';
 import { rowsOf } from './rows.js';
+import { isLive } from './rowStates.js';
 import { writerTables } from './scopes.js';
 
 /**

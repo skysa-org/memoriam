@@ -18,12 +18,12 @@ import { useLiveQuery } from 'dexie-react-hooks';
 
 import {
 	db as defaultDb,
-	isLive,
 	LOCAL_CONNECTION_ID,
 	type MemoriamDatabase,
 	type NoteRecord,
 } from './db.js';
 import { rowsOf } from './rows.js';
+import { isLive } from './rowStates.js';
 import { readSettings, type Settings } from './settings.js';
 
 /**

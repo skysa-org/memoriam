@@ -23,12 +23,12 @@ import {
 	pendingCredential,
 } from '../src/store/credentials.js';
 import {
-	isLive,
 	LOCAL_CONNECTION_ID,
 	type MemoriamDatabase,
 	PENDING_CREDENTIAL_ID,
 } from '../src/store/db.js';
 import { createPassage } from '../src/store/passages.js';
+import { isLive } from '../src/store/rowStates.js';
 import {
 	claimConnection,
 	disconnectAccount,

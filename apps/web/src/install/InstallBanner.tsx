@@ -5,8 +5,9 @@ import { useSyncExternalStore } from 'react';
 import { Icon } from '../components/Icon.js';
 import { useMediaQuery } from '../components/layout.js';
 import { t } from '../i18n/t.js';
-import { db as appDatabase, isLive, type MemoriamDatabase } from '../store/db.js';
+import { db as appDatabase, type MemoriamDatabase } from '../store/db.js';
 import { dismissInstall, getInstallDismissed } from '../store/prefs.js';
+import { isLive } from '../store/rowStates.js';
 import { type Device, type ManualInstall, manualInstall, thisDevice } from './installHow.js';
 import { type InstallPrompt, installPrompt } from './installPrompt.js';
 

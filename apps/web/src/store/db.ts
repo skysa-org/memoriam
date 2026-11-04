@@ -57,17 +57,13 @@ export interface NoteRecord {
 	/**
 	 * A tombstone: deleted here while the library is connected, and kept until
 	 * the delete has been sent, since the row carries the `remoteId` the delete
-	 * needs. Every reader but sync passes over one (`isLive`).
+	 * needs. Every reader but sync passes over one (`isLive`, in `rowStates.ts`).
 	 */
 	deletedLocally: Flag;
 	createdAt: number;
 	/** When the words or details were last edited. Practice never moves it. */
 	updatedAt: number;
 }
-
-/** A row anything but sync should see. */
-export const isLive = (note: Pick<NoteRecord, 'deletedLocally'>): boolean =>
-	note.deletedLocally === 0;
 
 /** A collection: a folder in the library, kept even while it holds nothing. */
 export interface FolderRecord {

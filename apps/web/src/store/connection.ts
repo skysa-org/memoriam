@@ -2,7 +2,6 @@ import type { ProviderKind } from '@memoriam/core';
 import type { PromiseExtended } from 'dexie';
 
 import {
-	isLive,
 	LOCAL_CONNECTION_ID,
 	type MemoriamDatabase,
 	type NoteRecord,
@@ -11,6 +10,7 @@ import {
 import { deviceId } from './device.js';
 import { queueByNotebook } from './queue.js';
 import { rowsOf } from './rows.js';
+import { isLive } from './rowStates.js';
 import { connectionTables, writerTables } from './scopes.js';
 
 /**

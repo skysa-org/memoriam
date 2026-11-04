@@ -2,13 +2,13 @@ import { useLiveQuery } from 'dexie-react-hooks';
 
 import {
 	db as defaultDb,
-	isLive,
 	LOCAL_CONNECTION_ID,
 	type MemoriamDatabase,
 	type NoteRecord,
 } from './db.js';
 import { type LibraryView, libraryView } from './library.js';
 import { rowsOf } from './rows.js';
+import { isLive } from './rowStates.js';
 
 /**
  * The store, as components read it: live, so a write anywhere — this tab or

@@ -2,9 +2,10 @@ import { daysBetween, isHidden, localDay } from '@memoriam/core';
 import { useLiveQuery } from 'dexie-react-hooks';
 
 import { boundConnection } from './connection.js';
-import { db as defaultDb, isLive, LOCAL_CONNECTION_ID, type MemoriamDatabase } from './db.js';
+import { db as defaultDb, LOCAL_CONNECTION_ID, type MemoriamDatabase } from './db.js';
 import { getPreference, setPreference } from './prefs.js';
 import { rowsOf } from './rows.js';
+import { isLive } from './rowStates.js';
 
 /**
  * When to remind the user to export a backup (docs/ARCHITECTURE.md §8,
