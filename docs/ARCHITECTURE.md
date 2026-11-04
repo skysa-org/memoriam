@@ -547,6 +547,8 @@ drive the engine through the adapter, held back in S1, are restored. Where it di
     readings that no decision changes), `files.ts` (where each file that is not a passage is,
     replayed through a batch's decisions), `replay.ts` (where a passage, a folder or an unreadable
     file is once the decisions so far are applied, a `merge-note` among them).
+  - `sync/providerOps.ts`, asking the provider where "nothing there" is an answer: `orIfNotFound`,
+    and `withParent`, which makes the folder above and tries once more.
 
 **Since the port.** Fixes skysa-notes made to its engine and adapters after `fa92ad6`, taken
 here:

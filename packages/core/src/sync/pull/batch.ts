@@ -49,7 +49,7 @@ export const madeInBatch = (decided: readonly PullChange[]): SyncNote[] =>
  * Where, and how far into the batch, each still-living thing is mentioned.
  * Keyed by `remoteId`; a thing can appear more than once.
  */
-interface LiveEntry {
+export interface LiveEntry {
 	path: string;
 	at: number;
 }
@@ -138,7 +138,7 @@ export const leavesFor = (
 };
 
 /** What this batch says has been deleted, by remote id and by path. */
-interface Doomed {
+export interface Doomed {
 	ids: ReadonlySet<string>;
 	paths: ReadonlySet<string>;
 }
