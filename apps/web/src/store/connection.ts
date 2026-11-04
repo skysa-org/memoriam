@@ -10,6 +10,7 @@ import {
 } from './db.js';
 import { deviceId } from './device.js';
 import { queueByNotebook } from './queue.js';
+import { rowsOf } from './rows.js';
 import { connectionTables, writerTables } from './scopes.js';
 
 /**
@@ -146,15 +147,10 @@ export const bindLibrary = (
 
 		// Unbound, nothing was queued and nothing was buried (`store/queue.ts`):
 		// every row is a live one the remote has never seen, and owed.
-		const notes = (
-			await db.notes.where('connectionId').equals(LOCAL_CONNECTION_ID).toArray()
-		).filter(isLive);
+		const notes = (await rowsOf(db.notes, LOCAL_CONNECTION_ID).toArray()).filter(isLive);
 		const owed = notes.map((note) => ({ ...loose(note), dirty: 1 as const }));
 		await db.notes.bulkPut(owed);
-		const folders = await db.folders
-			.where('connectionId')
-			.equals(LOCAL_CONNECTION_ID)
-			.toArray();
+		const folders = await rowsOf(db.folders, LOCAL_CONNECTION_ID).toArray();
 		await queueByNotebook(db, LOCAL_CONNECTION_ID, {
 			folders: folders.map((folder) => folder.path),
 			notes: owed,
@@ -189,21 +185,18 @@ export const unbindLibrary = (
 		}
 		if (bound !== undefined) await countBinding(db);
 		await db.syncState.clear();
-		await db.opQueue.where('connectionId').equals(LOCAL_CONNECTION_ID).delete();
+		await rowsOf(db.opQueue, LOCAL_CONNECTION_ID).delete();
 
-		const notes = await db.notes.where('connectionId').equals(LOCAL_CONNECTION_ID).toArray();
+		const notes = await rowsOf(db.notes, LOCAL_CONNECTION_ID).toArray();
 		await db.notes.bulkDelete(
 			notes.filter((note) => !isLive(note)).map((note) => [note.connectionId, note.id])
 		);
 		await db.notes.bulkPut(notes.filter(isLive).map(loose));
 
-		const folders = await db.folders
-			.where('connectionId')
-			.equals(LOCAL_CONNECTION_ID)
-			.toArray();
+		const folders = await rowsOf(db.folders, LOCAL_CONNECTION_ID).toArray();
 		await db.folders.bulkPut(folders.map(({ remoteId: _remoteId, ...folder }) => folder));
 
-		await db.files.where('connectionId').equals(LOCAL_CONNECTION_ID).delete();
-		await db.fileBytes.where('connectionId').equals(LOCAL_CONNECTION_ID).delete();
+		await rowsOf(db.files, LOCAL_CONNECTION_ID).delete();
+		await rowsOf(db.fileBytes, LOCAL_CONNECTION_ID).delete();
 		return true;
 	});

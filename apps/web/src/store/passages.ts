@@ -21,6 +21,7 @@ import {
 import { ensureCollections } from './collections.js';
 import { isLive, LOCAL_CONNECTION_ID, type MemoriamDatabase, type NoteRecord } from './db.js';
 import { isBound, queueDelete, queueMove, queueRestore, queueWrite } from './queue.js';
+import { rowsOf } from './rows.js';
 import { writerTables } from './scopes.js';
 
 /**
@@ -207,9 +208,6 @@ const namesIn = (rows: readonly NoteRecord[], folder: string, except?: string): 
 		)
 		.map((row) => basename(row.path));
 
-const rowsOf = (db: MemoriamDatabase, connectionId: string): Promise<NoteRecord[]> =>
-	db.notes.where('connectionId').equals(connectionId).toArray();
-
 /** Add a passage. */
 export const createPassage = (
 	db: MemoriamDatabase,
@@ -222,7 +220,7 @@ export const createPassage = (
 		const title = chosenTitle(details);
 		const reference = details.reference.trim();
 		const stamp = new Date(now).toISOString();
-		const taken = namesIn(await rowsOf(db, connectionId), details.collection);
+		const taken = namesIn(await rowsOf(db.notes, connectionId).toArray(), details.collection);
 		const row = rowFor({
 			id,
 			connectionId,
@@ -356,7 +354,11 @@ export const updatePassage = (
 		});
 		if (source === undefined) return { ok: false, reason: 'unreadable' } as const;
 
-		const taken = namesIn(await rowsOf(db, connectionId), details.collection, id);
+		const taken = namesIn(
+			await rowsOf(db.notes, connectionId).toArray(),
+			details.collection,
+			id
+		);
 		const name = basename(row.path);
 		const keepsName = !retitled && !taken.some((each) => foldName(each) === foldName(name));
 		const written = rowFor(
@@ -498,7 +500,7 @@ export const restorePassages = (
 			.map((each) => each.row)
 			.filter((row) => was.get(row.id)?.remoteId !== undefined);
 		const held = new Set(keeping.map((row) => foldName(row.path)));
-		const live = (await rowsOf(db, connectionId)).filter(isLive);
+		const live = (await rowsOf(db.notes, connectionId).toArray()).filter(isLive);
 		const inTheWay = live.filter((row) => held.has(foldName(row.path)));
 		const settled = live.filter((row) => !held.has(foldName(row.path)));
 		const aside = freePaths([...settled, ...keeping], inTheWay);

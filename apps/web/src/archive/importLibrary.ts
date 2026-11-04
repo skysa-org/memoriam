@@ -31,6 +31,7 @@ import {
 } from '../store/db.js';
 import { keptText, rowFor, titleFromText } from '../store/passages.js';
 import { queueByNotebook } from '../store/queue.js';
+import { rowsOf } from '../store/rows.js';
 import { writerTables } from '../store/scopes.js';
 import { readZip } from './readZip.js';
 
@@ -342,7 +343,7 @@ export const importLibrary = (
 	now: number = Date.now()
 ): Promise<ImportReport> =>
 	db.transaction('rw', writerTables(db), async () => {
-		const rows = await db.notes.where('connectionId').equals(connectionId).toArray();
+		const rows = await rowsOf(db.notes, connectionId).toArray();
 		const context: Context = { connectionId, now, newId: () => crypto.randomUUID() };
 		const placed = gathered.files.reduce<Placing>(
 			(placing, file) => place(placing, file, context),

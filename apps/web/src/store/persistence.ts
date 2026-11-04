@@ -2,6 +2,7 @@ import { isHidden } from '@memoriam/core';
 
 import { isLive, LOCAL_CONNECTION_ID, type MemoriamDatabase } from './db.js';
 import { getPreference, setPreference } from './prefs.js';
+import { rowsOf } from './rows.js';
 
 /**
  * Asking the browser to keep the library (docs/ARCHITECTURE.md §8, "Keeping
@@ -59,7 +60,7 @@ export const shouldAsk = async (
 ): Promise<boolean> => {
 	const asked = Number(await getPreference(db, ASKED_KEY));
 	if (Number.isFinite(asked) && now - asked < ASK_AGAIN_DAYS * DAY_MS) return false;
-	const rows = await db.notes.where('connectionId').equals(connectionId).filter(isLive).toArray();
+	const rows = await rowsOf(db.notes, connectionId).filter(isLive).toArray();
 	return rows.some((row) => !isHidden(row.path));
 };
 

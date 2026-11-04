@@ -8,6 +8,7 @@ import {
 	type NoteRecord,
 } from './db.js';
 import { type LibraryView, libraryView } from './library.js';
+import { rowsOf } from './rows.js';
 
 /**
  * The store, as components read it: live, so a write anywhere — this tab or
@@ -20,12 +21,8 @@ export const useLibrary = (
 	connectionId: string = LOCAL_CONNECTION_ID
 ): LibraryView | undefined =>
 	useLiveQuery(async () => {
-		const notes = await db.notes
-			.where('connectionId')
-			.equals(connectionId)
-			.filter(isLive)
-			.toArray();
-		const folders = await db.folders.where('connectionId').equals(connectionId).toArray();
+		const notes = await rowsOf(db.notes, connectionId).filter(isLive).toArray();
+		const folders = await rowsOf(db.folders, connectionId).toArray();
 		return libraryView(notes, folders);
 	}, [db, connectionId]);
 

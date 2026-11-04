@@ -25,6 +25,7 @@ import {
 	type NoteRecord,
 } from './db.js';
 import { changeActivity } from './practice.js';
+import { rowsOf } from './rows.js';
 import { readied } from './schedule.js';
 import { writerTables } from './scopes.js';
 import { readSettings, type Settings } from './settings.js';
@@ -108,11 +109,7 @@ export const useRewards = (
 	const day = localDay(now);
 	return useLiveQuery(
 		async () => {
-			const rows = await db.notes
-				.where('connectionId')
-				.equals(connectionId)
-				.filter(isLive)
-				.toArray();
+			const rows = await rowsOf(db.notes, connectionId).filter(isLive).toArray();
 			return rewardsFor(rows, await readSettings(db), new Date());
 		},
 		// The day, so a page left open past midnight counts the new one.

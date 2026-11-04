@@ -24,6 +24,7 @@ import {
 	type SyncStateRecord,
 } from '../store/db.js';
 import { MAX_OP_ATTEMPTS, outOfAttempts } from '../store/queue.js';
+import { rowsOf } from '../store/rows.js';
 import { createDexieSyncStore, toSyncOp } from './store.js';
 import { createTokenSource, type TokenSource } from './tokens.js';
 
@@ -473,9 +474,7 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 
 	/** Every op gets its attempts back. Inside a transaction. */
 	const resetAttempts = async (): Promise<void> => {
-		const tried = await db.opQueue
-			.where('connectionId')
-			.equals(LIBRARY)
+		const tried = await rowsOf(db.opQueue, LIBRARY)
 			.filter((op) => op.attempts > 0)
 			.toArray();
 		await db.opQueue.bulkPut(tried.map((op) => ({ ...op, attempts: 0 })));
@@ -499,9 +498,7 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 	 * it is what stopped the queue.
 	 */
 	const stuckOp = async (): Promise<StuckOp | undefined> => {
-		const failing = await db.opQueue
-			.where('connectionId')
-			.equals(LIBRARY)
+		const failing = await rowsOf(db.opQueue, LIBRARY)
 			.filter((op) => outOfAttempts(op, maxAttempts))
 			.toArray();
 		const upload = (op: OpQueueRecord): number => (op.op === 'upload' ? 1 : 0);
@@ -880,9 +877,7 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 
 	/** A change of the user's queues an op, so a new highest seq is something to push. */
 	const watchEdits = (session: Session) => {
-		const subscription = liveQuery(() =>
-			db.opQueue.where('connectionId').equals(LIBRARY).primaryKeys()
-		).subscribe({
+		const subscription = liveQuery(() => rowsOf(db.opQueue, LIBRARY).primaryKeys()).subscribe({
 			next: (seqs) => {
 				const highest = seqs.reduce((most, seq) => Math.max(most, seq), 0);
 				const seen = session.lastSeq.get('seq');

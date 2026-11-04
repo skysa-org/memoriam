@@ -7,3 +7,5 @@ The stale tab, the install prompt and the command registry tell their listeners 
 `hooks/useLatest.ts` holds the last value rendered in a ref, for the command and key hooks that follow.
 
 The store's transaction scopes are named once in `store/scopes.ts`: the writers' tables, the sync store's (`libraryTables`) and letting go of a connection (`connectionTables`).
+
+A connection's rows are read through one `rowsOf` (`store/rows.ts`).

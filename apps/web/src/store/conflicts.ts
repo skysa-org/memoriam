@@ -27,6 +27,7 @@ import {
 	updatePassage,
 } from './passages.js';
 import { queueMove, queueWrite } from './queue.js';
+import { rowsOf } from './rows.js';
 import { writerTables } from './scopes.js';
 
 /**
@@ -99,10 +100,7 @@ export const linesAgainst = (
 /** The library's conflicts, live; `undefined` while they are read. */
 export const useConflicts = (database: MemoriamDatabase = appDatabase): Conflict[] | undefined =>
 	useLiveQuery(
-		async () =>
-			conflictsIn(
-				await database.notes.where('connectionId').equals(LOCAL_CONNECTION_ID).toArray()
-			),
+		async () => conflictsIn(await rowsOf(database.notes, LOCAL_CONNECTION_ID).toArray()),
 		[database]
 	);
 
@@ -245,7 +243,7 @@ export const keepOrphan = (db: MemoriamDatabase, copyId: string): Promise<Edited
 		const copy = await db.notes.get([LOCAL_CONNECTION_ID, copyId]);
 		if (copy === undefined || !isLive(copy)) return { ok: false, reason: 'missing' } as const;
 		const folder = parentPath(copy.path);
-		const taken = (await db.notes.where('connectionId').equals(LOCAL_CONNECTION_ID).toArray())
+		const taken = (await rowsOf(db.notes, LOCAL_CONNECTION_ID).toArray())
 			.filter(
 				(row) =>
 					isLive(row) &&

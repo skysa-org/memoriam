@@ -37,6 +37,7 @@ import {
 } from '../store/db.js';
 import { pulledRow } from '../store/passages.js';
 import { queueMove, queueWrite } from '../store/queue.js';
+import { rowsOf } from '../store/rows.js';
 import { libraryTables } from '../store/scopes.js';
 import { eachInSlices } from '../store/slices.js';
 
@@ -256,8 +257,7 @@ export const createDexieSyncStore = (
 			return work();
 		});
 
-	const notesOf = (scope: Scope): Promise<NoteRecord[]> =>
-		scope.notes.where('connectionId').equals(LIBRARY).toArray();
+	const notesOf = (scope: Scope): Promise<NoteRecord[]> => rowsOf(scope.notes, LIBRARY).toArray();
 
 	/**
 	 * The library's passages at or beneath `folderPath`, tombstones included,
@@ -284,13 +284,12 @@ export const createDexieSyncStore = (
 	};
 
 	const foldersOf = (scope: Scope): Promise<FolderRecord[]> =>
-		scope.folders.where('connectionId').equals(LIBRARY).toArray();
+		rowsOf(scope.folders, LIBRARY).toArray();
 
 	const opsOf = (scope: Scope): Promise<OpQueueRecord[]> =>
-		scope.opQueue.where('connectionId').equals(LIBRARY).toArray();
+		rowsOf(scope.opQueue, LIBRARY).toArray();
 
-	const filesOf = (scope: Scope): Promise<FileRecord[]> =>
-		scope.files.where('connectionId').equals(LIBRARY).toArray();
+	const filesOf = (scope: Scope): Promise<FileRecord[]> => rowsOf(scope.files, LIBRARY).toArray();
 
 	const fileKey = (id: string): [string, string] => [LIBRARY, id];
 
@@ -771,7 +770,7 @@ export const createDexieSyncStore = (
 	 * just queued to take the file out of it.
 	 */
 	const rmdirsBehind = async (scope: Scope, path: string): Promise<void> => {
-		const ops = await scope.opQueue.where('connectionId').equals(LIBRARY).sortBy('seq');
+		const ops = await rowsOf(scope.opQueue, LIBRARY).sortBy('seq');
 		const fold = (each: string) => foldName(normalizePath(each));
 		const over = ops.filter((op) => op.op === 'rmdir' && isWithin(fold(path), fold(op.path)));
 		await scope.opQueue.bulkDelete(

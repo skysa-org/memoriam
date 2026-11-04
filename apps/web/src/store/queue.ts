@@ -9,6 +9,7 @@ import {
 import Dexie, { type PromiseExtended } from 'dexie';
 
 import type { FileRecord, MemoriamDatabase, NoteRecord, OpQueueRecord } from './db.js';
+import { rowsOf } from './rows.js';
 
 /**
  * The push queue: what the sync engine owes the remote, in the order it has to
@@ -245,9 +246,7 @@ export const queueMkdir = (db: QueueDb, connectionId: string, path: string): Que
  * ever remove, and the next pull would make the collection again, empty.
  */
 export const withdrawMkdirs = (db: QueueDb, connectionId: string, path: string): Queued =>
-	db.opQueue
-		.where('connectionId')
-		.equals(connectionId)
+	rowsOf(db.opQueue, connectionId)
 		.filter((op) => op.op === 'mkdir' && isWithin(op.path, path))
 		.toArray()
 		.then((inside) => db.opQueue.bulkDelete(seqsOf(inside)))

@@ -23,6 +23,7 @@ import {
 	type MemoriamDatabase,
 	type NoteRecord,
 } from './db.js';
+import { rowsOf } from './rows.js';
 import { readSettings, type Settings } from './settings.js';
 
 /**
@@ -127,11 +128,7 @@ export const useDayPlan = (
 	const day = localDay(now);
 	return useLiveQuery(
 		async () => {
-			const rows = await db.notes
-				.where('connectionId')
-				.equals(connectionId)
-				.filter(isLive)
-				.toArray();
+			const rows = await rowsOf(db.notes, connectionId).filter(isLive).toArray();
 			return planFor(rows, await readSettings(db), new Date());
 		},
 		// The day, so a page left open past midnight plans the new one.
