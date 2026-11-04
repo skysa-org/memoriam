@@ -5,7 +5,7 @@ import { useSyncExternalStore } from 'react';
 import { Icon } from '../components/Icon.js';
 import { useMediaQuery } from '../components/ui/layout.js';
 import { t } from '../i18n/t.js';
-import { db as appDatabase, type MemoriamDatabase } from '../store/db.js';
+import { useDb } from '../store/database.js';
 import { dismissInstall, getInstallDismissed } from '../store/prefs.js';
 import { isLive } from '../store/rowStates.js';
 import { type Device, type ManualInstall, manualInstall, thisDevice } from './installHow.js';
@@ -26,7 +26,6 @@ import { type InstallPrompt, installPrompt } from './installPrompt.js';
  */
 
 export interface InstallBannerProps {
-	database?: MemoriamDatabase;
 	/** What the browser has said about installing. Injected for tests. */
 	prompt?: InstallPrompt;
 	/** Which browser this is, for one that has no install event. Injected for tests. */
@@ -41,16 +40,16 @@ const MANUAL: Readonly<Record<ManualInstall, (name: string) => string>> = {
 };
 
 export const InstallBanner = ({
-	database = appDatabase,
 	prompt = installPrompt,
 	device = thisDevice(),
 	name = import.meta.env.VITE_APP_NAME ?? t('install.thisApp'),
 }: InstallBannerProps) => {
+	const db = useDb();
 	const wanted = useLiveQuery(
 		async () =>
-			!(await getInstallDismissed(database)) &&
-			(await database.notes.filter((row) => isLive(row) && !isHidden(row.path)).count()) > 0,
-		[database]
+			!(await getInstallDismissed(db)) &&
+			(await db.notes.filter((row) => isLive(row) && !isHidden(row.path)).count()) > 0,
+		[db]
 	);
 	// An installed app opens in a window of its own (`display: standalone` in
 	// the manifest), and Chromium moves a tab into one as it installs.
@@ -86,7 +85,7 @@ export const InstallBanner = ({
 				aria-label={t('common.dismiss')}
 				title={t('install.dontShowAgain')}
 				onClick={() => {
-					void dismissInstall(database);
+					void dismissInstall(db);
 				}}
 			>
 				<Icon name="close" />
