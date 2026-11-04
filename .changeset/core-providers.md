@@ -11,3 +11,5 @@ The adapters share their contract glue in `providers/adapter.ts`: one options ty
 The Dropbox adapter refuses the root as the other adapters do: a passage or file written at `''`, or a move onto it, is a `NotFoundError` rather than Dropbox's own 400, and `createFolder('')` answers the app folder instead of failing.
 
 OneDrive and Drive share their cursor's envelope and its reading (`treeCursorBase`, `readTreeCursor`, `applyAll` in `idTree.ts`). The cursors keep their shape, so every stored one reads as before.
+
+An answer a provider should not have given (an item with no id, a file with no version, a page with neither link) is a `ProviderResponseError`, still retried and counted as before, and a rate limit reads the same from every provider: who, the status, and how long it asked us to wait.

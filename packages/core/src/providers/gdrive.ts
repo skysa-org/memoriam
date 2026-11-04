@@ -20,6 +20,7 @@ import {
 	createTransport,
 	jsonBody,
 	parseRetryAfter,
+	rateLimited,
 	readErrorBody,
 	type RequestParts,
 } from './http.js';
@@ -46,7 +47,7 @@ import {
 	CursorResetError,
 	type EntryRef,
 	NotFoundError,
-	RateLimitError,
+	ProviderResponseError,
 	type RemoteEntry,
 	type StorageProvider,
 	type WriteOptions,
@@ -114,6 +115,11 @@ const PAGE_SIZE = '1000';
 const MULTIPART_LIMIT = 5 * 1024 * 1024;
 /** Drive refuses to nest folders deeper than this, so a listing need not go further. */
 const MAX_DEPTH = 100;
+/**
+ * Notes sent at once (`StorageProvider.writesAtOnce`). A note is three or four
+ * requests end to end, so four at once keeps a dozen or so in flight.
+ */
+const WRITES_AT_ONCE = 4;
 
 export interface GDriveProviderOptions extends HttpProviderOptions {
 	/** For the stamp in a duplicate's conflict name. */
@@ -294,10 +300,10 @@ const usableName = (name: string | undefined): name is string =>
  */
 const toEntry = (file: DriveFile, path: string): RemoteEntry => {
 	if (file.id === undefined || file.id === '')
-		throw new Error('gdrive returned a file with no id');
+		throw new ProviderResponseError('gdrive returned a file with no id');
 	const folder = isFolder(file);
 	if (!folder && (file.headRevisionId === undefined || file.headRevisionId === '')) {
-		throw new Error('gdrive returned a file with no headRevisionId');
+		throw new ProviderResponseError('gdrive returned a file with no headRevisionId');
 	}
 	return {
 		remoteId: file.id,
@@ -316,7 +322,8 @@ const toEntry = (file: DriveFile, path: string): RemoteEntry => {
  */
 const treeItemOf = (file: DriveFile): TreeItem => {
 	const id = file.id;
-	if (id === undefined || id === '') throw new Error('gdrive sent a file with no id');
+	if (id === undefined || id === '')
+		throw new ProviderResponseError('gdrive sent a file with no id');
 	if (file.trashed === true || !usableName(file.name)) return { id, gone: true };
 	const folder = isFolder(file);
 	return {
@@ -338,7 +345,8 @@ const treeItemOf = (file: DriveFile): TreeItem => {
 const changeItem = (change: DriveChange): TreeItem[] => {
 	if (change.changeType === 'drive') return [];
 	const id = change.fileId ?? change.file?.id;
-	if (id === undefined || id === '') throw new Error('gdrive sent a change with no file id');
+	if (id === undefined || id === '')
+		throw new ProviderResponseError('gdrive sent a change with no file id');
 	if (change.removed === true || change.file === undefined) return [{ id, gone: true }];
 	return [treeItemOf({ ...change.file, id })];
 };
@@ -441,10 +449,7 @@ export const createGDriveProvider = (options: GDriveProviderOptions): StoragePro
 		if (failure.status === 401) throw new AuthError(detail);
 		if (failure.status === 404) throw new NotFoundError(path ?? detail);
 		if (throttled(failure)) {
-			throw new RateLimitError(
-				`gdrive rate limit (${String(failure.status)}): ${detail}`,
-				failure.retryAfterMs
-			);
+			throw rateLimited('gdrive', failure.status, failure.retryAfterMs, detail);
 		}
 		throw new Error(`gdrive ${String(failure.status)}: ${detail}`);
 	};
@@ -524,7 +529,7 @@ export const createGDriveProvider = (options: GDriveProviderOptions): StoragePro
 
 	const idOfRoot = (root: DriveFile): string => {
 		if (root.id === undefined || root.id === '') {
-			throw new Error('gdrive returned an app folder with no id');
+			throw new ProviderResponseError('gdrive returned an app folder with no id');
 		}
 		rootBox.set('id', root.id);
 		rootBox.set('known', root.id);
@@ -726,7 +731,9 @@ export const createGDriveProvider = (options: GDriveProviderOptions): StoragePro
 		// Told apart, because which it is answers the live check: a header the
 		// page was not shown reads as `null`.
 		if (location === null) {
-			throw new Error('gdrive started a resumable upload and did not say where it is');
+			throw new ProviderResponseError(
+				'gdrive started a resumable upload and did not say where it is'
+			);
 		}
 		const url = ((): URL | undefined => {
 			try {
@@ -736,7 +743,9 @@ export const createGDriveProvider = (options: GDriveProviderOptions): StoragePro
 			}
 		})();
 		if (url?.origin !== API) {
-			throw new Error('gdrive started a resumable upload somewhere it will not be sent');
+			throw new ProviderResponseError(
+				'gdrive started a resumable upload somewhere it will not be sent'
+			);
 		}
 		return url.toString();
 	};
@@ -767,7 +776,9 @@ export const createGDriveProvider = (options: GDriveProviderOptions): StoragePro
 		if (!sent.ok) return raise(await failureOf(sent), path);
 		const made = JSON.parse(await sent.text()) as DriveFile;
 		if (made.id === undefined || made.id === '') {
-			throw new Error('gdrive finished a resumable upload and did not say what it made');
+			throw new ProviderResponseError(
+				'gdrive finished a resumable upload and did not say what it made'
+			);
 		}
 		const whole = [made.headRevisionId, made.createdTime, made.name, made.size].every(
 			(field) => field !== undefined && field !== ''
@@ -900,7 +911,7 @@ export const createGDriveProvider = (options: GDriveProviderOptions): StoragePro
 		if (isFolder(file) || file.trashed === true) throw new NotFoundError(entry.path);
 		const version = file.headRevisionId;
 		if (version === undefined || version === '') {
-			throw new Error('gdrive sent a file with no headRevisionId');
+			throw new ProviderResponseError('gdrive sent a file with no headRevisionId');
 		}
 
 		const response = await send('GET', `${FILES}/${encodeURIComponent(id)}?alt=media`);
@@ -984,7 +995,7 @@ export const createGDriveProvider = (options: GDriveProviderOptions): StoragePro
 			`${CHANGES}/startPageToken`
 		);
 		if (startPageToken === undefined || startPageToken === '') {
-			throw new Error('gdrive sent no start page token');
+			throw new ProviderResponseError('gdrive sent no start page token');
 		}
 		return {
 			v: 1,
@@ -1036,7 +1047,9 @@ export const createGDriveProvider = (options: GDriveProviderOptions): StoragePro
 		if (!result.ok) return raise(result.failure);
 		const next = result.value.nextPageToken ?? result.value.newStartPageToken;
 		if (next === undefined || next === '') {
-			throw new Error('gdrive changes sent neither a next nor a new start token');
+			throw new ProviderResponseError(
+				'gdrive changes sent neither a next nor a new start token'
+			);
 		}
 		const changes = result.value.changes ?? [];
 		return {
@@ -1210,8 +1223,7 @@ export const createGDriveProvider = (options: GDriveProviderOptions): StoragePro
 		// `drive.file` hides what the app did not make (skysa-notes' §5.1), so a listing
 		// cannot say a folder is empty.
 		listsEverything: false,
-		// A note is three or four requests end to end (`StorageProvider`).
-		writesAtOnce: 4,
+		writesAtOnce: WRITES_AT_ONCE,
 		ensureRoot,
 		list,
 		read,
