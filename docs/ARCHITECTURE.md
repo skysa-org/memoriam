@@ -823,7 +823,7 @@ any of them out. The one Worker serves the app as well, so `/api` and the app sh
     run of a few is not counted, so an edit's sync does not flash a number;
   - paused, or offline, or retrying;
   - what needs attention, with the change that is stuck, or "Connect again" when connecting the
-    account again is the answer (`needsReconnect` in `sync/runtime.ts`, as skysa-notes': the
+    account again is the answer (`needsReconnect` in `sync/status.ts`, as skysa-notes': the
     server or the provider wants the account asked again, or the credential reaches nothing).
     That sentence is drawn in the colour of an error, since sync has stopped until it is done.
 

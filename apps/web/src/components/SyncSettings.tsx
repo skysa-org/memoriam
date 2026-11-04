@@ -16,8 +16,9 @@ import {
 } from '../sync/account.js';
 import { type ConnectOutcome, connectReturn as appConnectReturn } from '../sync/connectReturn.js';
 import { isLongRun } from '../sync/progress.js';
-import { needsReconnect, syncScheduler, useSyncStatus } from '../sync/runtime.js';
+import { syncScheduler, useSyncStatus } from '../sync/runtime.js';
 import type { SchedulerStatus, SyncScheduler } from '../sync/scheduler.js';
+import { needsReconnect } from '../sync/status.js';
 import { ConfirmDialog } from './ConfirmDialog.js';
 import { ConflictsBanner } from './ConflictsBanner.js';
 import { Icon } from './Icon.js';
