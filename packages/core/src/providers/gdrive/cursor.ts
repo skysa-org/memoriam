@@ -75,9 +75,37 @@ const cursorSchema = z.object({
 	token: z.string(),
 	/** Where the feed begins once the scan is done. */
 	start: z.string().min(1),
+	/**
+	 * Pages of the feed this round has read, on a cursor written mid-round
+	 * (`feedLimit`). Absent at a round's start, and on every cursor written
+	 * before it was added, which are read as one.
+	 */
+	walked: z.number().int().positive().optional(),
 });
 
 type DriveCursor = z.infer<typeof cursorSchema>;
+
+/** A cursor for a page after its round's first: one this adapter wrote mid-round. */
+const midRound = (cursor: DriveCursor): boolean =>
+	cursor.phase === 'scan' ? cursor.token !== '' : cursor.walked !== undefined;
+
+/**
+ * How many pages of the change feed a round reads before it scans instead.
+ *
+ * `drive.file` hides every change the app cannot see, but Drive still pages
+ * through them: in skysa-notes, a phone away for a day while the account was
+ * busy elsewhere read 60 empty pages, two requests each, about 45 s of
+ * "Checking for changes…" with nothing found, before the 16 that held the
+ * notes another device had imported (measured on a Pixel against a live
+ * account, 2026-10-14). A scan lists only what the app can see, a page per
+ * thousand, so past twice what one would take the feed is the longer way
+ * round, and the round becomes a scan. The engine's answer to a reset is that
+ * scan, and a feed round is read whole before any of it is applied, so
+ * nothing read is half kept. The tree's size stands in for the scan's: it is
+ * what the app can see, near enough.
+ */
+const feedLimit = (nodes: number): number =>
+	2 * Math.max(1, Math.ceil(nodes / Number(PAGE_SIZE))) + 2;
 
 const parseCursor = (cursor: string): DriveCursor => readTreeCursor(cursorSchema, cursor, 'gdrive');
 
@@ -110,7 +138,7 @@ interface Fetched {
 /** `StorageProvider.changes`: a page of a scan or of the feed, read against the tree. */
 export const createChanges = (client: DriveClient, appFolder: AppFolder, now: () => Date) => {
 	const { attempt, call, raise, childrenOf } = client;
-	const { establishRoot, confirmRoot, forget } = appFolder;
+	const { establishRoot, confirmRoot, foundId, forget } = appFolder;
 	const separate = createSeparate(client, now);
 
 	const freshRound = async (): Promise<DriveCursor> => {
@@ -246,7 +274,14 @@ export const createChanges = (client: DriveClient, appFolder: AppFolder, now: ()
 	const changes = async (cursor?: string): Promise<ChangeSet> => {
 		const stored = cursor !== undefined && cursor !== '';
 		const from = stored ? parseCursor(cursor) : await freshRound();
-		if (stored) await confirmRoot(from.root);
+		// Once a round, at its first page. Asked again on every page, it was a
+		// search beside each, doubling a long round's requests; and mid-round the
+		// feed itself says when the folder goes to the trash (`rootGone`). A
+		// cursor this adapter did not find the folder for this round — one
+		// stored mid-round and read by the next session — is asked again.
+		if (stored && !(midRound(from) && foundId() === from.root)) {
+			await confirmRoot(from.root);
+		}
 
 		const fetched =
 			from.phase === 'scan' ? await scanPage(from, stored) : await feedPage(from, stored);
@@ -255,6 +290,10 @@ export const createChanges = (client: DriveClient, appFolder: AppFolder, now: ()
 		if (fetched.rootGone) {
 			forget();
 			throw new CursorResetError('gdrive app folder is gone');
+		}
+		const walked = from.phase === 'feed' ? (from.walked ?? 0) + 1 : undefined;
+		if (walked !== undefined && !fetched.roundEnds && walked >= feedLimit(from.nodes.length)) {
+			throw new CursorResetError('gdrive change feed is longer than a scan');
 		}
 
 		const page = pageFrom(from);
@@ -289,6 +328,7 @@ export const createChanges = (client: DriveClient, appFolder: AppFolder, now: ()
 			root: from.root,
 			nodes: nodesOf(page),
 			pending: settled.pending,
+			...(walked === undefined || fetched.roundEnds ? {} : { walked }),
 		};
 		const entries: ChangeEntry[] = settled.entries;
 		return { entries, cursor: JSON.stringify(written), more: !fetched.roundEnds };

@@ -570,6 +570,18 @@ here:
   optional fifth element of a tree row, so stored cursors still read, and OneDrive's are
   unchanged. skysa-notes has not yet measured whether Drive's change feed reports a change to
   `appProperties` alone.
+- **Drive scans when the change feed runs longer than a scan would** (skysa-notes #362).
+  `drive.file` hides other apps' changes, but Drive still pages through them: after a day away, a
+  phone read 60 empty pages before it found anything, where a scan took a few. A feed round that
+  has read twice the pages a scan would take, plus two (`feedLimit` in `gdrive/cursor.ts`, from
+  the tree's size), resets to a scan. A feed round is read whole before any of it is applied, so
+  nothing read is half kept. The app folder is confirmed once a round, at its first page, rather
+  than before every page (`foundId`).
+- **A deleted passage is never claimed by path** (skysa-notes #362). Scans made common by the
+  above found a mistake only a scan could make. Another device deleted a passage's file and gave
+  its name to another file. A scan never says what was removed, so the passage deleted here was
+  still at the path, was claimed by the newcomer, and its queued delete then removed that file.
+  `noteForEntry` now passes over a passage the user has deleted wherever it stands.
 
 **Merge before a conflict copy.** skysa-notes never merges: on a conflict the remote keeps the
 path, and the local version is written beside it as a conflict copy. Memoriam adds one merge
