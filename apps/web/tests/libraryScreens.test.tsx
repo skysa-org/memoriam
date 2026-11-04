@@ -1,7 +1,7 @@
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { createAppRouter } from '../src/router.js';
 import { db } from '../src/store/db.js';
@@ -17,11 +17,6 @@ const open = (path: string) => {
 	render(<RouterProvider router={router} />);
 	return router;
 };
-
-beforeEach(async () => {
-	await db.notes.clear();
-	await db.folders.clear();
-});
 
 afterEach(() => {
 	cleanup();

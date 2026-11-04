@@ -9,31 +9,19 @@ import {
 	readProgress,
 	type RemoteEntry,
 } from '@memoriam/core';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 // The suite lives beside the port it checks, in `packages/core`, and is not a
 // `*.test.ts` there so that it runs only where a store registers it. `core`
 // cannot import `apps/*`, so this store registers here instead.
 import { describeSyncStoreContract } from '../../../packages/core/tests/sync/storeContract.js';
-import { createDatabase, LOCAL_CONNECTION_ID, type MemoriamDatabase } from '../src/store/db.js';
+import { LOCAL_CONNECTION_ID, type MemoriamDatabase } from '../src/store/db.js';
 import { createPassage, deletePassage, pulledRow } from '../src/store/passages.js';
 import { recordPass } from '../src/store/practice.js';
 import { createDexieSyncStore, UnboundConnectionError } from '../src/sync/store.js';
+import { freshDatabase } from './support/db.js';
 
 const CONNECTION = 'dropbox-1';
-
-const opened: MemoriamDatabase[] = [];
-
-afterEach(async () => {
-	await Promise.all(opened.splice(0).map((db) => db.delete()));
-});
-
-/** A database of its own for every test, so nothing leaks between them. */
-const freshDatabase = (): MemoriamDatabase => {
-	const db = createDatabase(`sync-store-${crypto.randomUUID()}`);
-	opened.push(db);
-	return db;
-};
 
 /** The library bound to `CONNECTION`, and a store for it: the only kind that writes. */
 const boundStore = async (db: MemoriamDatabase) => {

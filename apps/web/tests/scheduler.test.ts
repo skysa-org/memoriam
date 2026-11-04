@@ -20,7 +20,6 @@ import { t } from '../src/i18n/t.js';
 import { bindLibrary, unbindLibrary } from '../src/store/connection.js';
 import { keepCredential } from '../src/store/credentials.js';
 import {
-	createDatabase,
 	LOCAL_CONNECTION_ID,
 	type MemoriamDatabase,
 	type NoteRecord,
@@ -39,6 +38,7 @@ import {
 	type SyncSchedulerOptions,
 } from '../src/sync/scheduler.js';
 import { createDexieSyncStore } from '../src/sync/store.js';
+import { freshDatabase } from './support/db.js';
 
 /**
  * The sync scheduler (docs/ARCHITECTURE.md §10, "The sync client"): when it
@@ -260,12 +260,6 @@ const remote = (): Remote => {
 		cursors,
 		factory,
 	};
-};
-
-const freshDatabase = (): MemoriamDatabase => {
-	const db = createDatabase(`scheduler-${crypto.randomUUID()}`);
-	cleanups.push(() => db.delete());
-	return db;
 };
 
 /** The credential this device holds for a connection. Without one nothing can mint. */

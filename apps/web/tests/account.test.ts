@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import { ROOT } from '@memoriam/core';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { ApiClient, Connection, Refusal, Result } from '../src/api/client.js';
 import {
@@ -23,7 +23,6 @@ import {
 	pendingCredential,
 } from '../src/store/credentials.js';
 import {
-	createDatabase,
 	isLive,
 	LOCAL_CONNECTION_ID,
 	type MemoriamDatabase,
@@ -37,6 +36,7 @@ import {
 	startConnecting,
 	stopSyncingHere,
 } from '../src/sync/account.js';
+import { freshDatabase } from './support/db.js';
 
 /**
  * Connecting, and the server's word on the connection the library is bound to
@@ -48,11 +48,7 @@ import {
 let db: MemoriamDatabase;
 
 beforeEach(() => {
-	db = createDatabase(`account-${crypto.randomUUID()}`);
-});
-
-afterEach(async () => {
-	await db.delete();
+	db = freshDatabase();
 });
 
 const connectionNamed = (id: string, overrides: Partial<Connection> = {}): Connection => ({

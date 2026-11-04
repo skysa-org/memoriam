@@ -6,7 +6,7 @@ import {
 	ROOT,
 	writeProgress,
 } from '@memoriam/core';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
 	createCollection,
@@ -14,7 +14,7 @@ import {
 	renameCollection,
 	restoreCollection,
 } from '../src/store/collections.js';
-import { createDatabase, type MemoriamDatabase, type NoteRecord } from '../src/store/db.js';
+import type { MemoriamDatabase, NoteRecord } from '../src/store/db.js';
 import { deviceId } from '../src/store/device.js';
 import { libraryView } from '../src/store/library.js';
 import {
@@ -26,15 +26,12 @@ import {
 	titleFromText,
 	updatePassage,
 } from '../src/store/passages.js';
+import { freshDatabase } from './support/db.js';
 
 let db: MemoriamDatabase;
 
 beforeEach(() => {
-	db = createDatabase(`library-${crypto.randomUUID()}`);
-});
-
-afterEach(async () => {
-	await db.delete();
+	db = freshDatabase();
 });
 
 const PSALM: PassageDetails = {

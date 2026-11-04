@@ -1,11 +1,11 @@
 import { isAuthError } from '@memoriam/core';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { ApiClient } from '../src/api/client.js';
 import { bindLibrary, unbindLibrary } from '../src/store/connection.js';
 import { forgetCredential, keepCredential } from '../src/store/credentials.js';
-import { createDatabase, type MemoriamDatabase } from '../src/store/db.js';
 import { createTokenSource } from '../src/sync/tokens.js';
+import { freshDatabase } from './support/db.js';
 
 /**
  * Provider access tokens for the connection the library is bound to
@@ -14,17 +14,10 @@ import { createTokenSource } from '../src/sync/tokens.js';
  * beside a refusal.
  */
 
-const opened: MemoriamDatabase[] = [];
-
-afterEach(async () => {
-	await Promise.all(opened.splice(0).map((db) => db.delete()));
-});
-
 const CREDENTIAL = 'sk1_the-credential-this-device-holds';
 
 const bound = async () => {
-	const db = createDatabase(`tokens-${crypto.randomUUID()}`);
-	opened.push(db);
+	const db = freshDatabase();
 	await bindLibrary(db, { connectionId: 'c1', provider: 'dropbox' });
 	await keepCredential(db, 'c1', {
 		id: 'c1',

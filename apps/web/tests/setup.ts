@@ -1,6 +1,18 @@
 // Dexie needs a real IndexedDB; Node has none.
 import 'fake-indexeddb/auto';
 
+import { afterEach } from 'vitest';
+
+import { deleteFreshDatabases, resetSharedDb } from './support/db.js';
+
+// Every test starts from an empty database (tests/support/db.ts). After each
+// test rather than before the next: a setup file's `afterEach` runs after the
+// file's own, so whatever the test rendered has been unmounted first.
+afterEach(async () => {
+	await deleteFreshDatabases();
+	await resetSharedDb();
+});
+
 // jsdom has no layout, so it implements none of the scrolling API. A component
 // that keeps the active row in view calls this, and an undefined method is a
 // TypeError rather than the "nothing scrolled" that a page with no viewport

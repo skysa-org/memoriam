@@ -20,10 +20,11 @@ import {
 	newCredential,
 	pendingCredential,
 } from '../src/store/credentials.js';
-import { createDatabase, db, type MemoriamDatabase, type NoteRecord } from '../src/store/db.js';
+import { db, type MemoriamDatabase, type NoteRecord } from '../src/store/db.js';
 import { createPassage, passageText, rowFor } from '../src/store/passages.js';
 import type { ConnectOutcome } from '../src/sync/connectReturn.js';
 import type { SchedulerStatus } from '../src/sync/scheduler.js';
+import { freshDatabase } from './support/db.js';
 
 /**
  * Sync on the Settings screen — connecting, how it stands, letting it go —
@@ -97,13 +98,12 @@ const holding = (outcome?: ConnectOutcome) => {
 let database: MemoriamDatabase;
 
 beforeEach(() => {
-	database = createDatabase(`sync-screens-${crypto.randomUUID()}`);
+	database = freshDatabase();
 });
 
-afterEach(async () => {
+afterEach(() => {
 	cleanup();
 	vi.restoreAllMocks();
-	await database.delete();
 });
 
 const showSettings = (props: Parameters<typeof SyncSettings>[0]) => {
@@ -342,12 +342,6 @@ describe('the conflicts screen', () => {
 		render(<RouterProvider router={router} />);
 		return router;
 	};
-
-	beforeEach(async () => {
-		await db.notes.clear();
-		await db.folders.clear();
-		await db.opQueue.clear();
-	});
 
 	const conflict = async (): Promise<{ original: NoteRecord; copy: NoteRecord }> => {
 		const original = await createPassage(db, {
