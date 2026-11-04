@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useSyncExternalStore } from 'react';
 
 import { Icon } from '../components/Icon.js';
-import { useMediaQuery } from '../components/layout.js';
+import { useMediaQuery } from '../components/ui/layout.js';
 import { t } from '../i18n/t.js';
 import { db as appDatabase, type MemoriamDatabase } from '../store/db.js';
 import { dismissInstall, getInstallDismissed } from '../store/prefs.js';

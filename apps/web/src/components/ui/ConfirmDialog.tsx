@@ -1,8 +1,8 @@
 import { type ReactNode, type RefObject, useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
-import { useSuspendShortcuts } from '../commands/context.js';
-import { t } from '../i18n/t.js';
+import { useSuspendShortcuts } from '../../commands/context.js';
+import { t } from '../../i18n/t.js';
 
 /**
  * A question the app asks over everything, with one answer and Cancel.

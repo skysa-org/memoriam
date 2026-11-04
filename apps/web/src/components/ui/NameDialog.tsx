@@ -1,8 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-import { useSuspendShortcuts } from '../commands/context.js';
-import { t } from '../i18n/t.js';
+import { useSuspendShortcuts } from '../../commands/context.js';
+import { t } from '../../i18n/t.js';
 
 /**
  * A name asked for over everything: a collection's, as it is made or renamed.

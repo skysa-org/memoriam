@@ -24,8 +24,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { type ReactNode, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 
 import { Icon } from '../components/Icon.js';
-import { COARSE_POINTER, useMediaQuery } from '../components/layout.js';
 import { useNotices } from '../components/Notices.js';
+import { COARSE_POINTER, useMediaQuery } from '../components/ui/layout.js';
 import { t } from '../i18n/t.js';
 import { db } from '../store/db.js';
 import { deviceId } from '../store/device.js';

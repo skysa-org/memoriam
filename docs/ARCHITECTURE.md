@@ -895,7 +895,7 @@ apps/web/              the PWA
   public/_headers      CSP and HSTS
   src/
     routes/            TanStack Router, a file route per screen (hash history)
-    components/        the shell and shared UI
+    components/        the screens' parts; ui/ for the building blocks they share
     hooks/             React hooks the UI shares that hold no app state (from skysa-notes)
     practice/          the practice screen and keystroke capture
     store/             Dexie: every local read and write, the push queue, credentials

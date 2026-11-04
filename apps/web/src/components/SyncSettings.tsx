@@ -19,10 +19,10 @@ import { isLongRun } from '../sync/progress.js';
 import { syncScheduler, useSyncStatus } from '../sync/runtime.js';
 import type { SchedulerStatus, SyncScheduler } from '../sync/scheduler.js';
 import { needsReconnect } from '../sync/status.js';
-import { ConfirmDialog } from './ConfirmDialog.js';
 import { ConflictsBanner } from './ConflictsBanner.js';
 import { Icon } from './Icon.js';
-import { RunProgress } from './RunProgress.js';
+import { ConfirmDialog } from './ui/ConfirmDialog.js';
+import { RunProgress } from './ui/RunProgress.js';
 
 /**
  * Sync, in Settings (docs/ARCHITECTURE.md §10, "Connecting"): connecting a

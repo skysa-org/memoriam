@@ -2,13 +2,13 @@ import type { Measure } from '@memoriam/core';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState } from 'react';
 
-import { ConfirmDialog } from '../components/ConfirmDialog.js';
 import { ConflictsBanner } from '../components/ConflictsBanner.js';
 import { ErrorScreen } from '../components/ErrorScreen.js';
 import { Icon } from '../components/Icon.js';
 import { MasteryBar } from '../components/MasteryBar.js';
-import { NameDialog } from '../components/NameDialog.js';
 import { useNotices } from '../components/Notices.js';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog.js';
+import { NameDialog } from '../components/ui/NameDialog.js';
 import { t } from '../i18n/t.js';
 import {
 	createCollection,
