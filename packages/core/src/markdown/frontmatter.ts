@@ -504,10 +504,11 @@ const defined = <T extends object>(value: T): T =>
  */
 export const readFrontmatter = (frontmatter: string | null): PassageFrontmatter => {
 	const recovered = recover(frontmatter);
-	if (recovered === undefined) return {};
-	const { record, doc } = recovered;
+	return recovered === undefined ? {} : fieldsOf(recovered);
+};
 
-	return defined({
+const fieldsOf = ({ record, doc }: Recovered): PassageFrontmatter =>
+	defined({
 		id: asId(record.id, doc),
 		title: asString(record.title),
 		created: asString(record.created),
@@ -517,7 +518,6 @@ export const readFrontmatter = (frontmatter: string | null): PassageFrontmatter 
 		chunker: asChunker(record.chunker),
 		progress: asProgress(record.progress),
 	});
-};
 
 /**
  * Where a note's times are, in the order they are looked for: the app's own
@@ -557,10 +557,27 @@ export interface PassageTimes {
  */
 export const readPassageTimes = (frontmatter: string | null): PassageTimes => {
 	const recovered = recover(frontmatter);
-	if (recovered === undefined) return {};
-	const created = firstTime(recovered.record, CREATED_KEYS);
-	const updated = firstTime(recovered.record, UPDATED_KEYS) ?? created;
+	return recovered === undefined ? {} : timesOf(recovered);
+};
+
+const timesOf = ({ record }: Recovered): PassageTimes => {
+	const created = firstTime(record, CREATED_KEYS);
+	const updated = firstTime(record, UPDATED_KEYS) ?? created;
 	return defined({ created, updated });
+};
+
+/**
+ * `readFrontmatter` and `readPassageTimes` together, from one parse of the
+ * block: what reading a passage file asks of it, on every passage a pull or an
+ * import brings in.
+ */
+export const readPassageMetadata = (
+	frontmatter: string | null
+): Readonly<{ fields: PassageFrontmatter; times: PassageTimes }> => {
+	const recovered = recover(frontmatter);
+	return recovered === undefined
+		? { fields: {}, times: {} }
+		: { fields: fieldsOf(recovered), times: timesOf(recovered) };
 };
 
 /**

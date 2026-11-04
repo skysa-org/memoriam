@@ -4,6 +4,8 @@ import { parseDocument } from 'yaml';
 import {
 	joinFrontmatter,
 	readFrontmatter,
+	readPassageMetadata,
+	readPassageTimes,
 	splitFrontmatter,
 	writeFrontmatter,
 } from '../../src/markdown/frontmatter.js';
@@ -1210,6 +1212,25 @@ describe('writeFrontmatter, over blocks put together at random', () => {
 			}
 
 			expect(writeFrontmatter(written, patch), `again, ${about}`).toBe(written);
+		});
+	});
+});
+
+describe('readPassageMetadata', () => {
+	it.each([
+		null,
+		'',
+		'title: Psalm 23\nid: abc\ntags: [psalms, kjv]\nsource: King James Version',
+		'created: 2026-01-02T03:04:05Z\nmodified: 2026-02-03',
+		'date created: 2024-05-06\nlastmod: not a time\nupdated: 2025-01-01',
+		'chunker: 1\nprogress:\n  c1: { due: 2026-03-01 }',
+		'title: [unclosed',
+		'- just\n- a list',
+		'id: 202409141302\ntitle: Zettel',
+	])('reads %j as readFrontmatter and readPassageTimes each do', (block) => {
+		expect(readPassageMetadata(block)).toEqual({
+			fields: readFrontmatter(block),
+			times: readPassageTimes(block),
 		});
 	});
 });

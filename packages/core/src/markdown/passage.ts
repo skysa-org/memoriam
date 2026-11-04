@@ -2,8 +2,7 @@ import {
 	joinFrontmatter,
 	type PassageFrontmatter,
 	type ProgressBlock,
-	readFrontmatter,
-	readPassageTimes,
+	readPassageMetadata,
 	splitFrontmatter,
 	writeFrontmatter,
 } from './frontmatter.js';
@@ -48,8 +47,7 @@ export const parsePassageFile = (
 	options: ParsePassageFileOptions = {}
 ): ParsedPassageFile => {
 	const { frontmatter, body } = splitFrontmatter(text);
-	const fields = readFrontmatter(frontmatter);
-	const times = readPassageTimes(frontmatter);
+	const { fields, times } = readPassageMetadata(frontmatter);
 
 	return {
 		...(fields.id === undefined ? {} : { id: fields.id }),
