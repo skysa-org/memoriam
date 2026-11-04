@@ -814,6 +814,10 @@ any of them out. The one Worker serves the app as well, so `/api` and the app sh
   nulled and the connection no live grant reaches is deleted in one `db.batch` (`revokeGrant` in
   `apps/api/src/db/connections.ts`). As two statements, a sign-out cut off between them left the
   row: a sealed refresh token that no credential reaches, and so nothing can use or revoke.
+- **Each provider's settings are named once**, in `OAUTH_ENV` in `apps/api/src/env.ts`, keyed by
+  the flows in `oauth/providers.ts`. A provider added to one and not the other does not compile.
+  The schema, the boot check and the credentials `createApp` is handed all read it. What the
+  providers whose grant carries an ID token do alike is one test (`tests/oauthContract.test.ts`).
 - **One list of error codes.** Every refusal is `{ error }` with a code from core's
   `API_ERROR_CODES` (`packages/core/src/api.ts`), and goes out through `fail` in
   `apps/api/src/http.ts`. The client's refusals are a part of that list, so the two ends cannot

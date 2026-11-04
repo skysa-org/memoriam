@@ -27,7 +27,7 @@ export type ResolvedOAuth =
 			error: Extract<ApiErrorCode, 'unsupported_provider' | 'provider_not_configured'>;
 	  };
 
-const isOAuthProvider = (provider: string): provider is OAuthProviderKind =>
+export const isOAuthProvider = (provider: string): provider is OAuthProviderKind =>
 	Object.hasOwn(CLIENTS, provider);
 
 /**
