@@ -8,7 +8,7 @@ import {
 	readPassageTimes,
 	splitFrontmatter,
 	writeFrontmatter,
-} from '../../src/markdown/frontmatter.js';
+} from '../../src/markdown/frontmatter/index.js';
 import { type LineEnding, withLineEnding } from '../../src/markdown/lineEndings.js';
 import { serializePassageFile } from '../../src/markdown/passage.js';
 import { mulberry32 } from '../support/random.js';

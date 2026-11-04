@@ -5,7 +5,7 @@ import {
 	frontmatterIsEditable,
 	joinFrontmatter,
 	splitFrontmatter,
-} from '../markdown/frontmatter.js';
+} from '../markdown/frontmatter/index.js';
 import { joinPath } from '../paths.js';
 
 /**

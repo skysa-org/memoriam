@@ -9,3 +9,5 @@ Reading a passage file parses its frontmatter once, not twice (`readPassageMetad
 Core reads JSON from outside through one `parseJson` and `isJsonObject`/`asObject` (`src/json.ts`), in place of the hand-rolled try/catch parses in the marker and the three provider adapters.
 
 Core's naming rules move into `names/` (fold, bytes, extension, slug and conflict names), below `markdown/`, `providers/` and `sync/`, with lint rules that keep them there.
+
+Split core's frontmatter module into `markdown/frontmatter/` (split, read and write), with an index exporting the same names.

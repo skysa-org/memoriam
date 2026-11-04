@@ -766,7 +766,7 @@ packages/core/         framework-free TypeScript: browser, Node and Workers
     practice/          hiding, typing reducer, grading, fading
     schedule/          FSRS, the session planner
     rewards/           activity and its merge, streaks, mastery, badges
-    markdown/          frontmatter (ported from skysa-notes)
+    markdown/          frontmatter/ in split, read and write (from skysa-notes), passage files
 apps/api/              the Worker (S5): OAuth, per-connection credentials, tokens, grants
   src/
     routes/            connect, token, connections

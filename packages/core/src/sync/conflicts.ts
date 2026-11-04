@@ -2,7 +2,7 @@ import {
 	frontmatterHasDeclinedId,
 	readFrontmatter,
 	splitFrontmatter,
-} from '../markdown/frontmatter.js';
+} from '../markdown/frontmatter/index.js';
 import { serializePassageFile } from '../markdown/passage.js';
 
 /**

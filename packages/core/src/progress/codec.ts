@@ -5,7 +5,7 @@ import {
 	type ProgressBlock,
 	readFrontmatter,
 	splitFrontmatter,
-} from '../markdown/frontmatter.js';
+} from '../markdown/frontmatter/index.js';
 import { serializePassageFile } from '../markdown/passage.js';
 import { readTime } from '../markdown/time.js';
 

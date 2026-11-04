@@ -5,7 +5,7 @@ import {
 	readPassageMetadata,
 	splitFrontmatter,
 	writeFrontmatter,
-} from './frontmatter.js';
+} from './frontmatter/index.js';
 import { firstLineEnding, withLineEnding } from './lineEndings.js';
 import { deriveTitle } from './title.js';
 

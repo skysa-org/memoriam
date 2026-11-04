@@ -141,7 +141,7 @@ export {
 	splitFrontmatter,
 	type SplitDocument,
 	writeFrontmatter,
-} from './markdown/frontmatter.js';
+} from './markdown/frontmatter/index.js';
 
 export { firstLineEnding, type LineEnding, toLf, withLineEnding } from './markdown/lineEndings.js';
 
