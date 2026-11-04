@@ -9,3 +9,5 @@ The stale tab, the install prompt and the command registry tell their listeners 
 The store's transaction scopes are named once in `store/scopes.ts`: the writers' tables, the sync store's (`libraryTables`) and letting go of a connection (`connectionTables`).
 
 A connection's rows are read through one `rowsOf` (`store/rows.ts`).
+
+Whether a row is live or a tombstone is asked by name (`store/rowStates.ts`), not by its flag.
