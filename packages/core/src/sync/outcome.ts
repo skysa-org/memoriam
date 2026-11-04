@@ -3,9 +3,10 @@ import { isRateLimitError } from '../providers/types.js';
 /**
  * What a run of the engine comes to (`SyncOutcome`), and the pieces every
  * outcome is built from: the plain one (`ok`), the one for a failure the
- * scheduler comes back from (`transient`), and the wait a provider asked
- * for (`waitFor`). skysa-notes' flags for what a pull met and decides nothing
- * about, its clipboard and its key file, have no counterpart here.
+ * scheduler comes back from (`transient`), the one for a token nothing could
+ * renew (`paused`), and the wait a provider asked for (`waitFor`).
+ * skysa-notes' flags for what a pull met and decides nothing about, its
+ * clipboard and its key file, have no counterpart here.
  */
 
 export type SyncStatus =
@@ -47,6 +48,18 @@ export const ok = (partial: Partial<SyncOutcome> = {}): SyncOutcome => ({
 	pushed: 0,
 	conflicts: [],
 	...partial,
+});
+
+/**
+ * A token the provider would not take, after one renewal or with no way to
+ * renew it: the connection needs the user, and nothing the scheduler retries
+ * will do. Over the base given: the push passes what it has sent, so that is
+ * still counted; the pull, like `transient`, reports nothing it committed.
+ */
+export const paused = (base: SyncOutcome = ok()): SyncOutcome => ({
+	...base,
+	status: 'paused',
+	error: 'authorization required',
 });
 
 /**
