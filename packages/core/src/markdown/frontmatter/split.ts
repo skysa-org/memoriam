@@ -16,11 +16,6 @@ import { toLf } from '../lineEndings.js';
 export const FENCE = '---';
 
 /**
- * The opening fence must be the very first line, and a closing fence must exist.
- * Without a closing fence a leading `---` is an ordinary thematic break.
- */
-const EOL = String.raw`(?:\r\n|\n|\r)`;
-/**
  * All three spellings, not two. A file ending its lines with a bare `\r` is
  * rare — pre-OS X Mac, and a few export tools — but `parse` reads one as a
  * document like any other, so a splitter that does not recognise its fences
@@ -28,6 +23,7 @@ const EOL = String.raw`(?:\r\n|\n|\r)`;
  * the note's `id` is lost, its title comes out as the YAML, and the next write
  * puts a second frontmatter block above the first.
  */
+const EOL = String.raw`(?:\r\n|\n|\r)`;
 /**
  * YAML's document-end marker. On a line of its own it closes a block as `---`
  * does — pandoc writes its blocks that way — and a reader that waits for `---`
@@ -37,6 +33,9 @@ const EOL = String.raw`(?:\r\n|\n|\r)`;
 export const DOCUMENT_END = '...';
 
 /**
+ * The opening fence must be the very first line, and a closing fence must exist.
+ * Without a closing fence a leading `---` is an ordinary thematic break.
+ *
  * Line anchors are spelled out from `EOL` rather than left to the `m` flag,
  * whose `^` and `$` also match at U+2028 and U+2029. Neither ends a line in
  * markdown or in YAML, and both are legal inside a quoted scalar: with `m`, a
@@ -311,6 +310,10 @@ const endedReading = (source: string): Reading | undefined => {
 	};
 };
 
+/** Did `...` close a block above the `---`, with more than blank lines between? */
+const closedEarlier = (source: string, ended: Reading, fenced: Reading): boolean =>
+	source.slice(ended.length, fenced.length).replace(CLOSING_FENCE, '').trim() !== '';
+
 /**
  * Frontmatter is optional on read: a `.md` file written by any other tool is a
  * valid note.
@@ -329,10 +332,6 @@ const endedReading = (source: string): Reading | undefined => {
  * app's own write — which tidies blank lines and would otherwise tip a rule
  * that counted them.
  */
-/** Did `...` close a block above the `---`, with more than blank lines between? */
-const closedEarlier = (source: string, ended: Reading, fenced: Reading): boolean =>
-	source.slice(ended.length, fenced.length).replace(CLOSING_FENCE, '').trim() !== '';
-
 export const splitFrontmatter = (source: string): SplitDocument => {
 	if (!source.startsWith(FENCE)) return NO_FRONTMATTER(source);
 
