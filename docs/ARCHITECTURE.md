@@ -512,9 +512,9 @@ differs.
   wire stub. `contract.test.ts` registers the adapters from one table, each over its stub and,
   given a token, a live account. The stubs share how they answer and record a request
   (`tests/providers/harness.ts`). Beyond skysa-notes' record, the suite asks every adapter about
-  the root: a passage or file written at it, a move onto it, and a delete or move of it, named by
-  its path or by its id, is a `NotFoundError`, and `createFolder('')` answers it as a folder
-  already there.
+  the root: a passage or file written at it, a move onto it, and a delete, move or leave
+  (`leaveFolder`) of it, named by its path or by its id, is a `NotFoundError`, and
+  `createFolder('')` answers it as a folder already there.
 - The fake, the stubs and the store contract reach the apps' tests as `@memoriam/core/testing`
   (`tests/testing.ts`), and never anything the apps ship.
 

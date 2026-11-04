@@ -220,7 +220,7 @@ export const createFakeProvider = (options: FakeProviderOptions = {}): FakeProvi
 	};
 
 	/**
-	 * The root as the entry to delete or move, by its path or its id:
+	 * The root as the entry to delete, leave or move, by its path or its id:
 	 * refused as every adapter refuses it (`refuseRoot` in `adapter.ts`).
 	 */
 	const refuseRoot = (ref: EntryRef): void => {
@@ -487,7 +487,9 @@ export const createFakeProvider = (options: FakeProviderOptions = {}): FakeProvi
 		});
 
 	const leaveFolder = (ref: EntryRef): Promise<void> =>
-		settle('leaveFolder', ref.path, () => undefined);
+		settle('leaveFolder', ref.path, () => {
+			refuseRoot(ref);
+		});
 
 	const scanPage = (offset: number, seqAtStart: number): ChangeSet => {
 		const all = [...nodes.values()].sort(byPath).map(toEntry);

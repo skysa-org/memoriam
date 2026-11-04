@@ -18,3 +18,5 @@ Google Drive lists the folders new to a round four at a time, rather than one af
 On Google Drive, a collection moved, renamed or deleted on one device no longer stays behind as an empty collection on the others, nor comes back after a re-scan: the folder it leaves is marked as left (`StorageProvider.leaveFolder`) and hidden while it holds nothing the app can see, with nothing in it touched.
 
 Google Drive reads the whole library again when its change feed runs longer than that would take, rather than paging through other apps' hidden changes for minutes, and confirms the app's folder once a round rather than before every page. A passage deleted here is never taken over by another device's file at its name, which a re-scan could do, and its delete then sent for that file.
+
+No adapter, nor the fake, leaves the app's own folder (`leaveFolder`), by its path or its id: it would hide the folder from the app that owns it.

@@ -459,6 +459,19 @@ export const describeProviderContract = (
 				await expect(provider.move(root, 'Archive')).rejects.toThrow(NotFoundError);
 				expect(paths(await provider.list(''))).toContain(MARKER_FILE);
 			});
+
+			// A left app folder would be hidden from the app that owns it.
+			it('refuses to leave the root', config, async ({ skip }) => {
+				const provider = await open();
+				const { leaveFolder } = provider;
+				if (leaveFolder === undefined) {
+					skip();
+					return;
+				}
+				const root = await provider.createFolder('');
+				await expect(leaveFolder(root)).rejects.toThrow(NotFoundError);
+				expect(paths(await provider.list(''))).toContain(MARKER_FILE);
+			});
 		});
 
 		describe('move', () => {

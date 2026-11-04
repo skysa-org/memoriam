@@ -217,6 +217,7 @@ export const createGDriveProvider = (options: GDriveProviderOptions): StoragePro
 	 * gone is the outcome the caller wanted.
 	 */
 	const leaveFolder = async (entry: EntryRef): Promise<void> => {
+		await refuseRoot(entry, rootId);
 		const id = await idOf(entry);
 		if (id === undefined) return;
 		const result = await attempt<unknown>(

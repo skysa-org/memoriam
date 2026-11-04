@@ -98,7 +98,7 @@ export interface CreateFileOptions {
  * - `createFolder` and `delete` are idempotent, so a queued op is always safe
  *   to replay.
  * - The root is a folder that is there, and nothing else: no file is written or
- *   created at it, nothing is moved onto it, and it is never deleted or
+ *   created at it, nothing is moved onto it, and it is never deleted, left or
  *   moved — named by its path or by its `rootId` — each refused with
  *   `NotFoundError` (`outsideRoot` and `refuseRoot` in `adapter.ts`).
  * - `move` may or may not change `version` — Dropbox's `rev` survives a move,
