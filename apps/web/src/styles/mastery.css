@@ -30,14 +30,14 @@
 	text-underline-offset: 0.2em;
 }
 
-.passage-missed.heat-1 {
+.passage-missed[data-heat='1'] {
 	text-decoration-color: color-mix(in srgb, var(--missed) 35%, transparent);
 }
 
-.passage-missed.heat-2 {
+.passage-missed[data-heat='2'] {
 	text-decoration-color: color-mix(in srgb, var(--missed) 65%, transparent);
 }
 
-.passage-missed.heat-3 {
+.passage-missed[data-heat='3'] {
 	text-decoration-color: var(--missed);
 }

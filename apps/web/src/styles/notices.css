@@ -46,10 +46,6 @@
 	pointer-events: auto;
 }
 
-.toast-error {
-	border-inline-start: 4px solid var(--bad);
-}
-
 /* The new-build notice and the toasts are the same shape. */
 .update-prompt,
 .toast {
@@ -63,6 +59,12 @@
 	box-shadow: var(--shadow-l);
 	--arrive-y: 0.5rem;
 	animation: arrive var(--duration-l) var(--ease-out);
+}
+
+/* A toast's tone, said by the component (`data-toast-tone`). It outweighs the
+   shape's `border`, which would otherwise put the side back to 1px. */
+.toast[data-toast-tone='error'] {
+	border-inline-start: 4px solid var(--bad);
 }
 
 .update-prompt {

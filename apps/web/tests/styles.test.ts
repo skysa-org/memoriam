@@ -52,6 +52,17 @@ describe('the stylesheet', () => {
 		).toEqual([]);
 	});
 
+	// The components say which by an attribute, and a browser is as quiet about a
+	// selector nothing matches as about a variable nobody declared.
+	it.each([
+		".toast[data-toast-tone='error']",
+		...[1, 2, 3].map((heat) => `.passage-missed[data-heat='${String(heat)}']`),
+		...[1, 2, 3, 4].map((level) => `.heatmap-cell[data-level='${String(level)}']`),
+		'.heatmap-cell[data-kept]',
+	])('draws %s', (selector) => {
+		expect(withoutComments(allStyles())).toContain(selector);
+	});
+
 	// A file left out draws nothing, and the tests that read the sheet would not
 	// see its rules either.
 	it('imports every file in its folder, once', () => {
