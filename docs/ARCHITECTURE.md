@@ -545,7 +545,8 @@ drive the engine through the adapter, held back in S1, are restored. Where it di
   skysa-notes moved them (its #446), with nothing they do changed and the differences above kept:
   - `sync/pull/`, the pull's: `attachments.ts` (files that are not passages, as a pull decides
     them: placed, adopted, gone, clashing), `batch.ts` (what a batch's decisions are reached against, and its
-    readings that no decision changes), `files.ts` (where each file that is not a passage is,
+    readings that no decision changes), `cascade.ts` (what a folder's deletion takes with it, and
+    the folders above a kept passage it must not), `files.ts` (where each file that is not a passage is,
     replayed through a batch's decisions), `occupancy.ts` (which passages end up in or under a
     folder, and the names a copy there must not take), `replay.ts` (where a passage, a folder or an unreadable
     file is once the decisions so far are applied, a `merge-note` among them).
