@@ -543,7 +543,8 @@ drive the engine through the adapter, held back in S1, are restored. Where it di
   map they need.
 - **Split by concern.** The engine's parts leave `engine.ts` for modules of their own, as
   skysa-notes moved them (its #446), with nothing they do changed and the differences above kept:
-  - `sync/pull/`, the pull's: `batch.ts` (what a batch's decisions are reached against, and its
+  - `sync/pull/`, the pull's: `attachments.ts` (files that are not passages, as a pull decides
+    them: placed, adopted, gone, clashing), `batch.ts` (what a batch's decisions are reached against, and its
     readings that no decision changes), `files.ts` (where each file that is not a passage is,
     replayed through a batch's decisions), `occupancy.ts` (which passages end up in or under a
     folder, and the names a copy there must not take), `replay.ts` (where a passage, a folder or an unreadable
