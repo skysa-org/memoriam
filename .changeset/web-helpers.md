@@ -23,3 +23,5 @@ The web's sync/ and the API hold their changing values in `cell()` too, and the 
 The lint rule for `cell()` covers every package's source, and the rest of the web holds its changing values that way.
 
 The shared building blocks of `components/` are in `components/ui/`, and the app's frame (the bar, the palette, the error, stale-tab and update screens) in `components/shell/`.
+
+A command is not registered again for a new `run` on every render, so the palette is not told of a change that is none; it runs the latest `run`.

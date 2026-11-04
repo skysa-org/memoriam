@@ -426,9 +426,12 @@ sent to a server.
 
 **Keyboard.** Commands are registered by the components that own them
 (`apps/web/src/commands/`), and the palette and the shortcuts read the same list. Shortcuts need a
-modifier, so they never collide with typing during practice.
-- `Mod+K` opens the palette (`components/shell/CommandPalette.tsx`, ported from skysa-notes). It is the
-  only chord: the screens are a tap away in the bar, and the chords a browser keeps for itself
+modifier, so they never collide with typing during practice. A command is registered again only
+when what the palette shows of it changes (its label, group, chord, or whether it can run), not for
+a new `run`, which most callers hand over on every render; the registered command calls the latest
+`run` (`useLatest`), so the palette is not told of a change on every render.
+- `Mod+K` opens the palette (`components/shell/CommandPalette.tsx`, ported from skysa-notes). It is
+  the only chord: the screens are a tap away in the bar, and the chords a browser keeps for itself
   (`Mod+N`, `Mod+T`) cannot be taken.
 - `components/AppCommands.tsx` registers what can be done from anywhere: go to each screen, start
   today's practice, add a passage, export a backup. A passage's page adds practising and editing
