@@ -17,6 +17,15 @@ export const sync = {
 		syncsWith: 'Syncing with {provider}.',
 		syncsWithAccount: 'Syncing with {provider} as {account}.',
 		syncNow: 'Sync now',
+		/** Shown while a sync goes: it stops it, and starts no other until asked. */
+		pause: 'Pause syncing',
+		/** What Pause syncing does, before it is pressed. */
+		pauseHint:
+			'Pausing stops this sync now. Nothing syncs on this device until you resume it, or open the app again.',
+		/** Sync now, while syncing is paused. */
+		resume: 'Resume syncing',
+		/** The bar under the status line during a long sync. */
+		progress: 'Sync progress',
 		disconnect: 'Disconnect',
 		connectAgain: 'Connect again',
 	},
@@ -42,6 +51,7 @@ export const sync = {
 		},
 		receiving: 'Receiving passages from {provider}: {done} of {total}.',
 		sending: 'Sending changes to {provider}: {done} of {total}.',
+		paused: 'Syncing with {provider} is paused on this device. Your changes are kept here, and sent when you resume it.',
 		offline:
 			'Offline. Your changes are kept on this device, and sent when you are back online.',
 		retrying: 'Sync could not finish ({error}). It will try again shortly.',

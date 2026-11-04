@@ -21,6 +21,7 @@ import type { SchedulerStatus, SyncScheduler } from '../sync/scheduler.js';
 import { ConfirmDialog } from './ConfirmDialog.js';
 import { ConflictsBanner } from './ConflictsBanner.js';
 import { Icon } from './Icon.js';
+import { RunProgress } from './RunProgress.js';
 
 /**
  * Sync, in Settings (docs/ARCHITECTURE.md §10, "Connecting"): connecting a
@@ -135,6 +136,8 @@ const statusLine = (status: SchedulerStatus, provider: string, now: number): str
 				: syncingLine(status.progress, provider);
 		case 'offline':
 			return t('sync.status.offline');
+		case 'paused':
+			return t('sync.status.paused', { provider });
 		case 'retrying':
 			return t('sync.status.retrying', { error });
 		case 'attention':
@@ -153,7 +156,7 @@ const statusLine = (status: SchedulerStatus, provider: string, now: number): str
 interface Props {
 	database?: MemoriamDatabase;
 	client?: Client;
-	scheduler?: Pick<SyncScheduler, 'status' | 'subscribe' | 'syncNow'>;
+	scheduler?: Pick<SyncScheduler, 'status' | 'subscribe' | 'syncNow' | 'pause'>;
 	connectReturn?: Pick<typeof appConnectReturn, 'peek' | 'forget'>;
 	/** Where the browser goes to consent. */
 	leave?: (url: string) => void;
@@ -216,6 +219,11 @@ const Connected = ({
 			<p className="field-hint" role="status">
 				{statusLine(status, provider, now)}
 			</p>
+			{/* A run long enough to count: its bar, and the file it is on. A
+			    few passages' sync is over before a bar could be read. */}
+			{status.phase === 'syncing' && isLongRun(status.progress) && (
+				<RunProgress status={status} label={t('sync.settings.progress')} />
+			)}
 			<div className="form-actions">
 				{status.refusal === 'reauthorize_required' && (
 					<button
@@ -229,6 +237,7 @@ const Connected = ({
 						{t('sync.settings.connectAgain')}
 					</button>
 				)}
+				{/* Paused, Sync now is what resumes it, and says so. */}
 				<button
 					type="button"
 					className="button"
@@ -238,8 +247,22 @@ const Connected = ({
 					}}
 				>
 					<Icon name="sync" />
-					{t('sync.settings.syncNow')}
+					{status.phase === 'paused'
+						? t('sync.settings.resume')
+						: t('sync.settings.syncNow')}
 				</button>
+				{status.phase === 'syncing' && (
+					<button
+						type="button"
+						className="button"
+						title={t('sync.settings.pauseHint')}
+						onClick={() => {
+							scheduler.pause();
+						}}
+					>
+						{t('sync.settings.pause')}
+					</button>
+				)}
 				<button
 					type="button"
 					className="button"

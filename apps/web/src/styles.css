@@ -1414,6 +1414,41 @@ textarea.field {
 	font-size: 1.125rem;
 }
 
+/* How far a long sync has got, under its status line in Settings
+   (`RunProgress`): a bar in the app's own colour, and the file it is on. A
+   `progress` with no value is the browser's own "cannot say how far"
+   animation, which is kept: it is the honest drawing of a run still listing
+   what there is to read. */
+.run-bar {
+	display: block;
+	width: 100%;
+	height: 0.5rem;
+	margin: var(--space-xs) 0 0.25rem;
+	accent-color: var(--brand);
+}
+
+/* One line, a path longer than the section cut in the middle (`MiddleCut`):
+   the start gives way to an ellipsis, and the end, which names the file,
+   stays whole. */
+.run-file {
+	display: flex;
+	min-width: 0;
+	margin: 0;
+	color: var(--muted);
+	font-size: 0.8125rem;
+	white-space: nowrap;
+}
+
+.run-file-start {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.run-file-end {
+	flex: none;
+}
+
 .settings-section .form-actions {
 	margin-block: var(--space-m) var(--space-s);
 }

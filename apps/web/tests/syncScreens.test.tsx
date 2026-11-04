@@ -76,6 +76,7 @@ const schedulerShowing = (status: Partial<SchedulerStatus> = {}) => {
 		status: () => said,
 		subscribe: () => () => undefined,
 		syncNow: vi.fn(() => Promise.resolve()),
+		pause: vi.fn(),
 	};
 };
 
@@ -264,6 +265,61 @@ describe('connected', () => {
 			{ stage: 'uploading', done: 2, total: 30 },
 			'Sending changes to Dropbox: 2 of 30.'
 		);
+	});
+
+	it('pauses a sync under way, and resumes it when asked', async () => {
+		await bound();
+		const { client } = fakes();
+		const user = userEvent.setup();
+		const syncing = schedulerShowing({
+			phase: 'syncing',
+			progress: {
+				stage: 'receiving',
+				done: 12,
+				total: 40,
+				listing: false,
+				path: 'Psalms/23.md',
+			},
+		});
+		showSettings({ client, scheduler: syncing, connectReturn: holding() });
+
+		// A long run's bar, and the file it is on.
+		const bar = await screen.findByRole('progressbar', { name: 'Sync progress' });
+		expect(bar.getAttribute('value')).toBe('12');
+		expect(bar.getAttribute('max')).toBe('40');
+		expect(screen.getByText('Psalms/23.md', { exact: false })).toBeTruthy();
+		await user.click(screen.getByRole('button', { name: 'Pause syncing' }));
+		expect(syncing.pause).toHaveBeenCalledOnce();
+		cleanup();
+
+		const paused = schedulerShowing({ phase: 'paused' });
+		showSettings({ client, scheduler: paused, connectReturn: holding() });
+		expect(
+			await screen.findByText(
+				'Syncing with Dropbox is paused on this device. Your changes are kept here, and sent when you resume it.'
+			)
+		).toBeTruthy();
+		expect(screen.queryByRole('button', { name: 'Pause syncing' })).toBeNull();
+		expect(screen.queryByRole('progressbar')).toBeNull();
+		await user.click(screen.getByRole('button', { name: 'Resume syncing' }));
+		expect(paused.syncNow).toHaveBeenCalledOnce();
+	});
+
+	it('draws no bar for a sync of a few passages', async () => {
+		await bound();
+		const { client } = fakes();
+		showSettings({
+			client,
+			scheduler: schedulerShowing({
+				phase: 'syncing',
+				progress: { stage: 'uploading', done: 1, total: 3, path: 'a.md' },
+			}),
+			connectReturn: holding(),
+		});
+
+		expect(await screen.findByText('Syncing…')).toBeTruthy();
+		expect(screen.queryByRole('progressbar')).toBeNull();
+		expect(screen.getByRole('button', { name: 'Pause syncing' })).toBeTruthy();
 	});
 
 	it('asks for the provider again when it has to be', async () => {

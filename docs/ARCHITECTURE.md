@@ -646,8 +646,16 @@ differs:
   - a run held up behind another tab's sync says so (`waitForLock`). The lock is a Web Lock, which
     nothing else here can see. After 5 seconds without it (`SYNC_WAIT_MS`) the status says
     `waiting`, and Settings says the sync is waiting for another tab or window, until the lock
-    comes. A lock this tab's own work holds, such as a re-scan clearing the cursor, is not another
-    tab's: the tab knows which it holds (`underSyncLock`), and asks again 5 seconds later.
+    comes. A lock this tab's own work holds, such as a paused run putting its batch away or a
+    re-scan clearing the cursor, is not another tab's: the tab knows which it holds
+    (`underSyncLock`), and asks again 5 seconds later;
+  - the user can pause syncing (`pause`), as skysa-notes' can. That ends the session, which
+    aborts every request the run has out, and makes the next one paused: it publishes `paused` and
+    runs nothing, since every trigger goes through `run`, which refuses while paused. A batch the
+    run was already writing is written whole with its cursor. An op whose request was aborted gets
+    back the attempt counted against it. Sync now or a re-scan resumes it, and so do letting the
+    library go and binding it again, and a reload: the pause is in memory only, so a reload never
+    leaves a device not syncing with nobody there to see it.
 
   skysa-notes also says when a run waits on another tab's reads of the database (`heldUp`).
   Memoriam does not follow its transactions, so only the wait for the lock is said. The scheduler
@@ -713,11 +721,15 @@ any of them out. The one Worker serves the app as well, so `/api` and the app sh
     changes or, on a first sync or a re-scan, looking for passages. From twenty passages
     (`PROGRESS_FROM` in `sync/progress.ts`) it says how many it has found, received or sent. A
     run of a few is not counted, so an edit's sync does not flash a number;
-  - offline, or retrying;
+  - paused, or offline, or retrying;
   - what needs attention, with the change that is stuck, or "Connect again" when the provider
     must be asked again (`reauthorize_required`).
 
-  Sync now runs a sync and tries again a stuck change.
+  Sync now runs a sync and tries again a stuck change. While a sync goes, a long run draws its bar
+  and the file it is on under the line (`RunProgress`), and **Pause syncing** stops it. Paused,
+  Sync now reads **Resume syncing**. skysa-notes opens these from its status line in a dialog,
+  because its line, at the sidebar's foot, has no room. Settings has room, so they are drawn in
+  place.
 - **Disconnect** asks first, then signs this device out on the server and lets go here. Where the
   server will not or cannot answer, the section offers to stop syncing on this device alone
   (`stopSyncingHere`).
