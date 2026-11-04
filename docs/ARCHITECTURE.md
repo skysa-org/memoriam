@@ -545,7 +545,8 @@ drive the engine through the adapter, held back in S1, are restored. Where it di
   skysa-notes moved them (its #446), with nothing they do changed and the differences above kept:
   - `sync/pull/`, the pull's: `batch.ts` (what a batch's decisions are reached against, and its
     readings that no decision changes), `files.ts` (where each file that is not a passage is,
-    replayed through a batch's decisions), `replay.ts` (where a passage, a folder or an unreadable
+    replayed through a batch's decisions), `occupancy.ts` (which passages end up in or under a
+    folder, and the names a copy there must not take), `replay.ts` (where a passage, a folder or an unreadable
     file is once the decisions so far are applied, a `merge-note` among them).
   - `sync/push/`, the push's: `conflicts.ts` (a write the remote would not take: set aside under a
     conflict name, merged, or reconciled by the conflict rule), `drain.ts` (the queue drained in
