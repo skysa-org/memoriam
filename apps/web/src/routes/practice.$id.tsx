@@ -9,7 +9,7 @@ import { t } from '../i18n/t.js';
 import { Finished } from '../practice/Finished.js';
 import { Session, type Tally } from '../practice/Session.js';
 import { runThrough, type Task, tasksOf } from '../practice/tasks.js';
-import { db } from '../store/db.js';
+import { useDb } from '../store/database.js';
 import { usePassage } from '../store/hooks.js';
 import { recordBadges } from '../store/rewards.js';
 import { type Readied, readied } from '../store/schedule.js';
@@ -36,6 +36,7 @@ const Practise = ({
 	passage,
 	settings,
 }: Readonly<{ id: string; title: string; passage: Readied | undefined; settings: Settings }>) => {
+	const db = useDb();
 	const [tasks, setTasks] = useState<readonly Task[]>(() => planned(passage));
 	// A fresh session for each run through.
 	const [round, setRound] = useState(0);

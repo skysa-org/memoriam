@@ -365,7 +365,8 @@ earn it.
 - A version only adds, and an upgrade carries forward what an older build wrote.
 - A component reads and writes the database it is drawn over (`useDb`, `store/database.tsx`, from
   skysa-notes): the app's own, unless a `DatabaseProvider` above it names another, as a test does
-  with one of its own. The store's hooks read it too, so nothing hands a database down as a prop.
+  with one of its own. The screens and the store's hooks read it too, so nothing hands a database
+  down as a prop. Only the sync runtime (`sync/runtime.ts`) is built over the app's own.
 
 **Recording a pass.** `recordPass` (`apps/web/src/store/practice.ts`) is one transaction:
 1. Read the row's current `source`, and cut it into chunks by its own `chunker`.

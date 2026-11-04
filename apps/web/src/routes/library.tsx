@@ -16,7 +16,8 @@ import {
 	renameCollection,
 	restoreCollection,
 } from '../store/collections.js';
-import { db, type NoteRecord } from '../store/db.js';
+import { useDb } from '../store/database.js';
+import type { NoteRecord } from '../store/db.js';
 import { useLibrary } from '../store/hooks.js';
 import { collectionName, type CollectionView } from '../store/library.js';
 import { useRewards } from '../store/rewards.js';
@@ -54,6 +55,7 @@ type Asking =
 	| Readonly<{ kind: 'delete'; collection: CollectionView }>;
 
 const Library = () => {
+	const db = useDb();
 	const library = useLibrary();
 	const measures = useRewards()?.measures;
 	const notices = useNotices();

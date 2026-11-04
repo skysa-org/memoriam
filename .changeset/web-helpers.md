@@ -31,3 +31,5 @@ A command is not registered again for a new `run` on every render, so the palett
 The command palette closes on a press begun and let go on the page around it, as a dialog's way out, rather than on any press that starts there; it, the confirm and the name dialogs give the focus back through one `useFocusBack`.
 
 The store's hooks read the database they are drawn over (`useDb`, `DatabaseProvider` in `store/database.tsx`) rather than taking one as an argument.
+
+The screens read the database they are drawn over too, so a test can draw one over a database of its own.

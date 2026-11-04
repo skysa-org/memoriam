@@ -17,7 +17,8 @@ import {
 	type Resolved,
 	useConflicts,
 } from '../store/conflicts.js';
-import { db, type NoteRecord } from '../store/db.js';
+import { useDb } from '../store/database.js';
+import type { NoteRecord } from '../store/db.js';
 import { deletePassage, type Edited, passageText, restorePassages } from '../store/passages.js';
 
 /**
@@ -64,6 +65,7 @@ const Version = ({
 );
 
 const ConflictView = ({ conflict }: Readonly<{ conflict: Conflict }>) => {
+	const db = useDb();
 	const notices = useNotices();
 	const [busy, setBusy] = useState(false);
 	const { copy, original } = conflict;
