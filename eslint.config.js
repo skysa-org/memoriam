@@ -33,6 +33,12 @@ const RESTRICTED_SYNTAX = [
 			"a re-export of nothing but types is 'export type { … } from', which loads nothing.",
 	},
 	{
+		// A static import is what the src rule on `@memoriam/core/testing` sees;
+		// this keeps a lazy one from slipping a test double into a chunk.
+		selector: "ImportExpression[source.value='@memoriam/core/testing']",
+		message: 'import the test doubles statically, from a test.',
+	},
+	{
 		selector: 'AwaitExpression > ImportExpression',
 		message:
 			'Await with dynamic imports (await import()) is not allowed. Use static imports at the top of the file instead.',
@@ -516,6 +522,29 @@ export default tseslint.config(
 		files: ['packages/*/src/**/*.ts', 'apps/*/src/**/*.{ts,tsx}'],
 		rules: {
 			'max-lines': ['warn', { max: 600, skipBlankLines: true, skipComments: true }],
+		},
+	},
+	{
+		// Core's test doubles are `@memoriam/core/testing`, for tests alone:
+		// nothing the app ships may reach them, by the entry or by a path into
+		// any tests folder. typescript-eslint's rule rather than core's, which the
+		// layer blocks above set per folder and would replace this in each.
+		files: ['packages/*/src/**/*.ts', 'apps/*/src/**/*.{ts,tsx}'],
+		rules: {
+			'@typescript-eslint/no-restricted-imports': [
+				'error',
+				{
+					paths: [
+						{ name: '@memoriam/core/testing', message: 'test doubles are for tests.' },
+					],
+					patterns: [
+						{
+							group: ['**/tests/**', '**/providers/fake', '**/providers/fake.js'],
+							message: 'test doubles are for tests.',
+						},
+					],
+				},
+			],
 		},
 	},
 

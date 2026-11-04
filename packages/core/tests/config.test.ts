@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { APP_DATA_FOLDER, HIDDEN_PREFIX, MARKER_FILE } from '../src/index.js';
+import { APP_DATA_FOLDER, HIDDEN_PREFIX, MARKER_FILE } from '../src/config.js';
 
 describe('the names the library is kept under', () => {
 	it('keeps the app’s own files out of sight of the library', () => {

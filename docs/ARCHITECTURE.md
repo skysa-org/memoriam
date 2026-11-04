@@ -492,6 +492,8 @@ differs.
 - The marker file, and conflict names.
 - The contract suite every adapter passes (`tests/providers/contract.ts`), with each provider's
   wire stub.
+- The fake, the stubs and the store contract reach the apps' tests as `@memoriam/core/testing`
+  (`tests/testing.ts`), and never anything the apps ship.
 
 Only the names differ:
 - `APP_FOLDER_NAME` is `memoriam`, and the marker is `.memoriam-app.json`.
@@ -758,6 +760,7 @@ apps/web/              the PWA
     install/           the install banner
 packages/core/         framework-free TypeScript: browser, Node and Workers
   src/
+    index.ts           what the apps may use, by name; tests/exports.test.ts lists it
     passage/           body grammar, tokenizer, chunker, remap
     progress/          frontmatter codec, passage merge
     providers/         storage adapters and the in-memory fake (from skysa-notes)
@@ -786,7 +789,9 @@ and none of the UI or the features above it. Inside `packages/core`, nothing und
 imports `sync/`: what both need, a conflict copy's name say, sits below them in `names/`, which
 imports none of `sync/`, `providers/` or `markdown/`. Neither `packages/core` nor the Worker may
 import a Node built-in, and the list is Node's own (`module.builtinModules`), not one kept by
-hand. Source files past 600 lines of code draw a warning, which marks the long files ported from
+hand. The apps import `@memoriam/core`, which names what it offers rather than everything its
+modules export; their tests may also import `@memoriam/core/testing`, and their source may not,
+nor any path into a `tests` folder. Source files past 600 lines of code draw a warning, which marks the long files ported from
 skysa-notes until they are split.
 
 ## 12. Roadmap

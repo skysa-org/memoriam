@@ -11,3 +11,5 @@ Core reads JSON from outside through one `parseJson` and `isJsonObject`/`asObjec
 Core's naming rules move into `names/` (fold, bytes, extension, slug and conflict names), below `markdown/`, `providers/` and `sync/`, with lint rules that keep them there.
 
 Split core's frontmatter module into `markdown/frontmatter/` (split, read and write), with an index exporting the same names.
+
+`@memoriam/core` now offers only what the apps import, by name, and its test doubles (the in-memory provider, the provider stubs, the store contract) moved to `@memoriam/core/testing`. Nothing the app does changes.
