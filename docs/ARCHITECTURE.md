@@ -487,7 +487,7 @@ the store and the engine. The ported code cites it as "skysa-notes' `docs/ARCHIT
 reference is never read against this file's sections. What follows records only where Memoriam
 differs.
 
-**The provider layer** (`packages/core/src/providers/`, `marker.ts`, `sync/conflicts.ts`):
+**The provider layer** (`packages/core/src/providers/`, `marker.ts`, `names/conflicts.ts`):
 - The adapters for Dropbox, OneDrive and Google Drive, and the in-memory fake.
 - The marker file, and conflict names.
 - The contract suite every adapter passes (`tests/providers/contract.ts`), with each provider's
@@ -761,7 +761,8 @@ packages/core/         framework-free TypeScript: browser, Node and Workers
     passage/           body grammar, tokenizer, chunker, remap
     progress/          frontmatter codec, passage merge
     providers/         storage adapters and the in-memory fake (from skysa-notes)
-    sync/              the engine and its store contract, conflict names, the merge
+    names/             a file's name: folded, slugged, cut to fit; a conflict copy's name
+    sync/              the engine and its store contract, a conflict copy's contents, the merge
     practice/          hiding, typing reducer, grading, fading
     schedule/          FSRS, the session planner
     rewards/           activity and its merge, streaks, mastery, badges
@@ -781,10 +782,12 @@ docs/
 Inside `apps/web/src` the layers point one way, and ESLint's `no-restricted-imports` holds them
 there. `store/` is the data layer: it imports none of `sync/`, `components/`, `routes/`,
 `practice/`, `archive/`, `install/` or `commands/`. `sync/` imports the store, `api/` and `i18n/`,
-and none of the UI or the features above it. Neither `packages/core` nor the Worker may import a
-Node built-in, and the list is Node's own (`module.builtinModules`), not one kept by hand. Source
-files past 600 lines of code draw a warning, which marks the long files ported from skysa-notes
-until they are split.
+and none of the UI or the features above it. Inside `packages/core`, nothing under `providers/`
+imports `sync/`: what both need, a conflict copy's name say, sits below them in `names/`, which
+imports none of `sync/`, `providers/` or `markdown/`. Neither `packages/core` nor the Worker may
+import a Node built-in, and the list is Node's own (`module.builtinModules`), not one kept by
+hand. Source files past 600 lines of code draw a warning, which marks the long files ported from
+skysa-notes until they are split.
 
 ## 12. Roadmap
 

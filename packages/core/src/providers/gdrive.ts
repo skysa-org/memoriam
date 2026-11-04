@@ -2,14 +2,14 @@ import { z } from 'zod';
 
 import { APP_FOLDER_NAME, MARKER_FILE } from '../config.js';
 import { asObject, parseJson } from '../json.js';
-import { isPassageName } from '../markdown/slug.js';
 import { buildMarker, serializeMarker } from '../marker.js';
-import { basename, joinPath, normalizePath, parentPath, pathSegments, ROOT } from '../paths.js';
 import {
 	conflictFilename,
 	conflictFolderName,
 	conflictNameKeepingExtension,
-} from '../sync/conflicts.js';
+} from '../names/conflicts.js';
+import { isPassageName } from '../names/fold.js';
+import { basename, joinPath, normalizePath, parentPath, pathSegments, ROOT } from '../paths.js';
 import type { FetchLike } from './dropbox.js';
 import {
 	applyItem,

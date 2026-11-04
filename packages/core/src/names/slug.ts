@@ -1,4 +1,6 @@
 import { PASSAGE_EXTENSION } from '../config.js';
+import { type Caps, cut } from './bytes.js';
+import { foldName } from './fold.js';
 
 /**
  * Filenames are a slug of the title; `id` in frontmatter is the stable identity,
@@ -59,108 +61,16 @@ export const UNTITLED_SLUG = 'untitled';
  *
  * 255 - 39 = 216. It promises nothing past that: a copy of a copy carries two
  * suffixes, and a name another tool chose was never capped at all. The 255 is
- * kept where those names are made, which cut the stem to fit with `fitBytes`
- * below, and this cap is only why they seldom have to.
+ * kept where those names are made — `conflictName` in names/conflicts.ts cuts
+ * the stem to fit, with `fitBytes` from bytes.ts — and this cap is only why it
+ * seldom has to.
  */
 const MAX_SLUG_CODE_POINTS = 120;
 const MAX_SLUG_BYTES = 216;
 
-/** What ext4 and APFS allow one name, in bytes of UTF-8. */
-export const MAX_NAME_BYTES = 255;
-
-export const utf8Length = (text: string): number =>
-	[...text].reduce((bytes, char) => {
-		const point = char.codePointAt(0) ?? 0;
-		if (point < 0x80) return bytes + 1;
-		if (point < 0x800) return bytes + 2;
-		return bytes + (point < 0x10000 ? 3 : 4);
-	}, 0);
-
-/**
- * Where there is no `Intl.Segmenter` (Firefox before 125): a base character
- * with its combining marks, carried across any zero-width joiner. It does not
- * know a flag or a skin-tone modifier from two characters, and what it gets
- * wrong is a cut in an odd place, never a malformed string.
- */
-const APPROXIMATE_CLUSTER = /\p{M}+|\P{M}\p{M}*(?:\u200d\P{M}\p{M}*)*/gu;
-
-/**
- * What a reader would call the characters: an emoji joined from four code
- * points is one, and so is a letter with the accents stacked on it.
- */
-export const clusters = (text: string): readonly string[] => {
-	// Asked of the value rather than the type: the lib says it is always there,
-	// and it is not.
-	const segmenter = (Intl as Partial<typeof Intl>).Segmenter;
-	return segmenter === undefined
-		? (text.match(APPROXIMATE_CLUSTER) ?? [])
-		: Array.from(
-				new segmenter(undefined, { granularity: 'grapheme' }).segment(text),
-				(each) => each.segment
-			);
-};
-
-interface Fit {
-	readonly text: string;
-	readonly points: number;
-	readonly bytes: number;
-	readonly full: boolean;
-}
-
-interface Caps {
-	readonly points: number;
-	readonly bytes: number;
-}
-
 const SLUG_CAPS: Caps = { points: MAX_SLUG_CODE_POINTS, bytes: MAX_SLUG_BYTES };
 
-/**
- * Cut to both caps without cutting a character in half.
- *
- * `slice` counts UTF-16 units, and a cut landing inside a surrogate pair leaves
- * half of one at the end of the name — see `LONE_SURROGATE` for what that
- * costs. Cutting between code points avoids that and still turns a family
- * emoji into a different one, or strands an accent's letter, so the cut is made
- * between clusters.
- *
- * A single cluster too big for the caps on its own — text with marks piled on
- * one letter by the hundred — is cut between code points instead, or the whole
- * name would be dropped for it.
- */
-const cut = (text: string, caps: Caps): string => {
-	const fits = (points: number, bytes: number): boolean =>
-		points <= caps.points && bytes <= caps.bytes;
-
-	// Nearly every title, and every one slugged on each keystroke of a rename:
-	// no UTF-16 unit is more than three bytes or more than one code point, so
-	// text this short fits whatever is in it, and nothing need be segmented.
-	if (fits(text.length, text.length * 3)) return text;
-
-	return clusters(text)
-		.flatMap((cluster) =>
-			fits([...cluster].length, utf8Length(cluster)) ? [cluster] : [...cluster]
-		)
-		.reduce<Fit>(
-			(fit, piece) => {
-				if (fit.full) return fit;
-				const points = fit.points + [...piece].length;
-				const bytes = fit.bytes + utf8Length(piece);
-				return fits(points, bytes)
-					? { text: fit.text + piece, points, bytes, full: false }
-					: { ...fit, full: true };
-			},
-			{ text: '', points: 0, bytes: 0, full: false }
-		).text;
-};
-
 const truncate = (text: string): string => cut(text, SLUG_CAPS);
-
-/**
- * As much of the start of `text` as fits in `bytes` of UTF-8, cut the same way.
- * Text that fits comes back untouched, which is nearly always.
- */
-export const fitBytes = (text: string, bytes: number): string =>
-	utf8Length(text) <= bytes ? text : cut(text, { points: Infinity, bytes });
 
 /**
  * Lowercase, hyphen-separated, safe on every provider. Non-Latin scripts are
@@ -228,30 +138,6 @@ export const sanitizeFolderName = (name: string, unnamed = 'Untitled'): string =
 export const passageFilename = (title: string): string => `${slugify(title)}${PASSAGE_EXTENSION}`;
 
 /**
- * Two names are the same name when the provider says they are: case-folded and
- * NFC-normalized, because Drive, Dropbox and macOS all treat them that way.
- *
- * The one place that answers this question, exported so that it stays the one
- * place. Every check that asks whether a name is taken guards a renamer that
- * asks the same thing, and the two have to agree: where they disagree it is
- * always the check that fails open, handing back the very name it was asked to
- * avoid — one file on the provider, under two names nothing here can tell
- * apart. Four separate bugs of that shape came from two copies of this
- * drifting.
- *
- * Both folds, not just case. `slugify` normalizes what it produces, so a taken
- * set folded by case alone misses a name that arrived as NFD.
- */
-export const foldName = (name: string): string => name.normalize('NFC').toLowerCase();
-
-/**
- * Whether a name or path is a passage's: its extension folded as `foldName`
- * folds, so `Psalm-23.MD` from a Windows tool is one. The engine, the providers
- * and the app all ask this, and must answer it the same way.
- */
-export const isPassageName = (name: string): boolean => foldName(name).endsWith(PASSAGE_EXTENSION);
-
-/**
  * Disambiguate against names already in the folder by appending `-2`, `-3`, and
  * so on — the convention every file manager uses.
  */
@@ -262,17 +148,3 @@ const nextFreeName = (base: string, used: ReadonlySet<string>, n: number): strin
 
 export const uniqueFilename = (title: string, taken: Iterable<string>): string =>
 	nextFreeName(slugify(title), new Set([...taken].map(foldName)), 1);
-
-/**
- * Where a name's extension starts — at its dot — or the name's length where it
- * has none: a dot and up to sixteen characters with no dot, space or
- * separator, at the end, and not at the start, where the dot makes a hidden
- * file (`.env`) rather than an extension with no stem. Bounded, so the stem is
- * always what gives way to fit a name: another tool's
- * `minutes.2026-01-01 with the board` has no extension, only a stem with a dot
- * in it.
- */
-export const extensionAt = (name: string): number => {
-	const match = /\.[^./\\\s]{1,16}$/u.exec(name);
-	return match === null || match.index === 0 ? name.length : match.index;
-};

@@ -68,14 +68,25 @@ export {
 
 export { mergeFile } from './sync/merge.js';
 
+export { clusters, fitBytes, MAX_NAME_BYTES, utf8Length } from './names/bytes.js';
 export {
-	conflictContent,
 	conflictFilename,
 	conflictFilePath,
 	conflictFolderPath,
 	conflictPath,
 	conflictStamp,
-} from './sync/conflicts.js';
+} from './names/conflicts.js';
+export { extensionAt } from './names/extension.js';
+export { foldName, isPassageName } from './names/fold.js';
+export {
+	normalizeTag,
+	passageFilename,
+	sanitizeFolderName,
+	slugify,
+	uniqueFilename,
+	UNTITLED_SLUG,
+} from './names/slug.js';
+export { conflictContent } from './sync/conflicts.js';
 
 export {
 	createSyncEngine,
@@ -141,22 +152,6 @@ export {
 	serializePassageFile,
 	type SerializePassageFileInput,
 } from './markdown/passage.js';
-
-export {
-	clusters,
-	extensionAt,
-	fitBytes,
-	foldName,
-	isPassageName,
-	MAX_NAME_BYTES,
-	normalizeTag,
-	passageFilename,
-	sanitizeFolderName,
-	slugify,
-	uniqueFilename,
-	UNTITLED_SLUG,
-	utf8Length,
-} from './markdown/slug.js';
 
 export { readTime } from './markdown/time.js';
 

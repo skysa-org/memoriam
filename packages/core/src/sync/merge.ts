@@ -1,4 +1,4 @@
-import { isPassageName } from '../markdown/slug.js';
+import { isPassageName } from '../names/fold.js';
 import { isHidden } from '../paths.js';
 import { mergePassage } from '../progress/merge.js';
 import {

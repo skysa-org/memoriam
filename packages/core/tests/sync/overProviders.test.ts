@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { isPassageName } from '../../src/markdown/slug.js';
+import { conflictFilePath } from '../../src/names/conflicts.js';
+import { isPassageName } from '../../src/names/fold.js';
 import {
 	ancestorPaths,
 	basename,
@@ -14,7 +15,6 @@ import { createFakeProvider, type FakeProvider } from '../../src/providers/fake.
 import { createGDriveProvider } from '../../src/providers/gdrive.js';
 import { createOneDriveProvider } from '../../src/providers/onedrive.js';
 import type { StorageProvider } from '../../src/providers/types.js';
-import { conflictFilePath } from '../../src/sync/conflicts.js';
 import { createSyncEngine, type SyncEngine, type SyncOutcome } from '../../src/sync/engine.js';
 import type { SyncNote } from '../../src/sync/store.js';
 import { createDropboxStub } from '../providers/dropboxStub.js';

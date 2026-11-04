@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { titleFromFilename } from '../../src/markdown/title.js';
+import { isPassageName } from '../../src/names/fold.js';
 import {
-	isPassageName,
 	passageFilename,
 	sanitizeFolderName,
 	slugify,
 	uniqueFilename,
-} from '../../src/markdown/slug.js';
-import { titleFromFilename } from '../../src/markdown/title.js';
+} from '../../src/names/slug.js';
 
 /** Both caps in `slug.ts`, and the property a provider adapter needs of a name. */
 const utf8Bytes = (text: string): number => new TextEncoder().encode(text).length;

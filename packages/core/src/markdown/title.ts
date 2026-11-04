@@ -1,5 +1,5 @@
 import { PASSAGE_EXTENSION } from '../config.js';
-import { isPassageName } from './slug.js';
+import { isPassageName } from '../names/fold.js';
 
 /**
  * A passage's title is frontmatter `title`, else its filename, else

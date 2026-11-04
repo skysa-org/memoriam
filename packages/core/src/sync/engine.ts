@@ -2,7 +2,8 @@ import { APP_DATA_FOLDER } from '../config.js';
 import { contentTypeOf } from '../files.js';
 import { contentHash } from '../hash.js';
 import { parsePassageFile } from '../markdown/passage.js';
-import { foldName, isPassageName } from '../markdown/slug.js';
+import { conflictFilePath, conflictFolderPath, conflictPath } from '../names/conflicts.js';
+import { foldName, isPassageName } from '../names/fold.js';
 import {
 	ancestorPaths,
 	basename,
@@ -29,12 +30,7 @@ import {
 	type StorageProvider,
 } from '../providers/types.js';
 import { isActivityPath } from '../rewards/activity.js';
-import {
-	conflictContent,
-	conflictFilePath,
-	conflictFolderPath,
-	conflictPath,
-} from './conflicts.js';
+import { conflictContent } from './conflicts.js';
 
 /**
  * How many times `freeFolderPath` may ask for a name before giving up. Names go
