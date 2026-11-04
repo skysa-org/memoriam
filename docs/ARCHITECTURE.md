@@ -547,8 +547,9 @@ drive the engine through the adapter, held back in S1, are restored. Where it di
     readings that no decision changes), `files.ts` (where each file that is not a passage is,
     replayed through a batch's decisions), `replay.ts` (where a passage, a folder or an unreadable
     file is once the decisions so far are applied, a `merge-note` among them).
-  - `sync/push/`, the push's: `folders.ts` (the folders made before a write, and removed or left
-    once empty).
+  - `sync/push/`, the push's: `files.ts` (files that are not passages: uploaded, moved, deleted,
+    or set beside what they meet), `folders.ts` (the folders made before a write, and removed or
+    left once empty).
   - `sync/context.ts`, what every part of the engine is handed (`EngineContext`): the provider,
     the store, the clock and ids, its bounds, the meter, and the merge hook as `mergedOf`.
   - `sync/names.ts`, finding a free conflict name: tried in turn, bounded, the last refusal
