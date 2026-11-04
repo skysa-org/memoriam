@@ -13,3 +13,5 @@ The Dropbox adapter refuses the root as the other adapters do: a passage or file
 OneDrive and Drive share their cursor's envelope and its reading (`treeCursorBase`, `readTreeCursor`, `applyAll` in `idTree.ts`). The cursors keep their shape, so every stored one reads as before.
 
 An answer a provider should not have given (an item with no id, a file with no version, a page with neither link) is a `ProviderResponseError`, still retried and counted as before, and a rate limit reads the same from every provider: who, the status, and how long it asked us to wait.
+
+The Google Drive adapter is split into `providers/gdrive/` by concern (wire, root, upload, cursor, duplicates), with nothing it does changed.

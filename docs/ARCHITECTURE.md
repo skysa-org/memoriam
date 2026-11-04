@@ -488,7 +488,11 @@ reference is never read against this file's sections. What follows records only 
 differs.
 
 **The provider layer** (`packages/core/src/providers/`, `marker.ts`, `names/conflicts.ts`):
-- The adapters for Dropbox, OneDrive and Google Drive, and the in-memory fake.
+- The adapters for Dropbox, OneDrive and Google Drive, and the in-memory fake. Drive's is a folder,
+  `providers/gdrive/`, one file per concern: `wire.ts` (endpoints, answers, failures and the
+  requests everything else makes), `root.ts` (the app folder and path walks), `upload.ts`,
+  `cursor.ts` (the scan and the change feed), `duplicates.ts` (two items at one path) and
+  `index.ts` (the provider).
 - What the HTTP adapters share. On the wire, `http.ts`: the injected `fetch` type, the transport
   each request goes through with its token (`createTransport`), error bodies, and the reading of
   `Retry-After`. On the contract's side, `adapter.ts`: the options each is made with, the marker

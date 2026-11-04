@@ -28,7 +28,7 @@ export {
 export { createDropboxProvider } from './providers/dropbox.js';
 export type { FetchLike } from './providers/http.js';
 
-export { createGDriveProvider } from './providers/gdrive.js';
+export { createGDriveProvider } from './providers/gdrive/index.js';
 
 export { createOneDriveProvider } from './providers/onedrive.js';
 
