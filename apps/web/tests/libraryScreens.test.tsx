@@ -1,7 +1,7 @@
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createAppRouter } from '../src/router.js';
 import { db } from '../src/store/db.js';
@@ -67,6 +67,32 @@ describe('the Library', () => {
 		await user.click(within(notice).getByRole('button', { name: 'Undo' }));
 		expect(await screen.findByRole('link', { name: /Psalm 23/ })).toBeTruthy();
 		expect(await db.notes.get(['local', passage.id])).toEqual(passage);
+	});
+
+	it('says so, in the error toast, when a delete cannot be taken back', async () => {
+		const user = userEvent.setup();
+		const passage = await createPassage(db, {
+			title: 'Psalm 23',
+			reference: '',
+			collection: '',
+			text: 'The Lord is my shepherd',
+		});
+		open(`/passage/${passage.id}`);
+		await user.click(await screen.findByRole('button', { name: 'Delete' }));
+		const notice = await screen.findByRole('status');
+
+		// The restore's first read of the rows it puts back.
+		const failing = vi.spyOn(db.notes, 'bulkGet').mockRejectedValueOnce(new Error('no'));
+		await user.click(within(notice).getByRole('button', { name: 'Undo' }));
+		const problem = await screen.findByRole('alert');
+		failing.mockRestore();
+
+		expect(problem.textContent).toContain(
+			'That could not be undone. Reload and look again: nothing else was changed.'
+		);
+		// The tone the stylesheet marks an error by.
+		expect(problem.dataset.toastTone).toBe('error');
+		expect(await db.notes.count()).toBe(0);
 	});
 
 	it('asks before leaving an edit that was not saved', async () => {
