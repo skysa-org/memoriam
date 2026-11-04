@@ -10,7 +10,7 @@ import type { Streak } from './streak.js';
  */
 
 /** Words learnt, across the library. */
-export const WORD_BADGES = [
+const WORD_BADGES = [
 	[100, 'words-100'],
 	[500, 'words-500'],
 	[1000, 'words-1000'],
@@ -18,7 +18,7 @@ export const WORD_BADGES = [
 ] as const;
 
 /** Days in a row (`STREAK_MILESTONES`). */
-export const STREAK_BADGES = [
+const STREAK_BADGES = [
 	[7, 'streak-7'],
 	[30, 'streak-30'],
 	[100, 'streak-100'],
@@ -26,7 +26,7 @@ export const STREAK_BADGES = [
 ] as const;
 
 /** Days a passage has been held, every part learnt and kept up. */
-export const HELD_BADGES = [
+const HELD_BADGES = [
 	[30, 'held-30'],
 	[90, 'held-90'],
 	[365, 'held-365'],

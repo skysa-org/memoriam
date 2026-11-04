@@ -16,8 +16,8 @@ import type { PassSummary } from './pass.js';
  * none hinted — and its practice stops for the session there.
  */
 
-export const UP_SHARE = 0.9;
-export const STAY_SHARE = 0.7;
+const UP_SHARE = 0.9;
+const STAY_SHARE = 0.7;
 
 export interface Faded {
 	readonly level: number;

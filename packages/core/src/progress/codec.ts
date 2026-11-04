@@ -177,7 +177,7 @@ export const progressBlock = (progress: Progress, order: readonly string[] = [])
 };
 
 /** Why a passage's progress could not be written. */
-export type ProgressRefusal =
+type ProgressRefusal =
 	/** The frontmatter is YAML the parser had to repair, which the app never rewrites. */
 	| 'unreadable'
 	/** It reads, but the writer would not change it: an anchor or alias holds `progress`. */

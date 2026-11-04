@@ -53,7 +53,7 @@ export const testConfig = (
 	...overrides,
 });
 
-export const MICROSOFT_CLIENT_ID = 'ms-client-id';
+const MICROSOFT_CLIENT_ID = 'ms-client-id';
 
 /** Both OAuth providers enabled and configured. */
 export const bothProvidersConfig = (
@@ -67,7 +67,7 @@ export const bothProvidersConfig = (
 		...env,
 	});
 
-export const GOOGLE_CLIENT_ID = 'google-client-id.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = 'google-client-id.apps.googleusercontent.com';
 
 /** Every OAuth provider enabled and configured. */
 export const allProvidersConfig = (
@@ -82,7 +82,7 @@ export const allProvidersConfig = (
 	});
 
 /** An ID token as a token endpoint returns one. The signature is never checked. */
-export const idToken = (claims: Record<string, unknown>): string => {
+const idToken = (claims: Record<string, unknown>): string => {
 	const part = (value: unknown) => toBase64Url(new TextEncoder().encode(JSON.stringify(value)));
 	return `${part({ typ: 'JWT', alg: 'RS256' })}.${part(claims)}.c2lnbmF0dXJl`;
 };
@@ -242,7 +242,7 @@ export const tokenResponse = (over: Record<string, unknown> = {}): Response =>
 		...over,
 	});
 
-export interface DropboxCall {
+interface DropboxCall {
 	url: string;
 	form: Record<string, string>;
 	authorization: string | undefined;
@@ -437,7 +437,7 @@ export const cookieNames = {
 };
 
 /** The flow cookie's payload, decoded the way `readFlowState` decodes it. */
-export const flowPayload = (jar: Jar): Record<string, unknown> => {
+const flowPayload = (jar: Jar): Record<string, unknown> => {
 	const [encoded = ''] = (
 		jar.get(flowCookieName(true)) ??
 		jar.get(flowCookieName(false)) ??

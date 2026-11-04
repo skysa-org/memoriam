@@ -45,7 +45,7 @@ export interface Activity {
 	readonly badges: ReadonlyMap<string, string>;
 }
 
-export const NO_DAY: DayActivity = { words: 0, passes: 0, reviews: 0, started: 0, ms: 0 };
+const NO_DAY: DayActivity = { words: 0, passes: 0, reviews: 0, started: 0, ms: 0 };
 
 const DAY_FIELDS = ['words', 'passes', 'reviews', 'started', 'ms'] as const;
 

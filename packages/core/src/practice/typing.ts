@@ -17,13 +17,13 @@ import { isNeighbour, type Neighbours } from './keyboard.js';
  */
 
 /** How long idle on a word before its outline shows, and then the word. */
-export const OUTLINE_AFTER_MS = 5000;
-export const WORD_AFTER_MS = 8000;
+const OUTLINE_AFTER_MS = 5000;
+const WORD_AFTER_MS = 8000;
 
 /** The least wait that is a hesitation, however quick the typist. */
-export const HESITATION_FLOOR_MS = 2000;
+const HESITATION_FLOOR_MS = 2000;
 /** A hesitation is a wait this many times the typist's usual time per word. */
-export const HESITATION_FACTOR = 2.5;
+const HESITATION_FACTOR = 2.5;
 
 /**
  * The wait before a word's first key that counts as a hesitation: 2.5 times
@@ -48,10 +48,10 @@ export interface WordResult {
 }
 
 /** A hint the word to type is showing. */
-export type Hint = 'none' | 'outline' | 'word';
+type Hint = 'none' | 'outline' | 'word';
 
 /** What the last event did, for the screen to answer: a sound, a buzz. */
-export type Effect = 'none' | 'right' | 'wrong' | 'slip' | 'hint';
+type Effect = 'none' | 'right' | 'wrong' | 'slip' | 'hint';
 
 export interface Typing {
 	/** The key each word is typed by (`Word.key`). */

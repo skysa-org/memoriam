@@ -30,7 +30,7 @@ import type { PassageWord } from './text.js';
  */
 
 /** How much of a chunk's words must survive an edit for its progress to. */
-export const KEEPS_PROGRESS = 0.6;
+const KEEPS_PROGRESS = 0.6;
 
 /** Lowercase words, as a chunk's key reads them. */
 const wordsOf = (words: readonly Pick<PassageWord, 'text'>[]): string[] =>

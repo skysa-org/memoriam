@@ -16,7 +16,7 @@ import type { PassSummary } from './pass.js';
 export type Grade = 'again' | 'hard' | 'good' | 'easy';
 
 /** More than this share of words missed is a failure. */
-export const AGAIN_SHARE = 0.15;
+const AGAIN_SHARE = 0.15;
 /** A chunk this short fails on this many misses, where a share would be one. */
 const SHORT_WORDS = 10;
 const SHORT_AGAIN = 2;
