@@ -26,10 +26,6 @@
 .install-banner button.install-banner-install {
 	flex: none;
 	padding: var(--space-2xs) var(--space-m);
-	border-radius: var(--radius-s);
-	border: 1px solid var(--border);
-	background: var(--bg);
-	cursor: pointer;
 }
 
 /* Over the bottom of the screen, newest last, above everything but a dialog. */
@@ -86,10 +82,6 @@
 .update-prompt button,
 .toast button {
 	padding: var(--space-xs) var(--space-m);
-	border-radius: var(--radius-s);
-	border: 1px solid var(--border);
-	background: var(--bg);
-	cursor: pointer;
 }
 
 .update-prompt button.ghost,

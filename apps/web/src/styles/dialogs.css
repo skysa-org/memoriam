@@ -40,10 +40,6 @@
 
 .tab-notice button {
 	padding: var(--space-xs) var(--space-m);
-	border-radius: var(--radius-s);
-	border: 1px solid var(--border);
-	background: var(--bg);
-	cursor: pointer;
 }
 
 .tab-notice-actions,

@@ -78,3 +78,19 @@ button.icon:disabled {
 	display: block;
 	flex: none;
 }
+
+/* A bare button with words on it, in what draws over a screen or in place of
+   one: a notice, the install banner, the other-tab dialog, the error screen.
+   Each says its own padding, and the error screen's sits on `--surface`. Rules
+   of the same weight later in the sheet win, so a ghost or a surface of their
+   own still does. A field is one rule already, `.field` (`forms.css`). */
+.update-prompt button,
+.toast button,
+.tab-notice button,
+.error-actions button,
+.install-banner button.install-banner-install {
+	border: 1px solid var(--border);
+	border-radius: var(--radius-s);
+	background: var(--bg);
+	cursor: pointer;
+}

@@ -19,7 +19,39 @@ const tokensCss = (): string =>
 /** Written by the brand's stylesheet (`brand.ts`). */
 const SET_ELSEWHERE: ReadonlySet<string> = new Set(['--font-mono', '--font-sans']);
 
+/** What `buttons.css` itself gives exactly this selector, not a rule that only starts like it. */
+const buttonDeclarations = (selector: string): string =>
+	withoutComments(readFileSync(join(STYLES_FOLDER, 'buttons.css'), 'utf8'))
+		.split('}')
+		.filter((block) =>
+			(block.split('{')[0] ?? '')
+				.split(',')
+				.map((listed) => listed.trim())
+				.includes(selector)
+		)
+		.map((block) => block.split('{')[1] ?? '')
+		.join(' ');
+
 describe('the stylesheet', () => {
+	it.each([
+		'.update-prompt button',
+		'.toast button',
+		'.tab-notice button',
+		'.error-actions button',
+		'.install-banner button.install-banner-install',
+	])('draws %s as a button', (selector) => {
+		const button = buttonDeclarations(selector);
+
+		expect(
+			[
+				'border: 1px solid var(--border)',
+				'border-radius: var(--radius-s)',
+				'background: var(--bg)',
+				'cursor: pointer',
+			].filter((declaration) => !button.includes(declaration))
+		).toEqual([]);
+	});
+
 	// A file left out draws nothing, and the tests that read the sheet would not
 	// see its rules either.
 	it('imports every file in its folder, once', () => {

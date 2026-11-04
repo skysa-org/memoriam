@@ -20,10 +20,7 @@
 
 .error-actions button {
 	padding: var(--space-xs) var(--space-m);
-	border-radius: var(--radius-s);
-	border: 1px solid var(--border);
 	background: var(--surface);
-	cursor: pointer;
 }
 
 .error-screen details {
