@@ -1205,7 +1205,7 @@ export const createDexieSyncStore = (
 				return new Uint8Array(held.bytes);
 			}),
 
-		applyPull: async (batch: PullBatch) => {
+		applyChanges: async (batch: PullBatch) => {
 			const read = await readAll(batch.changes);
 			await inTransaction(async () => {
 				// One after another, in the order given: the engine decided each

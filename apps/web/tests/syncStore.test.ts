@@ -194,7 +194,7 @@ describe('the Dexie sync store, beyond the contract', () => {
 		await db.syncState.delete(CONNECTION);
 		await db.syncState.put({ connectionId: 'gdrive-2', clientId: 'this-browser', boundAt: 1 });
 
-		await expect(store.applyPull({ changes: [], cursor: 'c1' })).rejects.toBeInstanceOf(
+		await expect(store.applyChanges({ changes: [], cursor: 'c1' })).rejects.toBeInstanceOf(
 			UnboundConnectionError
 		);
 		expect(await db.syncState.get('gdrive-2')).not.toHaveProperty('cursor');
@@ -220,7 +220,7 @@ describe('the Dexie sync store, beyond the contract', () => {
 		expect((await db.notes.get([LOCAL_CONNECTION_ID, 'p1']))?.updatedAt).toBe(edited);
 
 		const practised = passage(`progress:\n  ${FIRST}: { level: 2 }\n`);
-		await store.applyPull({
+		await store.applyChanges({
 			changes: [
 				{
 					kind: 'upsert-note',
@@ -238,7 +238,7 @@ describe('the Dexie sync store, beyond the contract', () => {
 		});
 
 		const reworded = passage('', '2026-10-12T09:00:00Z').replace('Jesus wept.', 'Jesus wept!');
-		await store.applyPull({
+		await store.applyChanges({
 			changes: [
 				{
 					kind: 'upsert-note',

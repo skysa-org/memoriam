@@ -134,7 +134,7 @@ export const createConflictPush = (
 		unread?: UnreadableFile
 	): Promise<Settled> => {
 		const path = await freeNotePath(note.path, taken);
-		await store.applyPull({
+		await store.applyChanges({
 			changes: [
 				...(note.remoteId === undefined
 					? []
@@ -201,7 +201,7 @@ export const createConflictPush = (
 	): Promise<Settled> => {
 		const remote = { ...read.remote, version: read.version };
 		const clean = merged === read.content;
-		await store.applyPull({
+		await store.applyChanges({
 			changes: [
 				{
 					kind: 'merge-note',
@@ -284,7 +284,7 @@ export const createConflictPush = (
 			unread?: UnreadableFile
 		): Promise<undefined> => {
 			const path = await freeNotePath(note.path, [], true);
-			await store.applyPull({
+			await store.applyChanges({
 				changes: [
 					...(own === 'unreadable'
 						? [{ kind: 'detach-note' as const, id: note.id }]

@@ -186,13 +186,13 @@ describe('the engine, merging', () => {
 		const practised = { done: false };
 		const practising: SyncStore = {
 			...store,
-			applyPull: (batch) => {
+			applyChanges: (batch) => {
 				const note = noteAt('two.md');
 				if (!practised.done && note !== undefined) {
 					store.put({ ...note, content: passage([at(FIRST, 1, 9), at(SECOND, 4, 13)]) });
 				}
 				practised.done = true;
-				return store.applyPull(batch);
+				return store.applyChanges(batch);
 			},
 		};
 		const racing = engineWith(mergeFile, practising);
