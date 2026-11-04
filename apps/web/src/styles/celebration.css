@@ -1,0 +1,92 @@
+/* ---- Celebration ---------------------------------------------------------- */
+
+/* Above the bar of screens on a phone; out of the way of the practice stage. */
+.celebration-region {
+	position: fixed;
+	z-index: 30;
+	inset-inline: var(--gutter);
+	inset-block-end: calc(4.5rem + env(safe-area-inset-bottom));
+	display: flex;
+	justify-content: center;
+	pointer-events: none;
+}
+
+.celebration {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--space-s);
+	max-width: 26rem;
+	padding: var(--space-m) var(--space-l);
+	border: 1px solid color-mix(in srgb, var(--brand) 40%, var(--border));
+	border-radius: var(--radius-m);
+	background: var(--surface-raised);
+	box-shadow: var(--shadow);
+	pointer-events: auto;
+	animation: rise var(--duration-xl) var(--ease-out);
+}
+
+.celebration > .icon-glyph {
+	flex: none;
+	margin-block-start: var(--space-3xs);
+	color: var(--brand);
+}
+
+.celebration-text {
+	flex: 1;
+}
+
+.celebration-text p {
+	margin: 0 0 var(--space-2xs);
+	font-weight: 600;
+}
+
+.celebration-text a {
+	color: var(--brand);
+	font-size: 0.875rem;
+}
+
+.practice-learnt {
+	display: flex;
+	align-items: center;
+	gap: var(--space-xs);
+	color: var(--ok);
+	font-weight: 500;
+}
+
+.practice-learnt .icon-glyph {
+	animation: pop var(--duration-xl) var(--ease-out);
+}
+
+@keyframes rise {
+	from {
+		opacity: 0;
+		transform: translateY(0.75rem);
+	}
+}
+
+@keyframes pop {
+	from {
+		transform: scale(0.4);
+	}
+
+	60% {
+		transform: scale(1.25);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.celebration,
+	.practice-learnt .icon-glyph {
+		animation: none;
+	}
+}
+
+@media (min-width: 48.0625rem) {
+	.celebration-region {
+		inset-block-end: var(--space-xl);
+	}
+}
+
+.passage-missed-hint {
+	margin: calc(-1 * var(--space-s)) 0 var(--space-m);
+}

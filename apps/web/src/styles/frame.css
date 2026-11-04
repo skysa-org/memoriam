@@ -1,0 +1,34 @@
+/* ---- The frame ---------------------------------------------------------- */
+
+.app {
+	display: flex;
+	flex-direction: column;
+	min-height: 100dvh;
+}
+
+.screen {
+	width: 100%;
+	max-width: 46rem;
+	margin: 0 auto;
+	padding: var(--space-xl) var(--gutter) calc(var(--space-2xl) + env(safe-area-inset-bottom));
+}
+
+.screen-header {
+	display: flex;
+	align-items: center;
+	gap: var(--space-s);
+	margin-block-end: var(--space-l);
+}
+
+.screen-header h1 {
+	flex: 1;
+	min-width: 0;
+	margin: 0;
+	font-size: 1.5rem;
+	line-height: 1.25;
+}
+
+.empty {
+	color: var(--muted);
+	line-height: 1.6;
+}

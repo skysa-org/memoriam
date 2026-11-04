@@ -416,6 +416,12 @@ copy of the library is the one in this browser, so a backup is a file the user k
 - Words are never pieced together in code.
 - An ESLint rule (`INLINE_WORDS`) refuses literal words in JSX.
 
+**The stylesheet** (`apps/web/src/styles/`, the method from skysa-notes #458). It is a file for
+each part of the app, which `styles/index.css` imports in the order they cascade. A later rule of
+the same specificity wins, so the order is part of what is drawn. The split cut the single
+`styles.css` into slices in its own order, and the CSS it builds was byte for byte the same.
+`tests/styles.test.ts` holds the folder to the imports.
+
 **A newer build in another tab ends this one.** As skysa-notes (`store/staleTab.ts`): the older
 tab flushes what it holds, closes its database for good, and says it is out of date. A frozen tab
 lets go of the database (`store/frozenTab.ts`). Only the app's own database is watched for either
@@ -935,6 +941,7 @@ apps/web/              the PWA
     commands/          command registry, chords, palette
     i18n/              t(), rich(), and the English catalog
     install/           the install banner
+    styles/            the stylesheet, a file a part, imported in order by index.css
 packages/core/         framework-free TypeScript: browser, Node and Workers
   src/
     index.ts           what the apps may use, by name; tests/exports.test.ts lists it

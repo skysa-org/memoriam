@@ -1,0 +1,108 @@
+/* ---- The library ---------------------------------------------------------- */
+
+.screen-header .button {
+	flex: none;
+}
+
+a.icon-link {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 2rem;
+	border-radius: var(--radius-s);
+	color: var(--muted);
+}
+
+@media (hover: hover) {
+	a.icon-link:hover {
+		color: var(--fg);
+		background: var(--hover-bg);
+	}
+}
+
+.new-collection {
+	margin-block-start: var(--space-l);
+	padding-inline: var(--space-s);
+}
+
+.collection + .collection {
+	margin-block-start: var(--space-xl);
+}
+
+.collection-header {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2xs);
+	margin-block-end: var(--space-xs);
+}
+
+.collection-name {
+	margin: 0;
+	font-size: 1rem;
+	font-weight: 600;
+}
+
+.collection-header .collection-name {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.collection-count {
+	flex: 1;
+	margin-inline-start: var(--space-xs);
+	color: var(--muted);
+	font-size: 0.875rem;
+	white-space: nowrap;
+}
+
+.collection > .collection-name {
+	margin-block-end: var(--space-xs);
+}
+
+.collection .empty {
+	margin: 0;
+	padding: var(--space-s) 0;
+	font-size: 0.9rem;
+}
+
+.passage-list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-m);
+	background: var(--surface-raised);
+	overflow: hidden;
+}
+
+.passage-list li + li {
+	border-block-start: 1px solid var(--border);
+}
+
+.passage-row {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3xs);
+	padding: var(--space-m) var(--space-l);
+	color: var(--fg);
+	text-decoration: none;
+}
+
+@media (hover: hover) {
+	.passage-row:hover {
+		background: var(--hover-bg);
+	}
+}
+
+.passage-row-title {
+	font-weight: 500;
+}
+
+.passage-row-reference {
+	color: var(--muted);
+	font-size: 0.875rem;
+}

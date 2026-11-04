@@ -1,0 +1,46 @@
+/* ---- When the app is in trouble ----------------------------------------- */
+
+.error-screen {
+	max-width: 36rem;
+	margin: 0 auto;
+	padding: 3rem 1.25rem;
+	line-height: 1.6;
+}
+
+.error-screen h1 {
+	margin: 0 0 var(--space-s);
+	font-size: 1.25rem;
+}
+
+.error-actions {
+	display: flex;
+	gap: var(--space-s);
+	margin-block: 1.25rem;
+}
+
+.error-actions button {
+	padding: var(--space-xs) var(--space-m);
+	border-radius: var(--radius-s);
+	border: 1px solid var(--border);
+	background: var(--surface);
+	cursor: pointer;
+}
+
+.error-screen details {
+	color: var(--muted);
+	font-size: 0.85rem;
+}
+
+.error-screen summary {
+	cursor: pointer;
+}
+
+.error-screen pre {
+	margin: var(--space-s) 0 0;
+	padding: var(--space-s) var(--space-m);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-s);
+	background: var(--surface);
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}

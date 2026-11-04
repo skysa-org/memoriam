@@ -1,0 +1,100 @@
+/* ---- Notices ------------------------------------------------------------ */
+
+.banner {
+	margin: 0;
+	padding: var(--space-s) var(--gutter);
+	font-size: 0.875rem;
+	color: var(--muted);
+	border-block-end: 1px solid var(--border);
+	background: var(--surface);
+}
+
+/* The offer to install the app (`InstallBanner.tsx`). */
+.install-banner {
+	display: flex;
+	align-items: center;
+	gap: var(--space-s);
+	padding-block: var(--space-2xs);
+	color: var(--fg);
+}
+
+.install-banner-text {
+	flex: 1;
+	min-width: 0;
+}
+
+.install-banner button.install-banner-install {
+	flex: none;
+	padding: var(--space-2xs) var(--space-m);
+	border-radius: var(--radius-s);
+	border: 1px solid var(--border);
+	background: var(--bg);
+	cursor: pointer;
+}
+
+/* Over the bottom of the screen, newest last, above everything but a dialog. */
+.toast-stack {
+	position: fixed;
+	z-index: 30;
+	inset-block-end: calc(var(--space-l) + env(safe-area-inset-bottom));
+	inset-inline: var(--space-l);
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-s);
+	max-width: 28rem;
+	margin-inline: auto;
+	pointer-events: none;
+}
+
+.toast-stack > * {
+	pointer-events: auto;
+}
+
+.toast-error {
+	border-inline-start: 4px solid var(--bad);
+}
+
+/* The new-build notice and the toasts are the same shape. */
+.update-prompt,
+.toast {
+	display: flex;
+	gap: var(--space-s);
+	align-items: center;
+	padding: var(--space-m) var(--space-l);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-m);
+	background: var(--surface-raised);
+	box-shadow: var(--shadow);
+	--arrive-y: 0.5rem;
+	animation: arrive var(--duration-l) var(--ease-out);
+}
+
+.update-prompt {
+	position: fixed;
+	z-index: 50;
+	inset-block-end: calc(var(--space-l) + env(safe-area-inset-bottom));
+	inset-inline: var(--space-l);
+	margin-inline: auto;
+	max-width: 28rem;
+}
+
+.update-prompt span,
+.toast span {
+	flex: 1;
+}
+
+.update-prompt button,
+.toast button {
+	padding: var(--space-xs) var(--space-m);
+	border-radius: var(--radius-s);
+	border: 1px solid var(--border);
+	background: var(--bg);
+	cursor: pointer;
+}
+
+.update-prompt button.ghost,
+.toast button.ghost {
+	border-color: transparent;
+	background: transparent;
+	color: var(--muted);
+}

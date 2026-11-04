@@ -1,0 +1,107 @@
+/* ---- Today ---------------------------------------------------------------- */
+
+.today-streak {
+	margin-block-end: var(--space-l);
+}
+
+.today-streak p {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--space-xs);
+	margin: 0 0 var(--space-xs);
+	font-weight: 500;
+}
+
+.today-streak .icon-glyph {
+	color: var(--flame);
+}
+
+.today-freezes {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2xs);
+	margin-inline-start: var(--space-s);
+	color: var(--muted);
+	font-weight: 400;
+}
+
+.today-freezes .icon-glyph {
+	color: var(--brand);
+}
+
+.today-streak p.today-repair {
+	color: var(--muted);
+	font-weight: 400;
+	line-height: 1.5;
+}
+
+.today-goal {
+	margin-block-end: var(--space-l);
+	padding: var(--space-m) var(--space-l);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-m);
+	background: var(--surface-raised);
+}
+
+.today-goal h2 {
+	margin: 0 0 var(--space-s);
+	font-size: 1rem;
+}
+
+/* The reminder to back up (`BackupReminder.tsx`): below the day's practice, never in its way. */
+.today-backup {
+	margin-block-start: var(--space-xl);
+	padding: var(--space-m) var(--space-l);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-m);
+	background: var(--surface);
+}
+
+.today-backup p {
+	margin: 0 0 var(--space-s);
+	font-size: 0.9375rem;
+}
+
+.today-meter {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2xs);
+	margin-block-end: var(--space-s);
+}
+
+.today-done {
+	margin: 0;
+	color: var(--ok);
+	font-weight: 500;
+}
+
+/* A bar of how far through: the day's goal, a passage learnt. */
+.today-meter progress,
+.mastery-bar {
+	width: 100%;
+	height: 0.5rem;
+	border: 0;
+	border-radius: 999px;
+	background: var(--border);
+	appearance: none;
+	overflow: hidden;
+}
+
+.today-meter progress::-webkit-progress-bar,
+.mastery-bar::-webkit-progress-bar {
+	border-radius: 999px;
+	background: var(--border);
+}
+
+.today-meter progress::-webkit-progress-value,
+.mastery-bar::-webkit-progress-value {
+	border-radius: 999px;
+	background: var(--brand);
+}
+
+.today-meter progress::-moz-progress-bar,
+.mastery-bar::-moz-progress-bar {
+	border-radius: 999px;
+	background: var(--brand);
+}
