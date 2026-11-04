@@ -35,6 +35,7 @@ const SURFACE = [
 	'addToDay',
 	'ancestorPaths',
 	'basename',
+	'cell',
 	'chunkPassage',
 	'conflictContent',
 	'conflictPath',
@@ -104,6 +105,7 @@ const SURFACE = [
 type Types = [
 	Core.ActivityWrite,
 	Core.Badge,
+	Core.Cell<unknown>,
 	Core.ChunkedPassage,
 	Core.ChunkProgress,
 	Core.ConflictResolution,

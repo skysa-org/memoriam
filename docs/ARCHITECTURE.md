@@ -908,6 +908,7 @@ apps/web/              the PWA
 packages/core/         framework-free TypeScript: browser, Node and Workers
   src/
     index.ts           what the apps may use, by name; tests/exports.test.ts lists it
+    cell.ts            cell(): the one way to hold a value that changes, where `let` is refused
     passage/           body grammar, tokenizer, chunker, remap
     progress/          frontmatter codec, passage merge
     providers/         storage adapters and the in-memory fake (from skysa-notes)
