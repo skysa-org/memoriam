@@ -545,7 +545,8 @@ drive the engine through the adapter, held back in S1, are restored. Where it di
   skysa-notes moved them (its #446), with nothing they do changed and the differences above kept:
   - `sync/pull/`, the pull's: `batch.ts` (what a batch's decisions are reached against, and its
     readings that no decision changes), `files.ts` (where each file that is not a passage is,
-    replayed through a batch's decisions).
+    replayed through a batch's decisions), `replay.ts` (where a passage, a folder or an unreadable
+    file is once the decisions so far are applied, a `merge-note` among them).
 
 **Since the port.** Fixes skysa-notes made to its engine and adapters after `fa92ad6`, taken
 here:
