@@ -810,6 +810,10 @@ any of them out. The one Worker serves the app as well, so `/api` and the app sh
   its database. Each route that acts on a connection mounts `requireBearer` itself, typed
   `AuthedEnv`, so one that forgot it has no `bearer` to read. A path under `/api/connection` that
   is not a route answers 404, not 401.
+- **Signing out the last device takes the account with it, in one transaction.** The grant is
+  nulled and the connection no live grant reaches is deleted in one `db.batch` (`revokeGrant` in
+  `apps/api/src/db/connections.ts`). As two statements, a sign-out cut off between them left the
+  row: a sealed refresh token that no credential reaches, and so nothing can use or revoke.
 - **One list of error codes.** Every refusal is `{ error }` with a code from core's
   `API_ERROR_CODES` (`packages/core/src/api.ts`), and goes out through `fail` in
   `apps/api/src/http.ts`. The client's refusals are a part of that list, so the two ends cannot
