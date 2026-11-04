@@ -1,15 +1,10 @@
 import { contentHash } from '../../hash.js';
 import { conflictPath } from '../../names/conflicts.js';
 import { basename } from '../../paths.js';
-import {
-	type EntryRef,
-	isConflictError,
-	isUnreadableError,
-	type RemoteEntry,
-} from '../../providers/types.js';
-import type { EngineContext } from '../context.js';
+import { isConflictError, isUnreadableError, type RemoteEntry } from '../../providers/types.js';
+import type { EngineContext, FromPull } from '../context.js';
 import { findFreeName, FREE_PATH_ATTEMPTS } from '../names.js';
-import type { ConflictResolution, PullChange, SyncNote, SyncOp, UnreadableFile } from '../store.js';
+import type { SyncNote, SyncOp, UnreadableFile } from '../store.js';
 import type { NotePush } from './notes.js';
 
 /**
@@ -33,20 +28,7 @@ export interface Settled {
 
 export const createConflictPush = (
 	{ provider, store, now, mergedOf }: EngineContext,
-	{
-		write,
-		fileState,
-		resolutionFor,
-	}: Pick<NotePush, 'write'> & {
-		fileState: (ref: EntryRef) => Promise<'there' | 'gone' | 'unreadable'>;
-		resolutionFor: (
-			local: SyncNote,
-			remoteContent: string,
-			remote: RemoteEntry,
-			claimed: ReadonlySet<string>,
-			decided: readonly PullChange[]
-		) => Promise<ConflictResolution>;
-	}
+	{ write, fileState, resolutionFor }: Pick<NotePush, 'write'> & FromPull
 ) => {
 	/**
 	 * A free path beside `path` for a note that has to move out of the way on

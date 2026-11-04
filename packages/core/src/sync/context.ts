@@ -1,6 +1,6 @@
-import type { StorageProvider } from '../providers/types.js';
+import type { EntryRef, RemoteEntry, StorageProvider } from '../providers/types.js';
 import type { Meter } from './progress.js';
-import type { SyncStore } from './store.js';
+import type { ConflictResolution, PullChange, SyncNote, SyncStore } from './store.js';
 
 /**
  * What every part of the engine is handed by `createSyncEngine`: the provider
@@ -27,4 +27,20 @@ export interface EngineContext {
 	 * (docs/ARCHITECTURE.md §10, "Merge before a conflict copy").
 	 */
 	readonly mergedOf: (path: string, local: string, remote: string) => string | undefined;
+}
+
+/**
+ * What the push asks of the engine's pull side, which asks the same: whether
+ * a file is there (`fileState`), and how a note and a newer remote version are
+ * reconciled (`resolutionFor`). Handed to the push's parts by name.
+ */
+export interface FromPull {
+	fileState: (ref: EntryRef) => Promise<'there' | 'gone' | 'unreadable'>;
+	resolutionFor: (
+		local: SyncNote,
+		remoteContent: string,
+		remote: RemoteEntry,
+		claimed: ReadonlySet<string>,
+		decided: readonly PullChange[]
+	) => Promise<ConflictResolution>;
 }

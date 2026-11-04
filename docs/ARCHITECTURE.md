@@ -548,7 +548,9 @@ drive the engine through the adapter, held back in S1, are restored. Where it di
     replayed through a batch's decisions), `replay.ts` (where a passage, a folder or an unreadable
     file is once the decisions so far are applied, a `merge-note` among them).
   - `sync/push/`, the push's: `conflicts.ts` (a write the remote would not take: set aside under a
-    conflict name, merged, or reconciled by the conflict rule), `files.ts` (files that are not passages: uploaded, moved, deleted,
+    conflict name, merged, or reconciled by the conflict rule), `drain.ts` (the queue drained in
+    order, op by op, writes sent together, a failed op answered; `createPush` wires the parts),
+    `files.ts` (files that are not passages: uploaded, moved, deleted,
     or set beside what they meet), `folders.ts` (the folders made before a write, and removed or
     left once empty), `notes.ts` (passages: written after a rename, renamed or moved aside,
     deleted).
