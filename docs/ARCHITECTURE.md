@@ -549,7 +549,8 @@ drive the engine through the adapter, held back in S1, are restored. Where it di
     the folders above a kept passage it must not), `deletions.ts` (a deletion believed or not by
     the rest of the batch, and what it takes with it), `files.ts` (where each file that is not a passage is,
     replayed through a batch's decisions), `folders.ts` (folders, as a pull decides them: made,
-    moved, moved over, deleted once rescued), `occupancy.ts` (which passages end up in or under a
+    moved, moved over, deleted once rescued), `notes.ts` (passages, as a pull decides them:
+    matched, read, merged or reconciled, moved aside, let go of), `occupancy.ts` (which passages end up in or under a
     folder, and the names a copy there must not take), `replay.ts` (where a passage, a folder or an unreadable
     file is once the decisions so far are applied, a `merge-note` among them).
   - `sync/push/`, the push's: `conflicts.ts` (a write the remote would not take: set aside under a
@@ -622,7 +623,7 @@ before that rule, through a `merge` option on the engine:
   - a passage (`.md`, not hidden) goes to `mergePassage`;
   - anything else gets no merge.
 - **On a pull.** Where a note changed here and on the remote since they last agreed, the engine
-  merges before it decides on a conflict copy. This includes a note never sent that meets a
+  merges before it decides on a conflict copy (`decideKnown` in `pull/notes.ts`). This includes a note never sent that meets a
   remote one at its path, such as two devices' `activity-2026.md`.
 - **On a push.** Where a write meets a `ConflictError` (`resolvePushConflict` and `pushMerged` in
   `push/conflicts.ts`), the engine reads the remote, merges, and writes the merge against the
