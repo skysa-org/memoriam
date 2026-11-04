@@ -10,7 +10,7 @@ import {
 } from '../names/conflicts.js';
 import { isPassageName } from '../names/fold.js';
 import { basename, joinPath, normalizePath, parentPath, pathSegments, ROOT } from '../paths.js';
-import type { FetchLike } from './dropbox.js';
+import { type FetchLike, parseRetryAfter } from './http.js';
 import {
 	applyItem,
 	arrivals,
@@ -33,7 +33,6 @@ import {
 	CursorResetError,
 	type EntryRef,
 	NotFoundError,
-	parseRetryAfter,
 	RateLimitError,
 	type RemoteEntry,
 	type StorageProvider,

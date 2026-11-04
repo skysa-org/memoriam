@@ -25,7 +25,8 @@ export {
 	type StorageProvider,
 } from './providers/types.js';
 
-export { createDropboxProvider, type FetchLike } from './providers/dropbox.js';
+export { createDropboxProvider } from './providers/dropbox.js';
+export type { FetchLike } from './providers/http.js';
 
 export { createGDriveProvider } from './providers/gdrive.js';
 

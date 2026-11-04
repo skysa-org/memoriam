@@ -489,6 +489,8 @@ differs.
 
 **The provider layer** (`packages/core/src/providers/`, `marker.ts`, `names/conflicts.ts`):
 - The adapters for Dropbox, OneDrive and Google Drive, and the in-memory fake.
+- What the HTTP adapters share: `http.ts` holds the injected `fetch` type and the reading of
+  `Retry-After`.
 - The marker file, and conflict names.
 - The contract suite every adapter passes (`tests/providers/contract.ts`), with each provider's
   wire stub. `contract.test.ts` registers the adapters from one table, each over its stub and,

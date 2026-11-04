@@ -6,8 +6,8 @@ import {
 	conflictFolderName,
 	conflictNameKeepingExtension,
 } from '../../src/names/conflicts.js';
-import type { FetchLike } from '../../src/providers/dropbox.js';
 import { createGDriveProvider } from '../../src/providers/gdrive.js';
+import type { FetchLike } from '../../src/providers/http.js';
 import {
 	AuthError,
 	type ChangeEntry,
