@@ -6,7 +6,8 @@ import { api as appApi, type ApiClient } from '../api/client.js';
 import { formatMoment } from '../i18n/dates.js';
 import { t } from '../i18n/t.js';
 import { boundConnection } from '../store/connection.js';
-import { db as appDatabase, type MemoriamDatabase, type SyncStateRecord } from '../store/db.js';
+import { useDb } from '../store/database.js';
+import type { SyncStateRecord } from '../store/db.js';
 import {
 	CONNECTABLE,
 	disconnectAccount,
@@ -153,7 +154,6 @@ const statusLine = (status: SchedulerStatus, provider: string, now: number): str
 };
 
 interface Props {
-	database?: MemoriamDatabase;
 	client?: Client;
 	scheduler?: Pick<SyncScheduler, 'status' | 'subscribe' | 'syncNow' | 'pause'>;
 	connectReturn?: Pick<typeof appConnectReturn, 'peek' | 'forget'>;
@@ -168,7 +168,6 @@ type Held = 'refused' | 'unreachable';
 const Connected = ({
 	bound,
 	kind,
-	database,
 	client,
 	scheduler,
 	connect,
@@ -178,7 +177,6 @@ const Connected = ({
 }: Readonly<{
 	bound: SyncStateRecord;
 	kind: ProviderKind;
-	database: MemoriamDatabase;
 	client: Client;
 	scheduler: NonNullable<Props['scheduler']>;
 	connect: (provider: ProviderKind) => void;
@@ -187,6 +185,7 @@ const Connected = ({
 	/** Say something under the section, once this part of it may be gone. */
 	tell: (said: string) => void;
 }>) => {
+	const db = useDb();
 	const status = useSyncStatus(scheduler);
 	const reconnect = needsReconnect(status);
 	const [asking, setAsking] = useState(false);
@@ -195,7 +194,7 @@ const Connected = ({
 
 	const disconnect = async () => {
 		setAsking(false);
-		const outcome = await disconnectAccount(database, client, bound.connectionId).catch(
+		const outcome = await disconnectAccount(db, client, bound.connectionId).catch(
 			() => undefined
 		);
 		if (outcome === undefined) {
@@ -288,7 +287,7 @@ const Connected = ({
 							type="button"
 							className="button"
 							onClick={() => {
-								void stopSyncingHere(database, bound.connectionId).then(() => {
+								void stopSyncingHere(db, bound.connectionId).then(() => {
 									tell(t('sync.disconnect.done'));
 								});
 							}}
@@ -354,7 +353,6 @@ const Offered = ({
 };
 
 export const SyncSettings = ({
-	database = appDatabase,
 	client = appApi,
 	scheduler = syncScheduler,
 	connectReturn = appConnectReturn,
@@ -363,8 +361,9 @@ export const SyncSettings = ({
 	},
 	now = Date.now,
 }: Readonly<Props>) => {
+	const db = useDb();
 	// `null` once read and there is none, so the screen can tell that from reading.
-	const bound = useLiveQuery(async () => (await boundConnection(database)) ?? null, [database]);
+	const bound = useLiveQuery(async () => (await boundConnection(db)) ?? null, [db]);
 	const offer = useOffer(client);
 	const [returned] = useState(() => connectReturn.peek());
 	const [busy, setBusy] = useState<ProviderKind | undefined>(undefined);
@@ -378,7 +377,7 @@ export const SyncSettings = ({
 	const connect = (provider: ProviderKind) => {
 		setBusy(provider);
 		setSaid(undefined);
-		void startConnecting(database, client, provider, window.location.pathname)
+		void startConnecting(db, client, provider, window.location.pathname)
 			.then((started) => {
 				if (started.ok) {
 					leave(started.value);
@@ -412,7 +411,6 @@ export const SyncSettings = ({
 				<Connected
 					bound={bound}
 					kind={bound.provider}
-					database={database}
 					client={client}
 					scheduler={scheduler}
 					connect={connect}

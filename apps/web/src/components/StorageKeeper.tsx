@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useRef } from 'react';
 
-import { db as appDatabase, type MemoriamDatabase } from '../store/db.js';
+import { useDb } from '../store/database.js';
 import { browserStorage, keepIfDue, type StorageApi } from '../store/persistence.js';
 import { isLive } from '../store/rowStates.js';
 
@@ -11,21 +11,21 @@ import { isLive } from '../store/rowStates.js';
  * the other browsers answer without asking. Settings says how it stands.
  */
 export const StorageKeeper = ({
-	database = appDatabase,
 	storage = browserStorage(),
-}: Readonly<{ database?: MemoriamDatabase; storage?: StorageApi | undefined }>) => {
+}: Readonly<{ storage?: StorageApi | undefined }>) => {
+	const db = useDb();
 	// Any passage at all: the count changes as the first is added.
-	const passages = useLiveQuery(() => database.notes.filter(isLive).count(), [database]);
+	const passages = useLiveQuery(() => db.notes.filter(isLive).count(), [db]);
 	// Once a page load: the answer is noted, and a second ask while the first
 	// is out would be a second prompt in Firefox.
 	const asking = useRef(false);
 	useEffect(() => {
 		if (passages === undefined || passages === 0 || asking.current) return;
 		asking.current = true;
-		void keepIfDue(database, storage, Date.now()).then((answer) => {
+		void keepIfDue(db, storage, Date.now()).then((answer) => {
 			// Not asked yet (no passage, only the app's own files): ask on a later change.
 			if (answer === undefined) asking.current = false;
 		});
-	}, [passages, database, storage]);
+	}, [passages, db, storage]);
 	return null;
 };
