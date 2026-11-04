@@ -6,9 +6,9 @@ import type { PullChange } from '../../../src/sync/store.js';
 
 /**
  * What a batch has spoken for, read off its decisions (`pull/decided.ts`).
- * `engine.test.ts` reaches these through whole pulls; this says what they
- * answer for memoriam's own `merge-note`, which skysa-notes' engine never
- * makes.
+ * The engine's tests (`engine/*.test.ts`) reach these through whole pulls;
+ * this says what they answer for memoriam's own `merge-note`, which
+ * skysa-notes' engine never makes.
  */
 
 const entry = (remoteId: string, path: string): RemoteEntry => ({

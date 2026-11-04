@@ -530,7 +530,10 @@ a passage. Every adapter's `read` is its `readBytes` decoded, and audio (Phase 3
 **The engine** (`sync/engine.ts`, `sync/store.ts`, from S2) is ported with its tests: the
 store contract (`tests/sync/storeContract.ts`), run against the in-memory store the engine tests
 use, the engine over every adapter's stub, and the randomized remote. The Google Drive tests that
-drive the engine through the adapter, held back in S1, are restored. Where it differs:
+drive the engine through the adapter, held back in S1, are restored. The engine's own tests are
+split by area into `tests/sync/engine/` (pull, push, conflicts, files, folders, deletions, paths
+and the rest), each file over one world made per test (`syncWorld`, `tests/sync/kit/`), as
+skysa-notes split them (#572 to #579). Where it differs:
 - **No clipboard.** skysa-notes' engine pulls a clipboard folder for its share target. Memoriam
   has neither, so that path is gone, from the pull and from its progress reports.
 - **The app's own folder.** The engine passes over hidden paths, except `.memoriam/` and its
