@@ -13,7 +13,7 @@ export interface ShownLine {
 	readonly words: readonly PassageWord[];
 }
 
-export interface ShownChunk {
+interface ShownChunk {
 	/** The chunk's key; none for lines ahead of a section's first word. */
 	readonly key?: string;
 	readonly lines: readonly ShownLine[];

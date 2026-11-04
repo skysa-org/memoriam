@@ -4,7 +4,7 @@ a `brand.json` of its own when it builds, and changes nothing here.
 
 - `brand.json`: the name ("Memoriam"), the colours, and where the icons are. No fonts, so the app
   keeps the system's. `brand.schema.json` is its JSON Schema, for an editor; `tests/brand.test.ts`
-  holds it to `brandSchema` in `brand.ts`.
+  holds it to the schema in `brand.ts` (`brandJsonSchema`).
 - `icons/`: the six icons, at the names and sizes in `BRAND_ICONS`. The mark is a passage being
   learnt: three lines of text, the last fading into dots where its words have been hidden. The
   favicons are a rounded tile; every other icon is a full square, since the platforms that show
