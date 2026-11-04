@@ -25,3 +25,5 @@ The lint rule for `cell()` covers every package's source, and the rest of the we
 The shared building blocks of `components/` are in `components/ui/`, and the app's frame (the bar, the palette, the error, stale-tab and update screens) in `components/shell/`.
 
 A command is not registered again for a new `run` on every render, so the palette is not told of a change that is none; it runs the latest `run`.
+
+`useEscapeKey` replaces `useEscape`: it answers only an Escape nothing nearer has, and not one ending a composition.
