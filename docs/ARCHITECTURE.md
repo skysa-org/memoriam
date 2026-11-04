@@ -554,7 +554,8 @@ drive the engine through the adapter, held back in S1, are restored. Where it di
     moved, moved over, deleted once rescued), `notes.ts` (passages, as a pull decides them:
     matched, read, merged or reconciled, moved aside, let go of), `occupancy.ts` (which passages end up in or under a
     folder, and the names a copy there must not take), `reconcile.ts` (a scan's last word on what
-    it never mentioned), `replay.ts` (where a passage, a folder or an unreadable
+    it never mentioned), `run.ts` (a pull run: a round from the cursor or a scan from the top, a
+    cursor reset, one retry after a refresh), `replay.ts` (where a passage, a folder or an unreadable
     file is once the decisions so far are applied, a `merge-note` among them).
   - `sync/push/`, the push's: `conflicts.ts` (a write the remote would not take: set aside under a
     conflict name, merged, or reconciled by the conflict rule), `drain.ts` (the queue drained in
