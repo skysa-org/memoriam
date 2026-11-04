@@ -23,12 +23,12 @@
 		"@memoriam/core": "workspace:*",
 		"drizzle-orm": "^0.45.2",
 		"hono": "^4.13.8",
-		"zod": "^4.6.5"
+		"zod": "catalog:"
 	},
 	"devDependencies": {
-		"@types/node": "^26.6.1",
+		"@types/node": "catalog:",
 		"drizzle-kit": "^0.31.10",
-		"vitest": "^5.0.1",
+		"vitest": "catalog:",
 		"wrangler": "^4.132.0"
 	}
 }
