@@ -1,5 +1,7 @@
 import {
 	AuthError,
+	type Cell,
+	cell,
 	createSyncEngine,
 	isAuthError,
 	isRateLimitError,
@@ -256,19 +258,19 @@ interface Session {
 	readonly engine: SyncEngine | undefined;
 	readonly flags: Set<Flag>;
 	/** Failures in a row, for the backoff. */
-	readonly failures: Map<'count', number>;
+	readonly failures: Cell<number>;
 	/** The highest op seq seen, which is how a change of the user's shows itself. */
-	readonly lastSeq: Map<'seq', number>;
+	readonly lastSeq: Cell<number | undefined>;
 	/** The run in progress, including any it has been asked to follow with. */
-	readonly inFlight: Map<'run', Promise<void>>;
+	readonly inFlight: Cell<Promise<void> | undefined>;
 	/** When a sync first came back `blocked`, since it last did not. */
-	readonly blockedSince: Map<'at', number>;
+	readonly blockedSince: Cell<number | undefined>;
 	/**
 	 * The op this connection's last completed run found out of attempts. Session
 	 * state rather than the scheduler's, so a run that finishes after the library
 	 * was bound elsewhere cannot clear — or answer for — the connection bound now.
 	 */
-	readonly stuck: Map<'op', StuckOp>;
+	readonly stuck: Cell<StuckOp | undefined>;
 	/** Aborted when the session ends, and every provider request with it. */
 	readonly abort: AbortController;
 }
@@ -330,24 +332,21 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 	const blockedRetryMs = options.blockedRetryMs ?? 15 * 60_000;
 	const progressMs = options.progressMs ?? 150;
 
-	const current = new Map<'session', Session>();
+	/** The session for the connection that is bound, if one is. */
+	const bound = cell<Session | undefined>(undefined);
 	/** The binding as last seen, which `pause` follows again. */
-	const shown = new Map<'state', SyncStateRecord>();
+	const shown = cell<SyncStateRecord | undefined>(undefined);
 	/** The connection the user has paused (`pause`), until they ask again. */
-	const pausedFor = new Map<'connection', string>();
-	const isPaused = (connectionId: string): boolean =>
-		pausedFor.get('connection') === connectionId;
-	const generations = new Map<'count', number>([['count', 0]]);
+	const pausedFor = cell<string | undefined>(undefined);
+	const isPaused = (connectionId: string): boolean => pausedFor.current === connectionId;
+	const generations = cell(0);
 	const timers = new Map<Timer, () => void>();
 	const unsubscribers = new Set<() => void>();
 	const sessionUnsubscribers = new Set<() => void>();
 	const listeners = new Set<(status: SchedulerStatus) => void>();
-	const statusBox = new Map<'status', SchedulerStatus>([
-		['status', { phase: 'local', conflicts: [] }],
-	]);
+	const statusBox = cell<SchedulerStatus>({ phase: 'local', conflicts: [] });
 
-	const status = (): SchedulerStatus =>
-		statusBox.get('status') ?? { phase: 'local', conflicts: [] };
+	const status = (): SchedulerStatus => statusBox.current;
 
 	/**
 	 * `stuck` comes from the bound session and nowhere else. Every other field is
@@ -356,7 +355,7 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 	 */
 	const publish = (next: SchedulerStatus) => {
 		const { stuck: _carried, progress, waiting, ...rest } = next;
-		const stuck = current.get('session')?.stuck.get('op');
+		const stuck = bound.current?.stuck.current;
 		// Progress is about the run under way and nothing else: carried into
 		// `idle` by a `{ ...status() }`, it would go on counting a run that has
 		// finished.
@@ -366,7 +365,7 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 			...(progress === undefined || rest.phase !== 'syncing' ? {} : { progress }),
 			...(waiting === undefined || rest.phase !== 'syncing' ? {} : { waiting }),
 		};
-		statusBox.set('status', full);
+		statusBox.current = full;
 		listeners.forEach((listener) => {
 			listener(full);
 		});
@@ -389,7 +388,7 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 	};
 
 	const isCurrent = (session: Session): boolean =>
-		current.get('session')?.generation === session.generation;
+		bound.current?.generation === session.generation;
 
 	// ------------------------------------------------------------- one run
 
@@ -487,7 +486,7 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 	/** Attempts given back: nothing is out of them, so nothing is stuck. */
 	const released = async (session: Session): Promise<void> => {
 		await releaseOps();
-		session.stuck.delete('op');
+		session.stuck.current = undefined;
 	};
 
 	/**
@@ -522,8 +521,8 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 	};
 
 	const backoff = (session: Session): number => {
-		const failures = (session.failures.get('count') ?? 0) + 1;
-		session.failures.set('count', failures);
+		const failures = session.failures.current + 1;
+		session.failures.current = failures;
 		return Math.min(backoffMs * 2 ** (failures - 1), maxBackoffMs);
 	};
 
@@ -604,13 +603,13 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 	 * a rate limit — end. Pulls go on meanwhile.
 	 */
 	const blocked = async (session: Session) => {
-		const since = session.blockedSince.get('at');
+		const since = session.blockedSince.current;
 		if (since === undefined) {
-			session.blockedSince.set('at', environment.now());
+			session.blockedSince.current = environment.now();
 			return;
 		}
 		if (environment.now() - since < blockedRetryMs) return;
-		session.blockedSince.delete('at');
+		session.blockedSince.current = undefined;
 		await released(session);
 		session.flags.add('again');
 	};
@@ -637,15 +636,14 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 			return;
 		}
 		// Nothing left failing that time will fix: the backoff starts over.
-		session.failures.delete('count');
+		session.failures.current = 0;
 		if (outcome.status === 'blocked') await blocked(session);
-		else session.blockedSince.delete('at');
+		else session.blockedSince.current = undefined;
 		// Asked for after `blocked`, which may have just given the queue its
 		// attempts back: nothing is stuck once it is being tried again.
 		const stuck = outcome.status === 'blocked' ? await stuckOp() : undefined;
 		if (!isCurrent(session)) return;
-		if (stuck === undefined) session.stuck.delete('op');
-		else session.stuck.set('op', stuck);
+		session.stuck.current = stuck;
 		publish({
 			phase: outcome.status === 'ok' ? 'idle' : 'attention',
 			lastSyncAt: status().lastSyncAt,
@@ -684,15 +682,15 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 		// Every trigger comes through here — the minute, an edit, focus, the
 		// network back — so a pause holds against all.
 		if (!isCurrent(session) || isPaused(session.connectionId)) return Promise.resolve();
-		const inFlight = session.inFlight.get('run');
+		const inFlight = session.inFlight.current;
 		if (inFlight !== undefined) {
 			session.flags.add(asked);
 			return inFlight;
 		}
 		const running = runOnce(session).finally(() => {
-			session.inFlight.delete('run');
+			session.inFlight.current = undefined;
 		});
-		session.inFlight.set('run', running);
+		session.inFlight.current = running;
 		return running;
 	};
 
@@ -742,19 +740,19 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 		cancel('debounce');
 		cancel('lazy');
 		cancelProgress();
-		current.get('session')?.abort.abort();
-		current.delete('session');
+		bound.current?.abort.abort();
+		bound.current = undefined;
 	};
 
 	// ----------------------------------------------------------- progress
 
-	const pendingProgress = new Map<'at', SyncProgress>();
-	const progressTimer = new Map<'timer', () => void>();
+	const pendingProgress = cell<SyncProgress | undefined>(undefined);
+	const progressTimer = cell<(() => void) | undefined>(undefined);
 
 	const cancelProgress = () => {
-		progressTimer.get('timer')?.();
-		progressTimer.delete('timer');
-		pendingProgress.delete('at');
+		progressTimer.current?.();
+		progressTimer.current = undefined;
+		pendingProgress.current = undefined;
 	};
 
 	/**
@@ -763,17 +761,17 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 	 */
 	const reportProgress = (session: Session, progress: SyncProgress) => {
 		if (!isCurrent(session)) return;
-		pendingProgress.set('at', progress);
-		if (progressTimer.has('timer')) return;
+		pendingProgress.current = progress;
+		if (progressTimer.current !== undefined) return;
 		const flush = () => {
-			const latest = pendingProgress.get('at');
-			pendingProgress.delete('at');
+			const latest = pendingProgress.current;
+			pendingProgress.current = undefined;
 			if (latest === undefined || !isCurrent(session) || status().phase !== 'syncing') {
-				progressTimer.delete('timer');
+				progressTimer.current = undefined;
 				return;
 			}
 			publish({ ...status(), progress: latest });
-			progressTimer.set('timer', environment.setTimer(flush, progressMs));
+			progressTimer.current = environment.setTimer(flush, progressMs);
 		};
 		flush();
 	};
@@ -817,26 +815,23 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 	 * gives up.
 	 */
 	const waitForLock = (session: Session): (() => void) => {
-		const timer = new Map<'timer', () => void>();
+		const timer = cell<(() => void) | undefined>(undefined);
 		const time = () => {
-			timer.set(
-				'timer',
-				environment.setTimer(() => {
-					timer.delete('timer');
-					if (!isCurrent(session)) return;
-					if (heldHere.has(session.connectionId)) {
-						time();
-						return;
-					}
-					lockWaits.add(session);
-					reportWaiting(session, true);
-				}, SYNC_WAIT_MS)
-			);
+			timer.current = environment.setTimer(() => {
+				timer.current = undefined;
+				if (!isCurrent(session)) return;
+				if (heldHere.has(session.connectionId)) {
+					time();
+					return;
+				}
+				lockWaits.add(session);
+				reportWaiting(session, true);
+			}, SYNC_WAIT_MS);
 		};
 		time();
 		return () => {
-			timer.get('timer')?.();
-			timer.delete('timer');
+			timer.current?.();
+			timer.current = undefined;
 			if (lockWaits.delete(session)) reportWaiting(session, false);
 		};
 	};
@@ -880,8 +875,8 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 		const subscription = liveQuery(() => rowsOf(db.opQueue, LIBRARY).primaryKeys()).subscribe({
 			next: (seqs) => {
 				const highest = seqs.reduce((most, seq) => Math.max(most, seq), 0);
-				const seen = session.lastSeq.get('seq');
-				session.lastSeq.set('seq', Math.max(highest, seen ?? 0));
+				const seen = session.lastSeq.current;
+				session.lastSeq.current = Math.max(highest, seen ?? 0);
 				// The first answer is what was already queued; the run on open
 				// covers that.
 				if (seen === undefined || highest <= seen || !isCurrent(session)) return;
@@ -908,12 +903,11 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 	};
 
 	const follow = (state: SyncStateRecord | undefined) => {
-		if (state === undefined) shown.delete('state');
-		else shown.set('state', state);
+		shown.current = state;
 		// Another connection bound, or none, ends a pause: binding one is what
 		// syncs it.
-		if (state === undefined || !isPaused(state.connectionId)) pausedFor.delete('connection');
-		const active = current.get('session');
+		if (state === undefined || !isPaused(state.connectionId)) pausedFor.current = undefined;
+		const active = bound.current;
 		if (state?.connectionId === active?.connectionId && active !== undefined) return;
 		endSession();
 		if (state === undefined) {
@@ -921,8 +915,8 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 			return;
 		}
 
-		const generation = (generations.get('count') ?? 0) + 1;
-		generations.set('count', generation);
+		const generation = generations.current + 1;
+		generations.current = generation;
 		const { connectionId } = state;
 		const tokens = createTokenSource({ db, client, connectionId, now: environment.now });
 		const abort = new AbortController();
@@ -957,14 +951,14 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 							},
 						}),
 			flags: new Set(),
-			failures: new Map(),
-			lastSeq: new Map(),
-			inFlight: new Map(),
-			blockedSince: new Map(),
-			stuck: new Map(),
+			failures: cell(0),
+			lastSeq: cell<number | undefined>(undefined),
+			inFlight: cell<Promise<void> | undefined>(undefined),
+			blockedSince: cell<number | undefined>(undefined),
+			stuck: cell<StuckOp | undefined>(undefined),
 			abort,
 		};
-		current.set('session', session);
+		bound.current = session;
 		const paused = isPaused(connectionId);
 		publish({ phase: paused ? 'paused' : 'idle', lastSyncAt: state.lastSyncAt, conflicts: [] });
 		watchEdits(session);
@@ -974,11 +968,11 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 
 	/** The user asking again: a pause of this session's connection is over. */
 	const resume = (session: Session) => {
-		if (isPaused(session.connectionId)) pausedFor.delete('connection');
+		if (isPaused(session.connectionId)) pausedFor.current = undefined;
 	};
 
 	const nudgeCurrent = (): Promise<void> => {
-		const session = current.get('session');
+		const session = bound.current;
 		return session === undefined ? Promise.resolve() : nudge(session);
 	};
 
@@ -994,7 +988,7 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 			unsubscribers.add(environment.listen('focus', () => void nudgeCurrent()));
 			unsubscribers.add(
 				environment.listen('visibilitychange', () => {
-					const session = current.get('session');
+					const session = bound.current;
 					if (session === undefined) return;
 					if (environment.isVisible()) void nudge(session);
 					else sendWaiting(session);
@@ -1003,15 +997,15 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 			// What failed while the network was going is no evidence against an op.
 			unsubscribers.add(
 				environment.listen('online', () => {
-					const session = current.get('session');
+					const session = bound.current;
 					if (session === undefined) return;
 					void released(session).then(() => run(session));
 				})
 			);
 			unsubscribers.add(
 				environment.listen('offline', () => {
-					const session = current.get('session');
-					if (session === undefined || session.inFlight.has('run')) return;
+					const session = bound.current;
+					if (session === undefined || session.inFlight.current !== undefined) return;
 					// Paused says more than offline does, and `online` would not
 					// say it again, since it starts no run.
 					if (isPaused(session.connectionId)) return;
@@ -1035,7 +1029,7 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 		},
 
 		resync: async () => {
-			const session = current.get('session');
+			const session = bound.current;
 			if (session === undefined) return;
 			resume(session);
 			// Inside the lock every run takes: a run already at the network is
@@ -1060,14 +1054,14 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 			// The backoff and the blocked clock start over: the user asking is
 			// the help `blocked` waits for, and a re-scan that has to sit out a
 			// five-minute backoff first is not one.
-			session.failures.delete('count');
-			session.blockedSince.delete('at');
-			session.stuck.delete('op');
+			session.failures.current = 0;
+			session.blockedSince.current = undefined;
+			session.stuck.current = undefined;
 			await run(session);
 		},
 
 		syncNow: async () => {
-			const session = current.get('session');
+			const session = bound.current;
 			if (session === undefined) return;
 			resume(session);
 			await released(session);
@@ -1075,16 +1069,16 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 		},
 
 		pause: () => {
-			const session = current.get('session');
+			const session = bound.current;
 			if (session === undefined) return;
-			pausedFor.set('connection', session.connectionId);
-			const running = session.inFlight.get('run');
+			pausedFor.current = session.connectionId;
+			const running = session.inFlight.current;
 			const { conflicts } = status();
 			// A session of its own: ending this one aborts every request the run
 			// has out, and the next is made paused, so it runs nothing.
 			endSession();
-			follow(shown.get('state'));
-			const paused = current.get('session');
+			follow(shown.current);
+			const paused = bound.current;
 			if (paused === undefined) return;
 			// The copies the last sync wrote are still on the device to be seen.
 			if (conflicts.length > 0) publish({ ...status(), conflicts });

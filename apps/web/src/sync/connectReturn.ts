@@ -1,3 +1,5 @@
+import { cell } from '@memoriam/core';
+
 /**
  * The way back from connecting a storage account (docs/ARCHITECTURE.md §10,
  * "Connecting"). The server's callback sends the browser to the path the app
@@ -57,17 +59,17 @@ export interface ConnectReturn {
 }
 
 export const createConnectReturn = (): ConnectReturn => {
-	const held = new Map<'outcome', ConnectOutcome>();
+	const held = cell<ConnectOutcome | undefined>(undefined);
 	return {
 		take: (location, history) => {
 			const read = readConnectReturn(location.href);
 			if (read === undefined) return;
 			history.replaceState(null, '', read.href);
-			if (read.outcome !== undefined) held.set('outcome', read.outcome);
+			if (read.outcome !== undefined) held.current = read.outcome;
 		},
-		peek: () => held.get('outcome'),
+		peek: () => held.current,
 		forget: () => {
-			held.delete('outcome');
+			held.current = undefined;
 		},
 	};
 };

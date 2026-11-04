@@ -1,4 +1,5 @@
 ---
+'@memoriam/api': patch
 '@memoriam/core': patch
 '@memoriam/web': patch
 ---
@@ -16,3 +17,5 @@ Whether a row is live or a tombstone is asked by name (`store/rowStates.ts`), no
 The store names its key types (`FileKey`, `FolderKey`) and the connection a call is about (`ConnectionScope`) once, and the sync store reads a passage's or file's queued ops through the queue's own `opsFor` and `opsForFile`.
 
 `@memoriam/core` offers `cell()`, the one way to hold a value that changes where the lint rules refuse `let`, and core holds its own that way.
+
+The web's sync/ and the API hold their changing values in `cell()` too, and the lint rule covers them.
