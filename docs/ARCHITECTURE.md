@@ -425,6 +425,9 @@ the same specificity wins, so the order is part of what is drawn. The split cut 
   corners (`--radius-*`), how far something is lifted (`--shadow-*`), sizes of words (`--text-*`)
   and what is over what (`--z-*`). A test checks that every variable the sheet uses is declared,
   and that every step is declared in `tokens.css`.
+- **Sizes of words are steps only.** A test refuses a `font-size` between the steps. A field's
+  size is a step held to `--text-field-floor`, 16px, below which Safari on a phone zooms in when
+  it is focused; a size in `em` follows the words around it.
 - **Brand defaults.** `--brand` and `--on-brand` have defaults there, the default brand's colours,
   under `:where(:root)`. It weighs nothing, so the brand's stylesheet wins whichever loads first,
   and a page without it still has its colours. A test keeps them equal to `brand/brand.json`.

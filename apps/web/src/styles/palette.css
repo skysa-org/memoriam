@@ -31,8 +31,8 @@
 	flex: none;
 	padding: var(--space-m);
 	font: inherit;
-	/* 16px, so iOS does not zoom in on it. */
-	font-size: 1rem;
+	/* 16px at least, so iOS does not zoom in on it. */
+	font-size: max(var(--text-body), var(--text-field-floor));
 	border: 0;
 	border-block-end: 1px solid var(--border);
 	background: transparent;
@@ -65,7 +65,7 @@
 	align-items: baseline;
 	gap: var(--space-s);
 	padding: var(--space-s);
-	font-size: 0.9375rem;
+	font-size: var(--text-body);
 	border-radius: var(--radius-s);
 	color: var(--fg);
 	cursor: pointer;

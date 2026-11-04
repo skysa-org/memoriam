@@ -35,7 +35,7 @@
 .tab-notice h2,
 .modal h2 {
 	margin: 0 0 var(--space-s);
-	font-size: 1.1rem;
+	font-size: var(--text-l);
 }
 
 .tab-notice button {

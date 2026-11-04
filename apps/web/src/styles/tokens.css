@@ -36,8 +36,11 @@
 	--radius-l: 1rem;
 	--radius-pill: 999px;
 
-	/* Words, by size. A size in `em` follows the words around it, and is not
-	   one of these; nor is a field's 16px floor, below which iOS zooms in. */
+	/* Words, by size, and nothing between the steps. A size in `em` follows the
+	   words around it, and is not one of these. `--text-field-floor` is not a
+	   step: it is what Safari on a phone needs of a field or it zooms in, so it
+	   is in px and stays 16px whatever the steps become. */
+	--text-field-floor: 16px;
 	--text-xs: 0.75rem;
 	--text-s: 0.8125rem;
 	--text-m: 0.875rem;

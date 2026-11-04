@@ -60,7 +60,7 @@
 
 .today-backup p {
 	margin: 0 0 var(--space-s);
-	font-size: 0.9375rem;
+	font-size: var(--text-body);
 }
 
 .today-meter {

@@ -52,6 +52,24 @@ describe('the stylesheet', () => {
 		).toEqual([]);
 	});
 
+	// The sizes drifted between the steps one literal at a time. A field's may be
+	// a step held to the 16px floor, and a size in `em` follows the words
+	// around it.
+	it('takes the size of words from the scale', () => {
+		const sizes = [...withoutComments(allStyles()).matchAll(/font-size:\s*([^;]+);/g)].map(
+			(match) => match[1] ?? ''
+		);
+		const STEP = /^var\(--text-[\w-]+\)$/;
+		const FLOORED = /^max\(var\(--text-[\w-]+\), var\(--text-field-floor\)\)$/;
+
+		expect(sizes.length).toBeGreaterThan(0);
+		expect(
+			sizes.filter(
+				(size) => !STEP.test(size) && !FLOORED.test(size) && !/[\d.]em$/.test(size)
+			)
+		).toEqual([]);
+	});
+
 	// The components say which by an attribute, and a browser is as quiet about a
 	// selector nothing matches as about a variable nobody declared.
 	it.each([
