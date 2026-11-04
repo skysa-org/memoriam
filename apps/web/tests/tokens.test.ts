@@ -3,8 +3,9 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { ApiClient } from '../src/api/client.js';
 import { bindLibrary, unbindLibrary } from '../src/store/connection.js';
-import { forgetCredential, keepCredential } from '../src/store/credentials.js';
+import { forgetCredential } from '../src/store/credentials.js';
 import { createTokenSource } from '../src/sync/tokens.js';
+import { holdCredential } from './support/connection.js';
 import { freshDatabase } from './support/db.js';
 
 /**
@@ -19,12 +20,7 @@ const CREDENTIAL = 'sk1_the-credential-this-device-holds';
 const bound = async () => {
 	const db = freshDatabase();
 	await bindLibrary(db, { connectionId: 'c1', provider: 'dropbox' });
-	await keepCredential(db, 'c1', {
-		id: 'c1',
-		credential: CREDENTIAL,
-		provider: 'dropbox',
-		createdAt: 0,
-	});
+	await holdCredential(db, 'c1', { credential: CREDENTIAL });
 	return db;
 };
 

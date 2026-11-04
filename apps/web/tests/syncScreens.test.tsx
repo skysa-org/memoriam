@@ -14,16 +14,12 @@ import { SyncKeeper } from '../src/components/SyncKeeper.js';
 import { SyncSettings } from '../src/components/SyncSettings.js';
 import { createAppRouter } from '../src/router.js';
 import { bindLibrary, boundConnection } from '../src/store/connection.js';
-import {
-	beginConnect,
-	keepCredential,
-	newCredential,
-	pendingCredential,
-} from '../src/store/credentials.js';
+import { beginConnect, newCredential, pendingCredential } from '../src/store/credentials.js';
 import { db, type MemoriamDatabase, type NoteRecord } from '../src/store/db.js';
 import { createPassage, passageText, rowFor } from '../src/store/passages.js';
 import type { ConnectOutcome } from '../src/sync/connectReturn.js';
 import type { SchedulerStatus } from '../src/sync/scheduler.js';
+import { holdCredential } from './support/connection.js';
 import { freshDatabase } from './support/db.js';
 
 /**
@@ -117,12 +113,7 @@ const showSettings = (props: Parameters<typeof SyncSettings>[0]) => {
 };
 
 const bound = async () => {
-	await keepCredential(database, 'c1', {
-		id: 'c1',
-		credential: newCredential(),
-		provider: 'dropbox',
-		createdAt: 1,
-	});
+	await holdCredential(database, 'c1', { credential: newCredential(), createdAt: 1 });
 	await bindLibrary(database, { connectionId: 'c1', provider: 'dropbox', displayName: 'Ann' });
 };
 
