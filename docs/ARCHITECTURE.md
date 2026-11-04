@@ -527,7 +527,7 @@ Only the names differ:
 The interface keeps `readBytes` and `createFile`, though nothing here yet writes a file that is not
 a passage. Every adapter's `read` is its `readBytes` decoded, and audio (Phase 3) would need both.
 
-**The engine** (`sync/engine.ts`, `sync/store.ts`, from S2) is ported whole, with its tests: the
+**The engine** (`sync/engine.ts`, `sync/store.ts`, from S2) is ported with its tests: the
 store contract (`tests/sync/storeContract.ts`), run against the in-memory store the engine tests
 use, the engine over every adapter's stub, and the randomized remote. The Google Drive tests that
 drive the engine through the adapter, held back in S1, are restored. Where it differs:
@@ -541,6 +541,10 @@ drive the engine through the adapter, held back in S1, are restored. Where it di
   `upload`, `move-file` and `delete-file` ops. Nothing in the web app makes one yet. They stay so
   that audio (Phase 3) does not reopen the engine. `files.ts` holds the extension → content type
   map they need.
+- **Split by concern.** The engine's parts leave `engine.ts` for modules of their own, as
+  skysa-notes moved them (its #446), with nothing they do changed and the differences above kept:
+  - `sync/pull/`, the pull's: `files.ts` (where each file that is not a passage is, replayed
+    through a batch's decisions).
 
 **Since the port.** Fixes skysa-notes made to its engine and adapters after `fa92ad6`, taken
 here:
