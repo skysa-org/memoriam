@@ -547,7 +547,8 @@ drive the engine through the adapter, held back in S1, are restored. Where it di
     readings that no decision changes), `files.ts` (where each file that is not a passage is,
     replayed through a batch's decisions), `replay.ts` (where a passage, a folder or an unreadable
     file is once the decisions so far are applied, a `merge-note` among them).
-  - `sync/push/`, the push's: `files.ts` (files that are not passages: uploaded, moved, deleted,
+  - `sync/push/`, the push's: `conflicts.ts` (a write the remote would not take: set aside under a
+    conflict name, merged, or reconciled by the conflict rule), `files.ts` (files that are not passages: uploaded, moved, deleted,
     or set beside what they meet), `folders.ts` (the folders made before a write, and removed or
     left once empty), `notes.ts` (passages: written after a rename, renamed or moved aside,
     deleted).
@@ -616,8 +617,9 @@ before that rule, through a `merge` option on the engine:
 - **On a pull.** Where a note changed here and on the remote since they last agreed, the engine
   merges before it decides on a conflict copy. This includes a note never sent that meets a
   remote one at its path, such as two devices' `activity-2026.md`.
-- **On a push.** Where a write meets a `ConflictError` (`resolvePushConflict`), the engine reads
-  the remote, merges, and writes the merge against the version it read.
+- **On a push.** Where a write meets a `ConflictError` (`resolvePushConflict` and `pushMerged` in
+  `push/conflicts.ts`), the engine reads the remote, merges, and writes the merge against the
+  version it read.
 - **The `merge-note` pull change** carries the merge. The store applies it only if the note still
   holds the content the merge was made from (`base`), and otherwise refuses the whole pull, so the
   next one decides again.
