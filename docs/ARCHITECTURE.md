@@ -547,6 +547,8 @@ drive the engine through the adapter, held back in S1, are restored. Where it di
     readings that no decision changes), `files.ts` (where each file that is not a passage is,
     replayed through a batch's decisions), `replay.ts` (where a passage, a folder or an unreadable
     file is once the decisions so far are applied, a `merge-note` among them).
+  - `sync/names.ts`, finding a free conflict name: tried in turn, bounded, the last refusal
+    thrown (`findFreeName`).
   - `sync/outcome.ts`, what a run comes to (`SyncOutcome`) and the pieces every outcome is built
     from, without skysa-notes' clipboard and key-file flags.
   - `sync/progress.ts`, how far the run under way has got, for `onProgress`: a scan's, a round's
