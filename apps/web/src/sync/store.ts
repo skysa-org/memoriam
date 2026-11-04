@@ -37,6 +37,7 @@ import {
 } from '../store/db.js';
 import { pulledRow } from '../store/passages.js';
 import { queueMove, queueWrite } from '../store/queue.js';
+import { libraryTables } from '../store/scopes.js';
 import { eachInSlices } from '../store/slices.js';
 
 /**
@@ -248,16 +249,12 @@ export const createDexieSyncStore = (
 	 * two cannot interleave.
 	 */
 	const inTransaction = <T>(work: () => Promise<T>): Promise<T> =>
-		db.transaction(
-			'rw',
-			[db.notes, db.folders, db.opQueue, db.syncState, db.files, db.fileBytes],
-			async () => {
-				if ((await db.syncState.get(connectionId)) === undefined) {
-					throw new UnboundConnectionError(connectionId);
-				}
-				return work();
+		db.transaction('rw', libraryTables(db), async () => {
+			if ((await db.syncState.get(connectionId)) === undefined) {
+				throw new UnboundConnectionError(connectionId);
 			}
-		);
+			return work();
+		});
 
 	const notesOf = (scope: Scope): Promise<NoteRecord[]> =>
 		scope.notes.where('connectionId').equals(LIBRARY).toArray();

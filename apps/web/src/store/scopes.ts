@@ -1,6 +1,16 @@
 import type { MemoriamDatabase } from './db.js';
 
 /**
+ * The tables a transaction opens, for the transactions that open many. A
+ * writer that asks for a table its caller's transaction did not open fails
+ * there with a `SubTransactionError`, so the ones that nest share a list
+ * rather than each spelling theirs. A wider scope than the work needs holds
+ * more of the database from other tabs and other work for longer, so these
+ * are as wide as they were, and a transaction with less to do still names
+ * its own.
+ */
+
+/**
  * The tables every writer of the library changes together: a row, the op that
  * sends it, and the binding that says whether one is owed (`store/queue.ts`).
  */
@@ -11,3 +21,13 @@ export const writerTables = (db: MemoriamDatabase) => [
 	db.syncState,
 	db.files,
 ];
+
+/** The writers' tables, and the bytes sync keeps of the files beside the passages. */
+export const libraryTables = (db: MemoriamDatabase) => [...writerTables(db), db.fileBytes];
+
+/**
+ * Everything the library holds for a connection on this device: what it is let
+ * go of the connection with. The prefs too, for the count of binds and unbinds
+ * a decision made from a server's answer checks (`unbindLibrary`).
+ */
+export const connectionTables = (db: MemoriamDatabase) => [...libraryTables(db), db.prefs];

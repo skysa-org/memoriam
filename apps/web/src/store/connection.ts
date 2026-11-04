@@ -10,7 +10,7 @@ import {
 } from './db.js';
 import { deviceId } from './device.js';
 import { queueByNotebook } from './queue.js';
-import { writerTables } from './scopes.js';
+import { connectionTables, writerTables } from './scopes.js';
 
 /**
  * Binding the library to a connection, and letting it go (docs/ARCHITECTURE.md
@@ -181,7 +181,7 @@ export const unbindLibrary = (
 	db: MemoriamDatabase,
 	only?: { connectionId: string; since?: number }
 ): Promise<boolean> =>
-	db.transaction('rw', [...writerTables(db), db.fileBytes, db.prefs], async () => {
+	db.transaction('rw', connectionTables(db), async () => {
 		const bound = await boundConnection(db);
 		if (only !== undefined) {
 			const moved = only.since !== undefined && (await bindingCount(db)) !== only.since;
