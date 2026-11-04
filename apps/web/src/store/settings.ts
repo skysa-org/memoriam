@@ -39,7 +39,7 @@ export const DEFAULT_SETTINGS: Settings = {
 	slips: true,
 };
 
-export const SETTING_KEYS = {
+const SETTING_KEYS = {
 	retention: 'schedule.retention',
 	newWords: 'schedule.newWords',
 	maxInterval: 'schedule.maxInterval',

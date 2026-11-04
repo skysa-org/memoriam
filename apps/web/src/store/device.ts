@@ -11,7 +11,7 @@ import type { MemoriamDatabase } from './db.js';
  * days are its own either way.
  */
 
-export const DEVICE_KEY = 'device.id';
+const DEVICE_KEY = 'device.id';
 
 /** Crockford's base 32, lowercased, as chunk keys are. */
 const BASE32 = '0123456789abcdefghjkmnpqrstvwxyz';
