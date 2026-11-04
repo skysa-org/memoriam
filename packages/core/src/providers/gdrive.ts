@@ -2,7 +2,6 @@ import { z } from 'zod';
 
 import { APP_FOLDER_NAME, MARKER_FILE } from '../config.js';
 import { parseJson } from '../json.js';
-import { buildMarker, serializeMarker } from '../marker.js';
 import {
 	conflictFilename,
 	conflictFolderName,
@@ -11,8 +10,15 @@ import {
 import { isPassageName } from '../names/fold.js';
 import { basename, joinPath, normalizePath, parentPath, pathSegments, ROOT } from '../paths.js';
 import {
+	type HttpProviderOptions,
+	isSelf,
+	outsideRoot,
+	readAsText,
+	rootFolderEntry,
+	writeMarkerOnce,
+} from './adapter.js';
+import {
 	createTransport,
-	type FetchLike,
 	jsonBody,
 	parseRetryAfter,
 	readErrorBody,
@@ -30,7 +36,7 @@ import {
 	settlePage,
 	type TreeItem,
 } from './idTree.js';
-import { decodeText, responseBytes, uploadType } from './text.js';
+import { responseBytes, uploadType } from './text.js';
 import {
 	AuthError,
 	type ChangeEntry,
@@ -109,13 +115,7 @@ const MULTIPART_LIMIT = 5 * 1024 * 1024;
 /** Drive refuses to nest folders deeper than this, so a listing need not go further. */
 const MAX_DEPTH = 100;
 
-export interface GDriveProviderOptions {
-	fetch: FetchLike;
-	/** Called per request, so a refreshed token is picked up without rebuilding. */
-	getAccessToken: () => Promise<string>;
-	appVersion: string;
-	clientId: string;
-	userAgent?: string;
+export interface GDriveProviderOptions extends HttpProviderOptions {
 	/** For the stamp in a duplicate's conflict name. */
 	now?: () => Date;
 }
@@ -309,12 +309,6 @@ const toEntry = (file: DriveFile, path: string): RemoteEntry => {
 	};
 };
 
-/** By id wherever both have one, as in the other adapters; otherwise by path, exactly. */
-const isSelf = (entry: EntryRef, current: RemoteEntry): boolean =>
-	entry.remoteId === '' || current.remoteId === ''
-		? normalizePath(entry.path) === current.path
-		: entry.remoteId === current.remoteId;
-
 /**
  * A file as the tree takes it. Trashed — explicitly, or with a folder above it
  * — is gone, and so is a name no path can hold. Revisions are the version, so a
@@ -412,7 +406,7 @@ interface Fetched {
 }
 
 export const createGDriveProvider = (options: GDriveProviderOptions): StorageProvider => {
-	const { fetch: doFetch, getAccessToken, appVersion, clientId, userAgent } = options;
+	const { fetch: doFetch, getAccessToken } = options;
 	const now = options.now ?? (() => new Date());
 	/**
 	 * `id`: the app folder's id, found again at the start of every `changes`
@@ -858,40 +852,30 @@ export const createGDriveProvider = (options: GDriveProviderOptions): StoragePro
 		return raise(result.failure, path);
 	};
 
-	const write = (path: string, content: string, opts: WriteOptions): Promise<RemoteEntry> => {
-		const target = normalizePath(path);
-		if (target === ROOT) return Promise.reject(new NotFoundError(target));
-		return opts.expectedVersion === undefined
-			? createNote(target, content)
-			: update(target, content, opts.expectedVersion);
-	};
+	const write = (path: string, content: string, opts: WriteOptions): Promise<RemoteEntry> =>
+		outsideRoot(path, (target) =>
+			opts.expectedVersion === undefined
+				? createNote(target, content)
+				: update(target, content, opts.expectedVersion)
+		);
 
 	const createFile = (
 		path: string,
 		bytes: Uint8Array<ArrayBuffer>,
 		opts: CreateFileOptions = {}
-	): Promise<RemoteEntry> => {
-		const target = normalizePath(path);
-		if (target === ROOT) return Promise.reject(new NotFoundError(target));
-		const type = uploadType(opts.contentType);
-		return create(target, bytes, type, type);
-	};
+	): Promise<RemoteEntry> =>
+		outsideRoot(path, (target) => {
+			const type = uploadType(opts.contentType);
+			return create(target, bytes, type, type);
+		});
 
 	const ensureRoot = async (): Promise<{ rootId: string }> => {
 		const id = await establishRoot();
-		if ((await itemAt(MARKER_FILE)) !== undefined) return { rootId: id };
-
-		const marker = buildMarker({
-			appVersion,
-			provider: 'gdrive',
-			clientId,
-			...(userAgent === undefined ? {} : { userAgent }),
-		});
-		// Create-only, so another device's marker written in between stands.
-		await createNote(MARKER_FILE, serializeMarker(marker)).catch((error: unknown) => {
-			if (error instanceof ConflictError) return;
-			throw error;
-		});
+		await writeMarkerOnce(
+			{ ...options, provider: 'gdrive' },
+			async () => (await itemAt(MARKER_FILE)) !== undefined,
+			createNote
+		);
 		return { rootId: id };
 	};
 
@@ -931,22 +915,11 @@ export const createGDriveProvider = (options: GDriveProviderOptions): StoragePro
 		return { bytes: await responseBytes(response), version };
 	};
 
-	const read = async (entry: EntryRef): Promise<{ content: string; version: string }> => {
-		const { bytes, version } = await readBytes(entry);
-		return { content: decodeText(bytes, entry.path), version };
-	};
+	const read = readAsText(readBytes);
 
 	const createFolder = async (path: string): Promise<RemoteEntry> => {
 		const target = normalizePath(path);
-		if (target === ROOT) {
-			return {
-				remoteId: await rootId(),
-				path: ROOT,
-				kind: 'folder',
-				version: '',
-				modifiedAt: '',
-			};
-		}
+		if (target === ROOT) return rootFolderEntry(await rootId());
 
 		const name = basename(target);
 		const parentId = await folderIdAt(parentPath(target));
@@ -973,7 +946,7 @@ export const createGDriveProvider = (options: GDriveProviderOptions): StoragePro
 		const occupant = await itemAt(target);
 		if (occupant !== undefined) {
 			const current = toEntry(occupant, target);
-			if (isSelf(entry, current)) return current;
+			if (isSelf(entry, current, 'exact')) return current;
 			throw new ConflictError(current);
 		}
 
