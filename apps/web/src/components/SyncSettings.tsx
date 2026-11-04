@@ -426,7 +426,7 @@ export const SyncSettings = ({
 					{said}
 				</p>
 			)}
-			<ConflictsBanner database={database} />
+			<ConflictsBanner />
 		</section>
 	);
 };

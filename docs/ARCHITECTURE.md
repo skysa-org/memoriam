@@ -363,6 +363,9 @@ earn it.
 - Deleting a passage or a collection removes its rows while the library is not connected, and
   leaves tombstones while it is. Either way an undo notice puts them back.
 - A version only adds, and an upgrade carries forward what an older build wrote.
+- A component reads and writes the database it is drawn over (`useDb`, `store/database.tsx`, from
+  skysa-notes): the app's own, unless a `DatabaseProvider` above it names another, as a test does
+  with one of its own. The store's hooks read it too, so nothing hands a database down as a prop.
 
 **Recording a pass.** `recordPass` (`apps/web/src/store/practice.ts`) is one transaction:
 1. Read the row's current `source`, and cut it into chunks by its own `chunker`.

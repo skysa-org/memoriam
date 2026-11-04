@@ -14,7 +14,9 @@ import { createDatabase, db, type MemoriamDatabase, watchTab } from '../../src/s
  *   the file thought to list. Hand-kept lists of tables let preferences leak
  *   from one test into the next.
  * - a test that can hand a database in asks `freshDatabase` for one of its own,
- *   deleted after the test.
+ *   deleted after the test. A component is handed one by drawing it inside a
+ *   `DatabaseProvider` (`store/database.tsx`, `over` in `./database.tsx`),
+ *   which the store's hooks read.
  */
 
 const opened: Dexie[] = [];

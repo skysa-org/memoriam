@@ -2,7 +2,8 @@ import { daysBetween, isHidden, localDay } from '@memoriam/core';
 import { useLiveQuery } from 'dexie-react-hooks';
 
 import { boundConnection } from './connection.js';
-import { db as defaultDb, LOCAL_CONNECTION_ID, type MemoriamDatabase } from './db.js';
+import { useDb } from './database.js';
+import { LOCAL_CONNECTION_ID, type MemoriamDatabase } from './db.js';
 import { getPreference, setPreference } from './prefs.js';
 import { rowsOf } from './rows.js';
 import { isLive } from './rowStates.js';
@@ -88,10 +89,8 @@ export const backupState = async (
 };
 
 /** The reminder, live: gone the moment a backup is made or put off. */
-export const useBackupReminder = (
-	now: Date = new Date(),
-	db: MemoriamDatabase = defaultDb
-): BackupReminder | undefined | null => {
+export const useBackupReminder = (now: Date = new Date()): BackupReminder | undefined | null => {
+	const db = useDb();
 	const day = localDay(now);
 	const reminder = useLiveQuery(
 		async () => backupReminder(await backupState(db), Date.now()) ?? null,

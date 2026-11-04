@@ -11,12 +11,8 @@ import {
 } from '@memoriam/core';
 import { useLiveQuery } from 'dexie-react-hooks';
 
-import {
-	db as appDatabase,
-	LOCAL_CONNECTION_ID,
-	type MemoriamDatabase,
-	type NoteRecord,
-} from './db.js';
+import { useDb } from './database.js';
+import { LOCAL_CONNECTION_ID, type MemoriamDatabase, type NoteRecord } from './db.js';
 import {
 	buryOrDrop,
 	type Edited,
@@ -98,11 +94,13 @@ export const linesAgainst = (
 };
 
 /** The library's conflicts, live; `undefined` while they are read. */
-export const useConflicts = (database: MemoriamDatabase = appDatabase): Conflict[] | undefined =>
-	useLiveQuery(
-		async () => conflictsIn(await rowsOf(database.notes, LOCAL_CONNECTION_ID).toArray()),
-		[database]
+export const useConflicts = (): Conflict[] | undefined => {
+	const db = useDb();
+	return useLiveQuery(
+		async () => conflictsIn(await rowsOf(db.notes, LOCAL_CONNECTION_ID).toArray()),
+		[db]
 	);
+};
 
 /** What a choice came to, and how to take it back. */
 export type Resolved =

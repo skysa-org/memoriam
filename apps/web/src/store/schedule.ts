@@ -16,12 +16,8 @@ import {
 } from '@memoriam/core';
 import { useLiveQuery } from 'dexie-react-hooks';
 
-import {
-	db as defaultDb,
-	LOCAL_CONNECTION_ID,
-	type MemoriamDatabase,
-	type NoteRecord,
-} from './db.js';
+import { useDb } from './database.js';
+import { LOCAL_CONNECTION_ID, type NoteRecord } from './db.js';
 import { rowsOf } from './rows.js';
 import { isLive } from './rowStates.js';
 import { readSettings, type Settings } from './settings.js';
@@ -122,9 +118,9 @@ export const planCounts = ({ steps, passages }: Pick<DayPlan, 'steps' | 'passage
 /** The day's plan, live. */
 export const useDayPlan = (
 	now: Date = new Date(),
-	db: MemoriamDatabase = defaultDb,
 	connectionId: string = LOCAL_CONNECTION_ID
 ): DayPlan | undefined => {
+	const db = useDb();
 	const day = localDay(now);
 	return useLiveQuery(
 		async () => {

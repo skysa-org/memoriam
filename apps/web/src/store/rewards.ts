@@ -17,9 +17,9 @@ import {
 } from '@memoriam/core';
 import { useLiveQuery } from 'dexie-react-hooks';
 
+import { useDb } from './database.js';
 import {
 	type ConnectionScope,
-	db as defaultDb,
 	LOCAL_CONNECTION_ID,
 	type MemoriamDatabase,
 	type NoteRecord,
@@ -104,9 +104,9 @@ export const rewardsFor = (
 /** The rewards, live. */
 export const useRewards = (
 	now: Date = new Date(),
-	db: MemoriamDatabase = defaultDb,
 	connectionId: string = LOCAL_CONNECTION_ID
 ): Rewards | undefined => {
+	const db = useDb();
 	const day = localDay(now);
 	return useLiveQuery(
 		async () => {
