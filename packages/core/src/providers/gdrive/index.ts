@@ -5,6 +5,7 @@ import {
 	isSelf,
 	outsideRoot,
 	readAsText,
+	refuseRoot,
 	rootFolderEntry,
 	writeMarkerOnce,
 } from '../adapter.js';
@@ -190,6 +191,7 @@ export const createGDriveProvider = (options: GDriveProviderOptions): StoragePro
 	};
 
 	const move = async (entry: EntryRef, newPath: string): Promise<RemoteEntry> => {
+		await refuseRoot(entry, rootId);
 		const target = normalizePath(newPath);
 		if (target === ROOT) throw new NotFoundError(target);
 
@@ -227,6 +229,7 @@ export const createGDriveProvider = (options: GDriveProviderOptions): StoragePro
 	 * folder is trashed with it.
 	 */
 	const remove = async (entry: EntryRef): Promise<void> => {
+		await refuseRoot(entry, rootId);
 		const id = await idOf(entry);
 		// Idempotent: something already gone is the outcome the caller wanted.
 		if (id === undefined) return;

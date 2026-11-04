@@ -15,3 +15,5 @@ OneDrive and Drive share their cursor's envelope and its reading (`treeCursorBas
 An answer a provider should not have given (an item with no id, a file with no version, a page with neither link) is a `ProviderResponseError`, still retried and counted as before, and a rate limit reads the same from every provider: who, the status, and how long it asked us to wait.
 
 The Google Drive adapter is split into `providers/gdrive/` by concern (wire, root, upload, cursor, duplicates), with nothing it does changed.
+
+No adapter, nor the in-memory fake, deletes or moves the app's own folder, whether it is named by its path or by its id: each refuses with a `NotFoundError`. Google Drive would otherwise have trashed the folder and everything in it. A provider's success answer that is not a JSON object is a `ProviderResponseError` naming the provider, not a `SyntaxError` or a `TypeError`, and Dropbox's rate-limit error says what Dropbox called it, as the other two do.

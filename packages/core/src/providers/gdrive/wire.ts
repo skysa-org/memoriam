@@ -265,6 +265,7 @@ export const createDriveClient = (options: HttpProviderOptions) => {
 	};
 
 	const { send, attempt, call } = createTransport({
+		kind: 'gdrive',
 		fetch: doFetch,
 		getAccessToken,
 		failureOf,
