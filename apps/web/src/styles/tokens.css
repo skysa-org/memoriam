@@ -82,7 +82,7 @@
 	/* Practice: a word the user recalled, one they missed, and a hidden word's
 	   placeholder. */
 	--recalled: var(--fg);
-	--missed: #dc2626;
+	--missed: var(--bad);
 	--missed-bg: color-mix(in srgb, var(--missed) 12%, transparent);
 	--placeholder: color-mix(in srgb, var(--muted) 45%, transparent);
 	/* A streak's flame and the heatmap's warmest day. */
@@ -114,7 +114,6 @@
 		--ok: #4ade80;
 		--warn: #fbbf24;
 		--bad: #f87171;
-		--missed: #f87171;
 		--flame: #fb923c;
 		--shadow-l: 0 8px 24px rgb(0 0 0 / 0.4);
 	}
