@@ -534,17 +534,18 @@ drive the engine through the adapter, held back in S1, are restored. Where it di
 - **No clipboard.** skysa-notes' engine pulls a clipboard folder for its share target. Memoriam
   has neither, so that path is gone, from the pull and from its progress reports.
 - **The app's own folder.** The engine passes over hidden paths, except `.memoriam/` and its
-  `activity-YYYY.md` files (`unsynced` in the engine). Every other hidden path, `.memoriam/` or
-  not, is left alone, as skysa-notes leaves it. `isHidden` itself is unchanged, so the library
-  still hides them.
+  `activity-YYYY.md` files (`sync/unsynced.ts`, asked wherever skysa-notes asks `isHidden`).
+  Every other hidden path, `.memoriam/` or not, is left alone, as skysa-notes leaves it.
+  `isHidden` itself is unchanged, so the library still hides them.
 - **Files, kept dormant.** The engine still carries skysa-notes' attachments: `SyncFile`, and the
   `upload`, `move-file` and `delete-file` ops. Nothing in the web app makes one yet. They stay so
   that audio (Phase 3) does not reopen the engine. `files.ts` holds the extension → content type
   map they need.
 - **Split by concern.** The engine's parts leave `engine.ts` for modules of their own, as
   skysa-notes moved them (its #446), with nothing they do changed and the differences above kept:
-  - `sync/pull/`, the pull's: `files.ts` (where each file that is not a passage is, replayed
-    through a batch's decisions).
+  - `sync/pull/`, the pull's: `batch.ts` (what a batch's decisions are reached against, and its
+    readings that no decision changes), `files.ts` (where each file that is not a passage is,
+    replayed through a batch's decisions).
 
 **Since the port.** Fixes skysa-notes made to its engine and adapters after `fa92ad6`, taken
 here:
