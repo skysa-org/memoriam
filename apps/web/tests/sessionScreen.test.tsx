@@ -8,9 +8,9 @@ import {
 	ROOT,
 } from '@memoriam/core';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { createAppRouter } from '../src/router.js';
 import { db } from '../src/store/db.js';
@@ -24,10 +24,6 @@ const open = (path: string) => {
 	render(<RouterProvider router={router} />);
 	return router;
 };
-
-afterEach(() => {
-	cleanup();
-});
 
 const TEXT = 'Jesus wept.\n';
 const KEY = chunkPassage(TEXT, 1)?.chunks[0]?.key ?? '';
