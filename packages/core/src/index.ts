@@ -49,6 +49,8 @@ export {
 	type SyncProgress,
 } from './sync/engine.js';
 
+export { messageOf } from './sync/outcome.js';
+
 export type {
 	ConflictResolution,
 	OpOutcome,

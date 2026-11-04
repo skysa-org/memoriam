@@ -4,6 +4,7 @@ import {
 	isAuthError,
 	isRateLimitError,
 	mergeFile,
+	messageOf,
 	type ProviderKind,
 	type StorageProvider,
 	type SyncEngine,
@@ -292,9 +293,6 @@ const UNAUTHORIZED: SyncOutcome = {
 const together = (seen: readonly string[], more: readonly string[]): string[] => [
 	...new Set([...seen, ...more]),
 ];
-
-const messageOf = (error: unknown): string =>
-	error instanceof Error ? error.message : String(error);
 
 /**
  * The longest a provider's `Retry-After` is taken at its word. Beyond this the

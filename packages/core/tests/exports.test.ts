@@ -72,6 +72,7 @@ const SURFACE = [
 	'mergeActivity',
 	'mergeFile',
 	'mergePassage',
+	'messageOf',
 	'normalizePath',
 	'parentPath',
 	'parsePassageFile',
