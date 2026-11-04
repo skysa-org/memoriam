@@ -520,7 +520,8 @@ differs.
 
 Only the names differ:
 - `APP_FOLDER_NAME` is `memoriam`, and the marker is `.memoriam-app.json`.
-- Google Drive tags the app's folder `appProperties: { memoriam: 'root' }`.
+- Google Drive tags the app's folder `appProperties: { memoriam: 'root' }`, and marks a folder the
+  app has left `memoriamLeft` (below, "Since the port").
 - `PROVIDER_KINDS` has no `webdav`, which skysa-notes deferred indefinitely.
 
 The interface keeps `readBytes` and `createFile`, though nothing here yet writes a file that is not
@@ -555,6 +556,20 @@ here:
   time was a wait per folder before the round could say anything. They are now asked a level at a
   time, four at once (`LISTS_AT_ONCE` in `gdrive/cursor.ts`, as many as writes), and the answers
   go into the page in the order one at a time put them.
+- **Drive leaves the folders a collection leaves behind** (skysa-notes #356). A collection moved,
+  renamed or deleted on one device stayed on every other device as an empty collection, and came
+  back after a re-scan: under `drive.file` a listing cannot prove a folder empty, so the engine's
+  `rmdir` removed nothing, since trashing the folder could trash what the user put there. Where
+  `listsEverything` is false, `rmdir` now calls the provider's optional `leaveFolder`, past the
+  same gates as a delete. Drive sets a private `appProperties` key (`memoriamLeft`) and touches
+  nothing in the folder. The adapter keeps a left folder in its id tree, but does not report it
+  while nothing the app can see is beneath it (`hideLeftFolders` in `idTree.ts`). A feed page
+  compares the tree before and after it: a folder that becomes hidden is reported deleted, and one
+  that stops being hidden is reported as a folder again. A scan holds left folders back until its
+  last page. `createFolder` at its path takes the mark off. The mark rides in the cursor as an
+  optional fifth element of a tree row, so stored cursors still read, and OneDrive's are
+  unchanged. skysa-notes has not yet measured whether Drive's change feed reports a change to
+  `appProperties` alone.
 
 **Merge before a conflict copy.** skysa-notes never merges: on a conflict the remote keeps the
 path, and the local version is written beside it as a conflict copy. Memoriam adds one merge

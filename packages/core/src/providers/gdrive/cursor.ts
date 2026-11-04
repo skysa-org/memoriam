@@ -4,6 +4,7 @@ import {
 	applyAll,
 	applyItem,
 	arrivals,
+	hideLeftFolders,
 	nodesOf,
 	type Page,
 	pageFrom,
@@ -270,7 +271,15 @@ export const createChanges = (client: DriveClient, appFolder: AppFolder, now: ()
 		// listed is in the tree. A parent it still does not know is outside the
 		// app folder, or a folder the user made in Drive, which `drive.file`
 		// cannot see — and either way the item has left.
-		const settled = settlePage(page, fetched.roundEnds);
+		// A folder the app has left is still in the tree, since what is inside
+		// it is placed through it, but is not reported while it holds nothing
+		// the app can see (`leaveFolder`).
+		const settled = hideLeftFolders(
+			page,
+			settlePage(page, fetched.roundEnds),
+			from.phase === 'scan',
+			fetched.roundEnds
+		);
 		const scanning = from.phase === 'scan' && !fetched.roundEnds;
 		const written: DriveCursor = {
 			v: 1,

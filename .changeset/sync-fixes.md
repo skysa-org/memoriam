@@ -14,3 +14,5 @@ A sync under way can be paused from Settings (Pause syncing): its requests stop,
 Reload, when a new version is offered, pauses syncing in every tab before it asks the new version to take over, so a sync's requests no longer hold the update back for minutes. The prompt says it is updating meanwhile, and what else to do if it takes long.
 
 Google Drive lists the folders new to a round four at a time, rather than one after another, so a round after collections moved on another device reaches its passages sooner.
+
+On Google Drive, a collection moved, renamed or deleted on one device no longer stays behind as an empty collection on the others, nor comes back after a re-scan: the folder it leaves is marked as left (`StorageProvider.leaveFolder`) and hidden while it holds nothing the app can see, with nothing in it touched.

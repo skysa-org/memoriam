@@ -32,6 +32,9 @@ import {
 	FILES,
 	FOLDER,
 	isFolder,
+	isLeft,
+	LEFT_KEY,
+	LEFT_VALUE,
 	toEntry,
 	usableName,
 	WRITES_AT_ONCE,
@@ -177,7 +180,9 @@ export const createGDriveProvider = (options: GDriveProviderOptions): StoragePro
 		const parentId = await folderIdAt(parentPath(target));
 		// Idempotent, so a replayed `mkdir` op is harmless.
 		const existing = earliest(await named(parentId, name));
-		if (existing !== undefined && isFolder(existing)) return toEntry(existing, target);
+		if (existing !== undefined && isFolder(existing)) {
+			return toEntry(await takenBack(existing), target);
+		}
 		if (existing !== undefined) throw new ConflictError(toEntry(existing, target));
 
 		const made = await call<DriveFile>(
@@ -185,9 +190,42 @@ export const createGDriveProvider = (options: GDriveProviderOptions): StoragePro
 			`${FILES}?fields=${FIELDS}`,
 			jsonBody({ name, mimeType: FOLDER, parents: [parentId] })
 		);
+		// Another device's, made in the same moment, may be one the app had left.
 		const winner = await settleCreate(parentId, made);
 		if (!isFolder(winner)) throw new ConflictError(toEntry(winner, target));
-		return toEntry(winner, target);
+		return toEntry(await takenBack(winner), target);
+	};
+
+	/**
+	 * A folder made again where the app had left it (`leaveFolder`): the mark
+	 * comes off, so it is a collection again on every device, which the user
+	 * making it here asked for. Nothing is sent for a folder never left.
+	 */
+	const takenBack = async (folder: DriveFile): Promise<DriveFile> =>
+		folder.id !== undefined && isLeft(folder)
+			? call<DriveFile>(
+					'PATCH',
+					fileUrl(folder.id),
+					jsonBody({ appProperties: { [LEFT_KEY]: null } })
+				)
+			: folder;
+
+	/**
+	 * In place of trashing a folder the engine has emptied, which would take
+	 * with it whatever the user put there that `drive.file` hides: the folder is
+	 * marked as left, and nothing in it is touched (`StorageProvider`). Already
+	 * gone is the outcome the caller wanted.
+	 */
+	const leaveFolder = async (entry: EntryRef): Promise<void> => {
+		const id = await idOf(entry);
+		if (id === undefined) return;
+		const result = await attempt<unknown>(
+			'PATCH',
+			fileUrl(id),
+			jsonBody({ appProperties: { [LEFT_KEY]: LEFT_VALUE } })
+		);
+		if (result.ok || result.failure.status === 404) return;
+		raise(result.failure);
 	};
 
 	const move = async (entry: EntryRef, newPath: string): Promise<RemoteEntry> => {
@@ -241,6 +279,8 @@ export const createGDriveProvider = (options: GDriveProviderOptions): StoragePro
 		// `drive.file` hides what the app did not make (skysa-notes' §5.1), so a listing
 		// cannot say a folder is empty.
 		listsEverything: false,
+		// So a folder the engine has emptied is marked rather than trashed.
+		leaveFolder,
 		writesAtOnce: WRITES_AT_ONCE,
 		ensureRoot,
 		list,
