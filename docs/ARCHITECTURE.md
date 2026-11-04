@@ -549,6 +549,8 @@ drive the engine through the adapter, held back in S1, are restored. Where it di
     file is once the decisions so far are applied, a `merge-note` among them).
   - `sync/outcome.ts`, what a run comes to (`SyncOutcome`) and the pieces every outcome is built
     from, without skysa-notes' clipboard and key-file flags.
+  - `sync/progress.ts`, how far the run under way has got, for `onProgress`: a scan's, a round's
+    and a push's count (`createProgress`).
   - `sync/providerOps.ts`, asking the provider where "nothing there" is an answer: `orIfNotFound`,
     and `withParent`, which makes the folder above and tries once more.
 
