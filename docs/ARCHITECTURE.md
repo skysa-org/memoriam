@@ -440,6 +440,16 @@ modifier, so they never collide with typing during practice.
   starts offline. Navigation falls back to the shell only for `/`.
 - **Updates.** `registerType: 'prompt'`: a new build waits for the user to reload, and never swaps
   in under a pass being typed.
+- **Reload stops the app's requests first** (`sync/beforeUpdate.ts`, from skysa-notes #360).
+  Reload asks the waiting worker to take over, and Chromium lets it only once the worker it
+  replaces has no fetch event in flight. A request that starts while the take-over waits holds it
+  for Chromium's five-minute limit, through Reload pressed again and a reload by hand. A sync keeps
+  requests going, so Reload looked dead. So Reload pauses this tab's sync, as Pause syncing does
+  (§10, "The sync client"), and asks every other tab to pause over a `BroadcastChannel`
+  (`memoriam-update`). It gives them 250 ms, then asks. A pause lasts only until the app is opened
+  again, so syncing starts again by itself after the reload. The prompt says it is updating
+  meanwhile, and after ten seconds what else will do it. A tab still on a build from before this
+  does not listen, and can still hold the take-over to the five minutes.
 - **Brand.** The name, colours, icons and fonts come from a `brand.json`: `apps/web/brand/` by
   default, or the file `MEMORIAM_BRAND` names (`apps/web/brand.ts`). The default icons are drawn by
   `apps/web/brand/draw-icons.mjs`.
