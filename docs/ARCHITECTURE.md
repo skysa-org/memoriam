@@ -491,7 +491,9 @@ differs.
 - The adapters for Dropbox, OneDrive and Google Drive, and the in-memory fake.
 - The marker file, and conflict names.
 - The contract suite every adapter passes (`tests/providers/contract.ts`), with each provider's
-  wire stub.
+  wire stub. `contract.test.ts` registers the adapters from one table, each over its stub and,
+  given a token, a live account. The stubs share how they answer and record a request
+  (`tests/providers/harness.ts`).
 - The fake, the stubs and the store contract reach the apps' tests as `@memoriam/core/testing`
   (`tests/testing.ts`), and never anything the apps ship.
 
