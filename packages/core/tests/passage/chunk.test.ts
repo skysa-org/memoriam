@@ -9,6 +9,7 @@ import {
 	keyText,
 	knowsChunker,
 } from '../../src/passage/chunk.js';
+import { mulberry32 } from '../support/random.js';
 
 const fixture = (name: string): string =>
 	readFileSync(new URL(`fixtures/${name}.txt`, import.meta.url), 'utf8');
@@ -35,27 +36,6 @@ const endsAtPauses = (chunked: ChunkedPassage): boolean =>
 		return last !== undefined && (last.lineEnd || /[.!?…,;:—–)]|\s-|-\s/.test(last.after));
 	});
 
-/**
- * A seeded stream of numbers (mulberry32), so a generated passage is the same
- * on every run and a failure can be reproduced.
- */
-const random = (seed: number) => {
-	const next = (state: number): [number, number] => {
-		const s = (state + 0x6d2b79f5) | 0;
-		const a = Math.imul(s ^ (s >>> 15), 1 | s);
-		const b = (a + Math.imul(a ^ (a >>> 7), 61 | a)) ^ a;
-		return [((b ^ (b >>> 14)) >>> 0) / 4294967296, s];
-	};
-	return (count: number): number[] =>
-		Array.from({ length: count }).reduce<{ out: number[]; state: number }>(
-			({ out, state }) => {
-				const [value, after] = next(state);
-				return { out: [...out, value], state: after };
-			},
-			{ out: [], state: seed }
-		).out;
-};
-
 const WORDS = [
 	'the',
 	'Lord',
@@ -70,9 +50,12 @@ const WORDS = [
 ];
 const PUNCTUATION = ['', '', '', '', ',', ';', '.', '!', ' —'];
 
-/** A passage of random words, lines and sections, from a seed. */
+/**
+ * A passage of random words, lines and sections, from a seed: the same on
+ * every run, so a failure can be reproduced.
+ */
 const generated = (seed: number): string => {
-	const draws = random(seed)(1200);
+	const draws = Array.from({ length: 1200 }, mulberry32(seed));
 	const take = (at: number, from: readonly string[]): string =>
 		from[Math.floor((draws[at] ?? 0) * from.length)] ?? '';
 	return Array.from({ length: 300 }, (_, at) => {
