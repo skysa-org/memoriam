@@ -1,5 +1,6 @@
 ---
 '@memoriam/core': patch
+'@memoriam/api': patch
 ---
 
 The provider stubs share one harness, and the contract suite registers every adapter from one table.
@@ -17,3 +18,5 @@ An answer a provider should not have given (an item with no id, a file with no v
 The Google Drive adapter is split into `providers/gdrive/` by concern (wire, root, upload, cursor, duplicates), with nothing it does changed.
 
 No adapter, nor the in-memory fake, deletes or moves the app's own folder, whether it is named by its path or by its id: each refuses with a `NotFoundError`. Google Drive would otherwise have trashed the folder and everything in it. A provider's success answer that is not a JSON object is a `ProviderResponseError` naming the provider, not a `SyntaxError` or a `TypeError`, and Dropbox's rate-limit error says what Dropbox called it, as the other two do.
+
+The Worker takes its `FetchLike` from core, so a fetch made for the OAuth modules fits the storage adapters too.
