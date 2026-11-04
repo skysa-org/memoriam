@@ -26,6 +26,7 @@ import {
 	type DriveChange,
 	type DriveClient,
 	type DriveFailure,
+	type DriveFile,
 	FIELDS,
 	type FileList,
 	FILES,
@@ -33,7 +34,16 @@ import {
 	MAX_DEPTH,
 	PAGE_SIZE,
 	treeItemOf,
+	WRITES_AT_ONCE,
 } from './wire.js';
+
+/**
+ * Folders whose contents are asked for at once (`listArrivals`), as many as
+ * passages are sent. A list is 100 of the 325,000 quota units a user has a
+ * minute, so four at a time is nowhere near the limit.
+ * https://developers.google.com/workspace/drive/api/guides/limits
+ */
+const LISTS_AT_ONCE = WRITES_AT_ONCE;
 
 /**
  * `drive` changes are about shared drives, which `drive.file` never reaches.
@@ -182,21 +192,54 @@ export const createChanges = (client: DriveClient, appFolder: AppFolder, now: ()
 	};
 
 	/**
-	 * Everything under a folder that has arrived from elsewhere, into the page.
-	 * The feed reports a moved folder alone, and a folder moved back in from
-	 * outside the app folder — or out from under one that was deleted — has
-	 * contents the tree has forgotten, subfolders and all.
+	 * Everything under the folders that have arrived from elsewhere, into the
+	 * page. The feed reports a moved folder alone, and a folder moved back in
+	 * from outside the app folder — or out from under one that was deleted —
+	 * has contents the tree has forgotten, subfolders and all.
+	 *
+	 * A folder made on another device since the last look arrives too, and
+	 * after collections moved there, every folder of them has: a request each,
+	 * one after another, was a wait of seconds per folder before the round
+	 * could say anything. So a level is asked at a time, `LISTS_AT_ONCE`
+	 * folders together. What it finds goes into the page in the order a
+	 * listing of one folder at a time, all the way down, put it: so nothing
+	 * the page makes of its order moves.
 	 */
-	const listInto = async (page: Page, folderId: string, depth: number): Promise<void> => {
-		if (depth > MAX_DEPTH) return;
-		const children = await childrenOf(folderId);
-		children.forEach((child) => {
-			applyItem(page, treeItemOf(child));
+	const listArrivals = async (page: Page, arrived: readonly string[]): Promise<void> => {
+		const listed = new Map<string, DriveFile[]>();
+		const listLevel = async (ids: readonly string[], depth: number): Promise<void> => {
+			// A folder under two parents is asked about once.
+			const asked = [...new Set(ids)].filter((id) => !listed.has(id));
+			if (asked.length === 0 || depth > MAX_DEPTH) return;
+			const waves = Array.from({ length: Math.ceil(asked.length / LISTS_AT_ONCE) }, (_, at) =>
+				asked.slice(at * LISTS_AT_ONCE, (at + 1) * LISTS_AT_ONCE)
+			);
+			await waves.reduce(async (done, wave) => {
+				await done;
+				const answers = await Promise.all(wave.map(childrenOf));
+				wave.forEach((id, at) => {
+					listed.set(id, answers[at] ?? []);
+				});
+			}, Promise.resolve());
+			const below = asked.flatMap((id) =>
+				(listed.get(id) ?? []).filter(isFolder).map((child) => child.id ?? '')
+			);
+			await listLevel(below, depth + 1);
+		};
+		await listLevel(arrived, 0);
+		const applyUnder = (folderId: string, depth: number) => {
+			if (depth > MAX_DEPTH) return;
+			const children = listed.get(folderId) ?? [];
+			children.forEach((child) => {
+				applyItem(page, treeItemOf(child));
+			});
+			children.filter(isFolder).forEach((child) => {
+				applyUnder(child.id ?? '', depth + 1);
+			});
+		};
+		arrived.forEach((id) => {
+			applyUnder(id, 0);
 		});
-		await children.filter(isFolder).reduce(async (done, child) => {
-			await done;
-			await listInto(page, child.id ?? '', depth + 1);
-		}, Promise.resolve());
 	};
 
 	const changes = async (cursor?: string): Promise<ChangeSet> => {
@@ -216,12 +259,7 @@ export const createChanges = (client: DriveClient, appFolder: AppFolder, now: ()
 		const page = pageFrom(from);
 		applyAll(page, fetched.items);
 		// A scan lists everything already, so only a feed round lists arrivals.
-		if (from.phase === 'feed') {
-			await arrivals(page).reduce(async (done, id) => {
-				await done;
-				await listInto(page, id, 0);
-			}, Promise.resolve());
-		}
+		if (from.phase === 'feed') await listArrivals(page, arrivals(page));
 		await clashes(page).reduce(async (done, clash) => {
 			await done;
 			await separate(page, clash);

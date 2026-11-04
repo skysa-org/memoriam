@@ -12,3 +12,5 @@ Settings says what a sync is doing: checking for changes, or looking for passage
 A sync under way can be paused from Settings (Pause syncing): its requests stop, a batch it was writing is kept whole, and nothing syncs on this device until Resume syncing, a re-scan, or the app is opened again. A long sync draws a bar under its status line, with the file it is on.
 
 Reload, when a new version is offered, pauses syncing in every tab before it asks the new version to take over, so a sync's requests no longer hold the update back for minutes. The prompt says it is updating meanwhile, and what else to do if it takes long.
+
+Google Drive lists the folders new to a round four at a time, rather than one after another, so a round after collections moved on another device reaches its passages sooner.

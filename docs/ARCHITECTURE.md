@@ -541,13 +541,20 @@ drive the engine through the adapter, held back in S1, are restored. Where it di
   that audio (Phase 3) does not reopen the engine. `files.ts` holds the extension → content type
   map they need.
 
-**Since the port.** Fixes skysa-notes made to its engine after `fa92ad6`, taken here:
+**Since the port.** Fixes skysa-notes made to its engine and adapters after `fa92ad6`, taken
+here:
 - **A round says it is reading its pages** (skysa-notes #350). Another device's moved folders are
   one round naming every passage moved, and its pages were read with nothing said. A round now
   reports `receiving` with `listing` before its first page, and after each page that names more
   passages how many it has named so far. Once through, it reports `listing: false` with the whole
   count, even when that is none, so the words never outlive the reading. A scan reports before
   its first page as well.
+- **Drive lists a round's new folders four at a time** (skysa-notes #354). A folder that arrives
+  in a feed round has its contents listed into the same page, since the feed will not name them,
+  and after collections moved on another device, every folder of them arrives. One request at a
+  time was a wait per folder before the round could say anything. They are now asked a level at a
+  time, four at once (`LISTS_AT_ONCE` in `gdrive/cursor.ts`, as many as writes), and the answers
+  go into the page in the order one at a time put them.
 
 **Merge before a conflict copy.** skysa-notes never merges: on a conflict the remote keeps the
 path, and the local version is written beside it as a conflict copy. Memoriam adds one merge
