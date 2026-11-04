@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { bindLibrary, unbindLibrary } from '../src/store/connection.js';
-import { type MemoriamDatabase, writerTables } from '../src/store/db.js';
+import type { MemoriamDatabase } from '../src/store/db.js';
+import { writerTables } from '../src/store/scopes.js';
 import type {
 	ProviderFactory,
 	SchedulerStatus,

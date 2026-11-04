@@ -16,10 +16,10 @@ import {
 	LOCAL_CONNECTION_ID,
 	type MemoriamDatabase,
 	type NoteRecord,
-	writerTables,
 } from './db.js';
 import { buryOrDrop, restorePassages } from './passages.js';
 import { queueMkdir, queueMove, queueMoveFile, queueRmdir, withdrawMkdirs } from './queue.js';
+import { writerTables } from './scopes.js';
 
 /**
  * Collections: the folders of the library (docs/ARCHITECTURE.md §3). One is

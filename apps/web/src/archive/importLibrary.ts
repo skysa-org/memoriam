@@ -28,10 +28,10 @@ import {
 	LOCAL_CONNECTION_ID,
 	type MemoriamDatabase,
 	type NoteRecord,
-	writerTables,
 } from '../store/db.js';
 import { keptText, rowFor, titleFromText } from '../store/passages.js';
 import { queueByNotebook } from '../store/queue.js';
+import { writerTables } from '../store/scopes.js';
 import { readZip } from './readZip.js';
 
 /**

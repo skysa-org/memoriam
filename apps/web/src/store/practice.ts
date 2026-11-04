@@ -14,10 +14,11 @@ import {
 	writeProgress,
 } from '@memoriam/core';
 
-import { isLive, LOCAL_CONNECTION_ID, type MemoriamDatabase, writerTables } from './db.js';
+import { isLive, LOCAL_CONNECTION_ID, type MemoriamDatabase } from './db.js';
 import { rowFor } from './passages.js';
 import { getPreference } from './prefs.js';
 import { queuePracticeWrite } from './queue.js';
+import { writerTables } from './scopes.js';
 
 /**
  * Practice, as the store keeps it: a pass's progress written into its

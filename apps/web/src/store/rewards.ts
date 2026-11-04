@@ -23,10 +23,10 @@ import {
 	LOCAL_CONNECTION_ID,
 	type MemoriamDatabase,
 	type NoteRecord,
-	writerTables,
 } from './db.js';
 import { changeActivity } from './practice.js';
 import { readied } from './schedule.js';
+import { writerTables } from './scopes.js';
 import { readSettings, type Settings } from './settings.js';
 
 /**

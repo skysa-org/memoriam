@@ -194,18 +194,6 @@ export type MemoriamDatabase = Dexie & {
 	credentials: Table<CredentialRecord, string>;
 };
 
-/**
- * The tables every writer of the library changes together: a row, the op that
- * sends it, and the binding that says whether one is owed (`store/queue.ts`).
- */
-export const writerTables = (db: MemoriamDatabase) => [
-	db.notes,
-	db.folders,
-	db.opQueue,
-	db.syncState,
-	db.files,
-];
-
 export const DATABASE_NAME = 'memoriam';
 
 /** A note's primary key: the source it belongs to, then its id within it. */

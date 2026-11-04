@@ -17,7 +17,6 @@ import {
 	LOCAL_CONNECTION_ID,
 	type MemoriamDatabase,
 	type NoteRecord,
-	writerTables,
 } from './db.js';
 import {
 	buryOrDrop,
@@ -28,6 +27,7 @@ import {
 	updatePassage,
 } from './passages.js';
 import { queueMove, queueWrite } from './queue.js';
+import { writerTables } from './scopes.js';
 
 /**
  * Passages changed in two places at once (docs/ARCHITECTURE.md §10,

@@ -7,10 +7,10 @@ import {
 	type MemoriamDatabase,
 	type NoteRecord,
 	type SyncStateRecord,
-	writerTables,
 } from './db.js';
 import { deviceId } from './device.js';
 import { queueByNotebook } from './queue.js';
+import { writerTables } from './scopes.js';
 
 /**
  * Binding the library to a connection, and letting it go (docs/ARCHITECTURE.md
