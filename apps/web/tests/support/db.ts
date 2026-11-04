@@ -1,6 +1,7 @@
 import type Dexie from 'dexie';
+import { onTestFinished } from 'vitest';
 
-import { createDatabase, db, type MemoriamDatabase } from '../../src/store/db.js';
+import { createDatabase, db, type MemoriamDatabase, watchTab } from '../../src/store/db.js';
 
 /**
  * How a test gets a database, and how it gets rid of it. Both are wired into
@@ -22,6 +23,17 @@ const opened: Dexie[] = [];
 export const freshDatabase = (): MemoriamDatabase => {
 	const made = createDatabase(`test-${crypto.randomUUID()}`);
 	opened.push(made);
+	return made;
+};
+
+/**
+ * A database of the test's own, watched as the app's own is (`watchTab`): for
+ * a newer tab, and the page being frozen. The watchers stop when the test
+ * finishes, and the database is deleted.
+ */
+export const watchedDatabase = (): MemoriamDatabase => {
+	const made = freshDatabase();
+	onTestFinished(watchTab(made));
 	return made;
 };
 
