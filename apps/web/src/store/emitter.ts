@@ -1,3 +1,5 @@
+import { cell } from '@memoriam/core';
+
 /**
  * The two halves of every store the UI reads through `useSyncExternalStore`,
  * written once: being told of a change, and a value that tells of its own.
@@ -49,7 +51,7 @@ export const createStore = <T>(
 	initial: T,
 	equals: (held: T, next: T) => boolean = Object.is
 ): Store<T> => {
-	const held = { current: initial };
+	const held = cell(initial);
 	const { subscribe, emit } = createEmitter();
 	return {
 		get: () => held.current,

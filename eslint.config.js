@@ -336,21 +336,26 @@ export default tseslint.config(
 		},
 	},
 
+	{
+		// A value that changes is a cell, in every package's src. The API's env
+		// block below sets the rule again, so it spreads the list too.
+		files: ['packages/*/src/**/*.ts', 'apps/*/src/**/*.ts'],
+		rules: { 'no-restricted-syntax': ['error', ...RESTRICTED_SYNTAX, ...CELL_SYNTAX] },
+	},
+
 	// ---- The app's words ----------------------------------------------------
 
 	{
+		// The cell rule too, since this sets the rule again for every .tsx.
 		files: ['apps/web/src/**/*.tsx'],
-		rules: { 'no-restricted-syntax': ['error', ...RESTRICTED_SYNTAX, ...INLINE_WORDS] },
-	},
-
-	{
-		// Core's source, the API's and the web's sync/ hold to it now; the web's
-		// other folders join as each is converted, until this is every
-		// package's src. The API's env block below sets the rule again, so it
-		// spreads the list too; the web's .tsx block, which sync/ has no file
-		// under, takes it when the last folder does.
-		files: ['packages/core/src/**/*.ts', 'apps/api/src/**/*.ts', 'apps/web/src/sync/**/*.ts'],
-		rules: { 'no-restricted-syntax': ['error', ...RESTRICTED_SYNTAX, ...CELL_SYNTAX] },
+		rules: {
+			'no-restricted-syntax': [
+				'error',
+				...RESTRICTED_SYNTAX,
+				...INLINE_WORDS,
+				...CELL_SYNTAX,
+			],
+		},
 	},
 
 	// ---- Boundaries ---------------------------------------------------------

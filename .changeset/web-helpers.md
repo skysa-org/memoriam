@@ -19,3 +19,5 @@ The store names its key types (`FileKey`, `FolderKey`) and the connection a call
 `@memoriam/core` offers `cell()`, the one way to hold a value that changes where the lint rules refuse `let`, and core holds its own that way.
 
 The web's sync/ and the API hold their changing values in `cell()` too, and the lint rule covers them.
+
+The lint rule for `cell()` covers every package's source, and the rest of the web holds its changing values that way.

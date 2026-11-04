@@ -1,3 +1,5 @@
+import { cell } from '@memoriam/core';
+
 import { createEmitter } from '../store/emitter.js';
 import type { Chord } from './chord.js';
 
@@ -68,7 +70,7 @@ export const createCommandRegistry = (): CommandRegistry => {
 	// `list` must return the *same* array until something actually changes:
 	// `useSyncExternalStore` compares snapshots by identity and would otherwise
 	// re-render forever.
-	const snapshot = { current: [] as readonly Command[] };
+	const snapshot = cell<readonly Command[]>([]);
 
 	const changed = () => {
 		snapshot.current = [...commands.values()];
