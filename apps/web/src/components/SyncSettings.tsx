@@ -1,4 +1,4 @@
-import type { ProviderKind } from '@memoriam/core';
+import type { ProviderKind, SyncProgress } from '@memoriam/core';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
 
@@ -15,6 +15,7 @@ import {
 	stopSyncingHere,
 } from '../sync/account.js';
 import { type ConnectOutcome, connectReturn as appConnectReturn } from '../sync/connectReturn.js';
+import { isLongRun } from '../sync/progress.js';
 import { syncScheduler, useSyncStatus } from '../sync/runtime.js';
 import type { SchedulerStatus, SyncScheduler } from '../sync/scheduler.js';
 import { ConfirmDialog } from './ConfirmDialog.js';
@@ -69,6 +70,56 @@ const useOffer = (client: Pick<ApiClient, 'config'>): Offer => {
 	return offer;
 };
 
+/** How far a long run has got, in a sentence (`isLongRun`). */
+const countLine = (progress: SyncProgress, provider: string): string => {
+	switch (progress.stage) {
+		case 'scanning':
+			return progress.listing
+				? t('sync.status.looking', { provider, count: progress.found })
+				: t('sync.status.receiving', {
+						provider,
+						done: progress.done,
+						total: progress.found,
+					});
+		case 'receiving':
+			return progress.listing
+				? t('sync.status.checkingFound', { provider, count: progress.total })
+				: t('sync.status.receiving', {
+						provider,
+						done: progress.done,
+						total: progress.total,
+					});
+		case 'uploading':
+			return t('sync.status.sending', {
+				provider,
+				done: progress.done,
+				total: progress.total,
+			});
+	}
+};
+
+/**
+ * What a run still reading the provider's pages says, before it has found
+ * enough to count: the pages of what changed, or of a re-scan. Said from the
+ * first, since that can take minutes after another device moved many
+ * passages, and "Syncing…" alone said nothing of why.
+ */
+const listingLine = (progress: SyncProgress | undefined, provider: string): string | undefined => {
+	if (progress?.stage === 'receiving' && progress.listing) {
+		return t('sync.status.checking', { provider });
+	}
+	if (progress?.stage === 'scanning' && progress.listing) {
+		return t('sync.status.lookingStart', { provider });
+	}
+	return undefined;
+};
+
+/** What a sync under way is doing: how far a long run has got, or what it is reading. */
+const syncingLine = (progress: SyncProgress | undefined, provider: string): string => {
+	const count = isLongRun(progress) ? countLine(progress, provider) : undefined;
+	return count ?? listingLine(progress, provider) ?? t('sync.status.syncing');
+};
+
 /** How syncing stands, in a sentence. */
 const statusLine = (status: SchedulerStatus, provider: string, now: number): string => {
 	const error = status.error ?? t('sync.failed');
@@ -79,7 +130,9 @@ const statusLine = (status: SchedulerStatus, provider: string, now: number): str
 				? t('sync.status.idle')
 				: t('sync.status.idleSince', { time: formatMoment(status.lastSyncAt, now) });
 		case 'syncing':
-			return status.waiting === true ? t('sync.status.waiting') : t('sync.status.syncing');
+			return status.waiting === true
+				? t('sync.status.waiting')
+				: syncingLine(status.progress, provider);
 		case 'offline':
 			return t('sync.status.offline');
 		case 'retrying':

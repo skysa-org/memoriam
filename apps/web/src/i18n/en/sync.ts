@@ -27,6 +27,21 @@ export const sync = {
 		/** Syncing, held up behind another tab's or window's sync (`status.waiting`). */
 		waiting:
 			'Waiting for another tab or window of Memoriam to finish syncing. This one syncs after it.',
+		/** Reading what has changed since the last sync, before it has found enough to count. */
+		checking: 'Checking {provider} for changes…',
+		/** The same, with how many changed passages it has found so far. */
+		checkingFound: {
+			one: 'Checking {provider} for changes: {count} changed passage found so far.',
+			other: 'Checking {provider} for changes: {count} changed passages found so far.',
+		},
+		/** A first sync, or a re-scan, before it has found enough to count. */
+		lookingStart: 'Looking for passages in {provider}…',
+		looking: {
+			one: 'Looking for passages in {provider}: {count} found so far.',
+			other: 'Looking for passages in {provider}: {count} found so far.',
+		},
+		receiving: 'Receiving passages from {provider}: {done} of {total}.',
+		sending: 'Sending changes to {provider}: {done} of {total}.',
 		offline:
 			'Offline. Your changes are kept on this device, and sent when you are back online.',
 		retrying: 'Sync could not finish ({error}). It will try again shortly.',

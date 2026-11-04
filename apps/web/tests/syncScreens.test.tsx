@@ -215,6 +215,57 @@ describe('connected', () => {
 		expect(screen.getByText(/^Offline\./)).toBeTruthy();
 	});
 
+	it('says what a sync is reading, and how far a long one has got', async () => {
+		// Reported in skysa-notes, on a phone: another device's folders moved
+		// was minutes of plain "Syncing…" while the round's pages were read.
+		await bound();
+		const { client } = fakes();
+		const showing = async (progress: SchedulerStatus['progress'], said: string) => {
+			showSettings({
+				client,
+				scheduler: schedulerShowing({ phase: 'syncing', progress }),
+				connectReturn: holding(),
+			});
+			expect(await screen.findByText(said)).toBeTruthy();
+			cleanup();
+		};
+
+		await showing(
+			{ stage: 'receiving', done: 0, total: 0, listing: true },
+			'Checking Dropbox for changes…'
+		);
+		// A few is not worth counting: an edit's sync would flash a number.
+		await showing(
+			{ stage: 'receiving', done: 0, total: 3, listing: true },
+			'Checking Dropbox for changes…'
+		);
+		await showing(
+			{ stage: 'receiving', done: 0, total: 40, listing: true },
+			'Checking Dropbox for changes: 40 changed passages found so far.'
+		);
+		await showing(
+			{ stage: 'receiving', done: 12, total: 40, listing: false, path: 'a.md' },
+			'Receiving passages from Dropbox: 12 of 40.'
+		);
+		await showing({ stage: 'receiving', done: 1, total: 3, listing: false }, 'Syncing…');
+		await showing(
+			{ stage: 'scanning', found: 0, done: 0, listing: true },
+			'Looking for passages in Dropbox…'
+		);
+		await showing(
+			{ stage: 'scanning', found: 25, done: 0, listing: true },
+			'Looking for passages in Dropbox: 25 found so far.'
+		);
+		await showing(
+			{ stage: 'scanning', found: 25, done: 5, listing: false },
+			'Receiving passages from Dropbox: 5 of 25.'
+		);
+		await showing(
+			{ stage: 'uploading', done: 2, total: 30 },
+			'Sending changes to Dropbox: 2 of 30.'
+		);
+	});
+
 	it('asks for the provider again when it has to be', async () => {
 		await bound();
 		const { client, startConnect } = fakes();
