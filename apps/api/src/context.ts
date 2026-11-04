@@ -3,27 +3,58 @@ import type { SecretKey } from './crypto.js';
 import type { Database } from './db/client.js';
 import type { AppConfig } from './env.js';
 import type { RateLimiter } from './limits.js';
+import type { FetchLike } from './oauth/types.js';
 
 export type Bindings = {
 	DB: D1Database;
 };
 
+/** What a request carries of its own: its database. Everything else is the app's (`RouteDeps`). */
 export type Variables = {
 	db: Database;
-	config: AppConfig;
-	rateLimiter: RateLimiter;
-	/**
-	 * The connection the caller's credential reaches, on the routes that require
-	 * one. `requireBearer` is the only writer, and it answers 401 rather than
-	 * calling `next()` when there is nothing to put here — so a handler behind it
-	 * always finds one.
-	 */
-	bearer: Bearer;
-	/** AES-256-GCM key for the `connections` secret columns. */
-	secretKey: SecretKey;
-	/** HMAC key for the short-lived OAuth flow cookie. Derived, not the same key. */
-	signingKey: CryptoKey;
 };
 
 /** What a request is handed, as Hono types it: its bindings and what middleware has set. */
 export type AppEnv = { Bindings: Bindings; Variables: Variables };
+
+/**
+ * A request behind `requireBearer`, and only one: it is the one writer of
+ * `bearer`, and answers 401 rather than calling `next()` when there is nothing
+ * to put there, so a handler typed with this always finds one. A handler that
+ * reads `bearer` without the middleware is typed `AppEnv` and does not compile;
+ * one that never reads it is caught by the test that asks every `/connection*`
+ * route without a credential (`connections.test.ts`).
+ */
+export type AuthedEnv = {
+	Bindings: Bindings;
+	Variables: Variables & {
+		/** The connection the caller's credential reaches. */
+		bearer: Bearer;
+	};
+};
+
+/** The app's two keys, both from `SECRETS_KEY`. */
+export interface Keys {
+	/** AES-256-GCM key for the `connections` secret columns. */
+	readonly secretKey: SecretKey;
+	/** HMAC key for the short-lived OAuth flow cookie. Derived, not the same key. */
+	readonly signingKey: CryptoKey;
+}
+
+/**
+ * What every router is built with, once, by `createApp`: the one way a route
+ * reaches the app's configuration and seams, where they used to arrive both as
+ * factory arguments and through the request.
+ */
+export interface RouteDeps {
+	readonly config: AppConfig;
+	readonly rateLimiter: RateLimiter;
+	/** How a route reaches a provider, with the app's deadline on every call. */
+	readonly fetch: FetchLike;
+	/**
+	 * The keys. A function, since key import is async and `createApp` is not,
+	 * and it answers the same promise every time: imported on the first
+	 * request, already settled for every one after.
+	 */
+	readonly keys: () => Promise<Keys>;
+}

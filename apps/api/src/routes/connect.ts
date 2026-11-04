@@ -3,7 +3,7 @@ import { and, desc, eq, notInArray } from 'drizzle-orm';
 import { type Context, Hono } from 'hono';
 import { z } from 'zod';
 
-import type { AppEnv } from '../context.js';
+import type { AppEnv, RouteDeps } from '../context.js';
 import { isCredentialHash, MAX_GRANTS_PER_CONNECTION } from '../credentials.js';
 import { randomBase64Url, type SealedSecret, sealOAuthSecret, secretColumns } from '../crypto.js';
 import { type Database, schema } from '../db/client.js';
@@ -20,7 +20,7 @@ import { fail, jsonBody, requireSameOrigin, tooMany } from '../http.js';
 import { logFailure } from '../log.js';
 import { createPkcePair, createState } from '../oauth/pkce.js';
 import { oauthFor, type OAuthProviderKind } from '../oauth/providers.js';
-import { type FetchLike, ScopeNotGrantedError } from '../oauth/types.js';
+import { ScopeNotGrantedError } from '../oauth/types.js';
 
 /**
  * Connecting a storage account. Two routes: one the device asks for an
@@ -91,11 +91,13 @@ const startBody = z.object({
 const callerKey = (c: Context<AppEnv>, what: string): string =>
 	`${what}:${c.req.header('cf-connecting-ip') ?? 'unknown'}`;
 
-export const connectRoutes = (doFetch: FetchLike) => {
+export const connectRoutes = (deps: RouteDeps) => {
+	const { config, rateLimiter, fetch: doFetch, keys } = deps;
 	const app = new Hono<AppEnv>();
+	/** Refuses a request from any page but this deployment's own. */
+	const ownOrigin = requireSameOrigin(config.appOrigin);
 
-	app.post('/auth/connect/:provider/start', requireSameOrigin, async (c) => {
-		const config = c.get('config');
+	app.post('/auth/connect/:provider/start', ownOrigin, async (c) => {
 		const cookies = { secure: config.cookiesSecure };
 
 		const resolved = oauthFor(config, c.req.param('provider'));
@@ -105,7 +107,7 @@ export const connectRoutes = (doFetch: FetchLike) => {
 		// Before anything is minted or written: an attacker who can start flows
 		// freely makes this deployment pay for a provider round trip per attempt
 		// at the callback, and fills the cookie jar in the meantime.
-		const limit = await c.get('rateLimiter').check(callerKey(c, 'connect'));
+		const limit = await rateLimiter.check(callerKey(c, 'connect'));
 		if (!limit.allowed) return tooMany(c, limit.retryAfter);
 
 		const body = await jsonBody(c, startBody);
@@ -116,7 +118,7 @@ export const connectRoutes = (doFetch: FetchLike) => {
 		const device = deviceLabel(c.req.header('user-agent'));
 		await setFlowState(
 			c,
-			c.get('signingKey'),
+			(await keys()).signingKey,
 			{
 				state,
 				verifier,
@@ -140,10 +142,9 @@ export const connectRoutes = (doFetch: FetchLike) => {
 	});
 
 	app.get('/auth/connect/:provider/callback', async (c) => {
-		const config = c.get('config');
 		const db = c.get('db');
 		const cookies = { secure: config.cookiesSecure };
-		const key = c.get('signingKey');
+		const key = (await keys()).signingKey;
 		const state = c.req.query('state');
 
 		// The same callback asked for again, after this browser was answered: sent
@@ -201,7 +202,7 @@ export const connectRoutes = (doFetch: FetchLike) => {
 		// for one.
 		// Throttled is a failed connect to the person waiting, and only the log
 		// tells the operator why.
-		const limit = await c.get('rateLimiter').check(callerKey(c, 'callback'));
+		const limit = await rateLimiter.check(callerKey(c, 'callback'));
 		if (!limit.allowed) {
 			logFailure(`${provider} callback`, new Error('rate_limited'));
 			return answer('failed');
@@ -247,7 +248,7 @@ export const connectRoutes = (doFetch: FetchLike) => {
 			provider,
 			accountId: tokens.accountId,
 			displayName,
-			sealed: await sealOAuthSecret(c.get('secretKey'), {
+			sealed: await sealOAuthSecret((await keys()).secretKey, {
 				refreshToken: tokens.refreshToken,
 			}),
 			credentialHash: flow.credentialHash,

@@ -805,6 +805,11 @@ any of them out. The one Worker serves the app as well, so `/api` and the app sh
   `neverLimited`.
 - **No connect gate, connect codes or change relay**, as the client has none ("The sync client").
 - **No `AUTH_MODE` and no WebDAV.**
+- **Routes get what they need once.** `createApp` builds one `RouteDeps` (the config, the rate
+  limiter, the provider `fetch` and the keys) and hands it to every router; a request carries only
+  its database. Each route that acts on a connection mounts `requireBearer` itself, typed
+  `AuthedEnv`, so one that forgot it has no `bearer` to read. A path under `/api/connection` that
+  is not a route answers 404, not 401.
 - **One list of error codes.** Every refusal is `{ error }` with a code from core's
   `API_ERROR_CODES` (`packages/core/src/api.ts`), and goes out through `fail` in
   `apps/api/src/http.ts`. The client's refusals are a part of that list, so the two ends cannot
@@ -940,7 +945,7 @@ apps/api/              the Worker (S5): OAuth, per-connection credentials, token
   src/
     app.ts             createApp(options); reads no environment
     worker.ts          the default Worker entry, which reads the environment through env.ts
-    context.ts         AppEnv: what a request is handed (bindings and variables)
+    context.ts         AppEnv (a request's bindings and db), AuthedEnv (+ bearer), RouteDeps
     routes/            connect, token, connections
     oauth/             Dropbox, OneDrive, Google Drive, and what the three share (common.ts)
     db/                the D1 schema (drizzle)

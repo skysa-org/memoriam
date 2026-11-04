@@ -1,12 +1,10 @@
 import { cell } from '@memoriam/core';
 import { Hono } from 'hono';
 import { csrf } from 'hono/csrf';
-import { createMiddleware } from 'hono/factory';
 import { HTTPException } from 'hono/http-exception';
 
-import type { AppEnv } from './context.js';
-import { bearerFrom, grantHolder } from './credentials.js';
-import { importSecretKey, type SecretKey, signingKey } from './crypto.js';
+import type { AppEnv, Keys, RouteDeps } from './context.js';
+import { importSecretKey, signingKey } from './crypto.js';
 import { createDb } from './db/client.js';
 import type { AppConfig } from './env.js';
 import { fail } from './http.js';
@@ -25,7 +23,7 @@ import { connectionRoutes } from './routes/connections.js';
 import { tokenRoutes } from './routes/token.js';
 
 /** The request context's types, in `context.ts`; kept on the package entry. */
-export type { AppEnv, Bindings, Variables } from './context.js';
+export type { AppEnv, AuthedEnv, Bindings, Variables } from './context.js';
 
 export interface CreateAppOptions {
 	config: AppConfig;
@@ -74,32 +72,33 @@ export const createApp = (options: CreateAppOptions) => {
 		});
 
 	/**
-	 * Key import is async and `createApp` is not, so the promises are built once
+	 * Key import is async and `createApp` is not, so the promise is built once
 	 * and awaited per request — every request after the first resolves an already
 	 * settled promise. A cell, as the isolate cache in `src/worker.ts` is.
 	 */
-	const keys = cell<Promise<readonly [SecretKey, CryptoKey]> | undefined>(undefined);
-	const keySet = (): Promise<readonly [SecretKey, CryptoKey]> => {
-		const cached = keys.current;
+	const keyCache = cell<Promise<Keys> | undefined>(undefined);
+	const keys = (): Promise<Keys> => {
+		const cached = keyCache.current;
 		if (cached !== undefined) return cached;
 
 		const built = Promise.all([
 			importSecretKey(config.secretsKey, config.secretsKeyId),
 			signingKey(config.secretsKey),
-		] as const);
-		keys.current = built;
+		]).then(([secretKey, hmacKey]) => ({ secretKey, signingKey: hmacKey }));
+		keyCache.current = built;
 		return built;
 	};
 
+	const deps: RouteDeps = { config, rateLimiter, fetch: doFetch, keys };
+
 	const app = new Hono<AppEnv>().basePath('/api');
 
+	// Before anything answers, as the per-request middleware that set every
+	// variable was: a deployment whose `SECRETS_KEY` cannot be imported fails
+	// every request, not only the ones that reach a key.
 	app.use('*', async (c, next) => {
-		const [secretKey, hmacKey] = await keySet();
+		await keys();
 		c.set('db', createDb(c.env.DB));
-		c.set('config', config);
-		c.set('rateLimiter', rateLimiter);
-		c.set('secretKey', secretKey);
-		c.set('signingKey', hmacKey);
 		await next();
 	});
 
@@ -155,35 +154,9 @@ export const createApp = (options: CreateAppOptions) => {
 	 */
 	app.get('/config', (c) => c.json({ providers: config.enabledProviders }));
 
-	/**
-	 * Everything that acts on a connection needs the device's credential, and
-	 * gets it here rather than in each handler — a route that forgot the check
-	 * would otherwise be one that serves anybody.
-	 *
-	 * The two refusals differ on purpose. `credential_required` means the device
-	 * never had one and has to connect; `credential_revoked` means the one it
-	 * holds is not known here any more — revoked, expired for idleness, or from
-	 * a deployment that has since been reset — and it should throw the
-	 * credential away before offering to connect, or it will present it forever.
-	 */
-	const requireBearer = createMiddleware<AppEnv>(async (c, next) => {
-		const credential = bearerFrom(c.req.header('authorization'));
-		if (credential === undefined) return fail(c, 'credential_required', 401);
-
-		const bearer = await grantHolder(c.get('db'), credential);
-		if (bearer === undefined) return fail(c, 'credential_revoked', 401);
-
-		c.set('bearer', bearer);
-		await next();
-	});
-
-	app.use('/token', requireBearer);
-	app.use('/connection', requireBearer);
-	app.use('/connection/*', requireBearer);
-
-	app.route('/', connectRoutes(doFetch));
-	app.route('/', tokenRoutes(doFetch));
-	app.route('/', connectionRoutes(doFetch));
+	app.route('/', connectRoutes(deps));
+	app.route('/', tokenRoutes(deps));
+	app.route('/', connectionRoutes(deps));
 
 	app.notFound((c) => fail(c, 'not_found', 404));
 
