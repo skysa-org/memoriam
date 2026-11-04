@@ -703,6 +703,15 @@ suite (`apps/web/tests/syncStore.test.ts`). Where it differs:
   collection's rename, keeps the flag it had, and owes only the move. Marked dirty, it stayed dirty
   for good. The other device's next edit then made a conflict copy of the old words, and a delete
   there left it here, cut loose from the remote (found by the soak, S6).
+- **A queued row is read by its kind** (`toSyncOp`, from skysa-notes #545). Core's `SyncOp` is a
+  union by `op`, each kind with the fields it cannot be sent without, and the store reads each row
+  through a zod schema of those kinds. The rows are stored as they always were.
+  - A row that fits none, such as a move that lost its target or a kind a later version queued,
+    is read as `malformed`. It is never thrown on, so the rest of the queue still reads, and never
+    dropped.
+  - The engine fails it, as it fails any op it cannot send, and at the attempt limit it holds the
+    queue like any other. Settings names its path, and the scheduler names it `malformed`
+    rather than by a kind this version has no words for.
 
 **The sync client** (S4: `apps/web/src/api/client.ts`, `store/credentials.ts`,
 `sync/{tokens,providers,scheduler,account,runtime}.ts`) is skysa-notes' client, ported. Where it

@@ -1,4 +1,11 @@
-import { ancestorPaths, foldName, isWithin, parentPath, pathSegments } from '@memoriam/core';
+import {
+	ancestorPaths,
+	foldName,
+	isWithin,
+	type NewSyncOp,
+	parentPath,
+	pathSegments,
+} from '@memoriam/core';
 import Dexie, { type PromiseExtended } from 'dexie';
 
 import type { FileRecord, MemoriamDatabase, NoteRecord, OpQueueRecord } from './db.js';
@@ -104,13 +111,7 @@ const atPath = (
 
 const nothing = (): Queued => Dexie.Promise.resolve();
 
-const add = (
-	db: QueueDb,
-	op: Pick<
-		OpQueueRecord,
-		'connectionId' | 'op' | 'noteId' | 'fileId' | 'path' | 'targetPath' | 'remoteId' | 'lazy'
-	>
-): Queued =>
+const add = (db: QueueDb, op: NewSyncOp & Pick<OpQueueRecord, 'connectionId' | 'lazy'>): Queued =>
 	isBound(db).then((bound) =>
 		bound
 			? db.opQueue.add({ attempts: 0, queuedAt: Date.now(), ...op }).then(() => undefined)
