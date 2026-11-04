@@ -2,7 +2,12 @@ import { MARKER_FILE } from '@memoriam/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { unbindLibrary } from '../src/store/connection.js';
-import { createSyncScheduler, type SchedulerEvent, type SyncPhase } from '../src/sync/scheduler.js';
+import {
+	createSyncScheduler,
+	type SchedulerEvent,
+	SYNC_WAIT_MS,
+	type SyncPhase,
+} from '../src/sync/scheduler.js';
 import { freshDatabase } from './support/db.js';
 import { fakeEnvironment } from './support/fakes/environment.js';
 import {
@@ -38,7 +43,8 @@ import {
  *
  * skysa-notes' scheduler tests, ported, less what the port left behind — the
  * change relay, the clipboard, files read on demand, an import that can be
- * cancelled or resumed, the wait on another tab, several sources at once —
+ * cancelled or resumed, the wait on another tab's reads of the database,
+ * several sources at once —
  * and with tests of its own for when practice is sent ("Push timing").
  */
 
@@ -141,6 +147,41 @@ describe('syncing a connection', () => {
 		expect(new Set(withLock.mock.calls.map(([name]) => name))).toEqual(
 			new Set([`memoriam:sync:${CONNECTION}`])
 		);
+	});
+});
+
+describe('a run held up on another tab', () => {
+	it('says so behind another tab’s sync of the library, and stops once it has its turn', async () => {
+		const db = await bound();
+		const h = started(db);
+		await reaches(h.scheduler, 'idle');
+		const theirs = deferred();
+		const theirSync = h.env.environment.withLock(
+			`memoriam:sync:${CONNECTION}`,
+			() => theirs.promise
+		);
+		const held = deferred();
+		h.remote.gate.set('changes', held.promise);
+		const arrived = h.remote.gated();
+
+		h.env.fire('focus');
+		await reaches(h.scheduler, 'syncing');
+		h.env.advance(SYNC_WAIT_MS - 1);
+		expect(h.scheduler.status().waiting).toBeUndefined();
+		h.env.advance(1);
+		expect(h.scheduler.status()).toMatchObject({ phase: 'syncing', waiting: true });
+
+		theirs.resolve();
+		await theirSync;
+		await vi.waitFor(() => {
+			expect(h.remote.gated()).toBe(arrived + 1);
+		});
+		expect(h.scheduler.status().phase).toBe('syncing');
+		expect(h.scheduler.status().waiting).toBeUndefined();
+
+		h.remote.gate.delete('changes');
+		held.resolve();
+		await reaches(h.scheduler, 'idle');
 	});
 });
 

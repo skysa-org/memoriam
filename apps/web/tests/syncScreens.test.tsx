@@ -196,6 +196,18 @@ describe('connected', () => {
 		expect(screen.getByRole('button', { name: 'Sync now' })).toHaveProperty('disabled', true);
 		cleanup();
 
+		showSettings({
+			client,
+			scheduler: schedulerShowing({ phase: 'syncing', waiting: true }),
+			connectReturn: holding(),
+		});
+		expect(
+			await screen.findByText(
+				'Waiting for another tab or window of Memoriam to finish syncing. This one syncs after it.'
+			)
+		).toBeTruthy();
+		cleanup();
+
 		const offline = schedulerShowing({ phase: 'offline' });
 		showSettings({ client, scheduler: offline, connectReturn: holding() });
 		await user.click(await screen.findByRole('button', { name: 'Sync now' }));

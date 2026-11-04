@@ -24,6 +24,9 @@ export const sync = {
 		idle: 'Up to date.',
 		idleSince: 'Up to date. Last synced {time}.',
 		syncing: 'Syncing…',
+		/** Syncing, held up behind another tab's or window's sync (`status.waiting`). */
+		waiting:
+			'Waiting for another tab or window of Memoriam to finish syncing. This one syncs after it.',
 		offline:
 			'Offline. Your changes are kept on this device, and sent when you are back online.',
 		retrying: 'Sync could not finish ({error}). It will try again shortly.',

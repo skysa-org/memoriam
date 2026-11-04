@@ -46,8 +46,15 @@ import { createTokenSource, type TokenSource } from './tokens.js';
  * Ported from skysa-notes' `sync/scheduler.ts`, less what serves several
  * sources and features Memoriam does not have: the change relay, the
  * clipboard, files read on demand, an import that can be cancelled, a resume
- * to verify, and the wait on another tab.
+ * to verify, and the wait on another tab's reads of the database. A wait on
+ * another tab's sync is said (`waitForLock`).
  */
+
+/**
+ * How long a run waits for another tab or window of the app before it says
+ * so (`SchedulerStatus.waiting`).
+ */
+export const SYNC_WAIT_MS = 5000;
 
 export type SyncPhase =
 	/** No connection: the library is kept on this device only. */
@@ -100,6 +107,12 @@ export interface SchedulerStatus {
 	 * and only then (`onProgress` in the engine).
 	 */
 	readonly progress?: SyncProgress;
+	/**
+	 * The run is under way and has waited `SYNC_WAIT_MS` for the sync of this
+	 * library that another tab or window of the app is running, and is waiting
+	 * still. While `syncing`, and only then.
+	 */
+	readonly waiting?: true;
 }
 
 export type SchedulerEvent = 'focus' | 'visibilitychange' | 'online' | 'offline';
@@ -321,7 +334,7 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 	 * must not be: it describes a queue that is out of attempts *now*.
 	 */
 	const publish = (next: SchedulerStatus) => {
-		const { stuck: _carried, progress, ...rest } = next;
+		const { stuck: _carried, progress, waiting, ...rest } = next;
 		const stuck = current.get('session')?.stuck.get('op');
 		// Progress is about the run under way and nothing else: carried into
 		// `idle` by a `{ ...status() }`, it would go on counting a run that has
@@ -330,6 +343,7 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 			...rest,
 			...(stuck === undefined ? {} : { stuck }),
 			...(progress === undefined || rest.phase !== 'syncing' ? {} : { progress }),
+			...(waiting === undefined || rest.phase !== 'syncing' ? {} : { waiting }),
 		};
 		statusBox.set('status', full);
 		listeners.forEach((listener) => {
@@ -673,13 +687,14 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 		publish({ ...status(), phase: 'syncing', error: undefined, refusal: undefined });
 		// One engine at a time per connection, across sessions and tabs: a
 		// session ended mid-run, or another tab, may still be at the network.
-		const result = await environment
-			.withLock(lockName(session.connectionId), () =>
-				isCurrent(session)
-					? attempt(session, provider, engine)
-					: Promise.resolve<RunResult>({ kind: 'superseded' })
-			)
-			.catch((error: unknown): RunResult => ({ kind: 'failed', error }));
+		const stopWaiting = waitForLock(session);
+		const result = await underSyncLock(session.connectionId, () => {
+			stopWaiting();
+			return isCurrent(session)
+				? attempt(session, provider, engine)
+				: Promise.resolve<RunResult>({ kind: 'superseded' });
+		}).catch((error: unknown): RunResult => ({ kind: 'failed', error }));
+		stopWaiting();
 		// Whatever it had still to say is about a run that has ended.
 		cancelProgress();
 		if (isCurrent(session)) {
@@ -737,6 +752,69 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 			progressTimer.set('timer', environment.setTimer(flush, progressMs));
 		};
 		flush();
+	};
+
+	// ------------------------------------------------------------ waiting
+
+	/** The run has started, or stopped, waiting on another tab's sync. */
+	const reportWaiting = (session: Session, waiting: boolean) => {
+		const now = status();
+		// Said already, either way.
+		if (!isCurrent(session) || now.phase !== 'syncing' || (now.waiting === true) === waiting) {
+			return;
+		}
+		const { waiting: _was, ...rest } = now;
+		publish(waiting ? { ...rest, waiting } : rest);
+	};
+
+	/** Connections whose sync lock this tab's own work holds (`underSyncLock`). */
+	const heldHere = new Set<string>();
+
+	/** Run `work` holding the connection's sync lock, known here to be this tab's. */
+	const underSyncLock = <T>(connectionId: string, work: () => Promise<T>): Promise<T> =>
+		environment.withLock(lockName(connectionId), async () => {
+			heldHere.add(connectionId);
+			try {
+				return await work();
+			} finally {
+				heldHere.delete(connectionId);
+			}
+		});
+
+	/** Runs that have waited `SYNC_WAIT_MS` for the sync lock, and are waiting still. */
+	const lockWaits = new Set<Session>();
+
+	/**
+	 * Say so once a run has waited `SYNC_WAIT_MS` for its connection's sync
+	 * lock: another tab or window of the app is syncing the library, and this
+	 * one goes after it. A lock this tab's own work holds is not another
+	 * tab's — a re-scan clearing the cursor — so then it asks again a while
+	 * later. Returns the way to stop, for when the lock comes, or the run
+	 * gives up.
+	 */
+	const waitForLock = (session: Session): (() => void) => {
+		const timer = new Map<'timer', () => void>();
+		const time = () => {
+			timer.set(
+				'timer',
+				environment.setTimer(() => {
+					timer.delete('timer');
+					if (!isCurrent(session)) return;
+					if (heldHere.has(session.connectionId)) {
+						time();
+						return;
+					}
+					lockWaits.add(session);
+					reportWaiting(session, true);
+				}, SYNC_WAIT_MS)
+			);
+		};
+		time();
+		return () => {
+			timer.get('timer')?.();
+			timer.delete('timer');
+			if (lockWaits.delete(session)) reportWaiting(session, false);
+		};
 	};
 
 	// ------------------------------------------------------------ changes
@@ -926,7 +1004,7 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 			// holding a cursor of its own and writes it back when its round
 			// lands. Clearing outside the lock would put that cursor back after
 			// ours went, and the re-scan the user asked for would never happen.
-			await environment.withLock(lockName(session.connectionId), () =>
+			await underSyncLock(session.connectionId, () =>
 				// One transaction: the cursor and the attempts go together, so a
 				// scan that is about to run cannot start against a half-reset queue.
 				db.transaction('rw', db.syncState, db.opQueue, async () => {

@@ -79,7 +79,7 @@ const statusLine = (status: SchedulerStatus, provider: string, now: number): str
 				? t('sync.status.idle')
 				: t('sync.status.idleSince', { time: formatMoment(status.lastSyncAt, now) });
 		case 'syncing':
-			return t('sync.status.syncing');
+			return status.waiting === true ? t('sync.status.waiting') : t('sync.status.syncing');
 		case 'offline':
 			return t('sync.status.offline');
 		case 'retrying':

@@ -634,9 +634,16 @@ differs:
   - an op out of attempts holds the queue (`blocked`), and is tried again after 15 minutes or when
     the user asks;
   - a run that ends after the library was bound or let go (`bindingCount`) is ignored, and asked
-    for again.
+    for again;
+  - a run held up behind another tab's sync says so (`waitForLock`). The lock is a Web Lock, which
+    nothing else here can see. After 5 seconds without it (`SYNC_WAIT_MS`) the status says
+    `waiting`, and Settings says the sync is waiting for another tab or window, until the lock
+    comes. A lock this tab's own work holds, such as a re-scan clearing the cursor, is not another
+    tab's: the tab knows which it holds (`underSyncLock`), and asks again 5 seconds later.
 
-  It is started in `main.tsx`, and does nothing while the library is bound to nothing.
+  skysa-notes also says when a run waits on another tab's reads of the database (`heldUp`).
+  Memoriam does not follow its transactions, so only the wait for the lock is said. The scheduler
+  is started in `main.tsx`, and does nothing while the library is bound to nothing.
 - **The account** (`sync/account.ts`). There is one library, so connecting is choosing where it
   syncs.
   - **A connect that comes back** binds the library (`claimConnection`). A library bound
