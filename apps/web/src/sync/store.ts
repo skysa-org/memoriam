@@ -26,6 +26,7 @@ import { z } from 'zod';
 
 import {
 	type FileBytesRecord,
+	type FileKey,
 	type FileRecord,
 	type FolderRecord,
 	LOCAL_CONNECTION_ID,
@@ -36,7 +37,7 @@ import {
 	type SyncStateRecord,
 } from '../store/db.js';
 import { pulledRow } from '../store/passages.js';
-import { queueMove, queueWrite } from '../store/queue.js';
+import { opsFor, opsForFile, queueMove, queueWrite } from '../store/queue.js';
 import { rowsOf } from '../store/rows.js';
 import { isLive, isTombstone } from '../store/rowStates.js';
 import { libraryTables } from '../store/scopes.js';
@@ -292,7 +293,7 @@ export const createDexieSyncStore = (
 
 	const filesOf = (scope: Scope): Promise<FileRecord[]> => rowsOf(scope.files, LIBRARY).toArray();
 
-	const fileKey = (id: string): [string, string] => [LIBRARY, id];
+	const fileKey = (id: string): FileKey => [LIBRARY, id];
 
 	const ownFile = (scope: Scope, id: string): Promise<FileRecord | undefined> =>
 		scope.files.get(fileKey(id));
@@ -303,10 +304,8 @@ export const createDexieSyncStore = (
 		await scope.fileBytes.delete(fileKey(id));
 	};
 
-	const fileOpsOf = async (scope: Scope, fileId: string): Promise<OpQueueRecord[]> =>
-		(await scope.opQueue.where('fileId').equals(fileId).toArray()).filter(
-			(op) => op.connectionId === LIBRARY
-		);
+	const fileOpsOf = (scope: Scope, fileId: string): Promise<OpQueueRecord[]> =>
+		opsForFile(scope, { connectionId: LIBRARY, id: fileId });
 
 	const withdraw = (scope: Scope, ops: readonly OpQueueRecord[]) =>
 		scope.opQueue.bulkDelete(ops.flatMap((op) => (op.seq === undefined ? [] : [op.seq])));
@@ -395,10 +394,8 @@ export const createDexieSyncStore = (
 	};
 
 	/** One passage's queued ops. */
-	const noteOpsOf = async (scope: Scope, noteId: string): Promise<OpQueueRecord[]> =>
-		(await scope.opQueue.where('noteId').equals(noteId).toArray()).filter(
-			(op) => op.connectionId === LIBRARY
-		);
+	const noteOpsOf = (scope: Scope, noteId: string): Promise<OpQueueRecord[]> =>
+		opsFor(scope, { connectionId: LIBRARY, id: noteId });
 
 	/**
 	 * Point a queued rename's *origin* at where the pull says the passage's file

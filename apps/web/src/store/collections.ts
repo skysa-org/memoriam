@@ -11,6 +11,7 @@ import {
 
 import { t } from '../i18n/t.js';
 import {
+	type ConnectionScope,
 	type FolderRecord,
 	LOCAL_CONNECTION_ID,
 	type MemoriamDatabase,
@@ -35,10 +36,6 @@ import { writerTables } from './scopes.js';
  * `mkdir` before anything goes into it, and an `rmdir` behind the moves and
  * deletes that empty it.
  */
-
-export interface CollectionScope {
-	connectionId?: string;
-}
 
 /** What naming a collection came to. */
 export type Named =
@@ -120,7 +117,7 @@ export const ensureCollections = async (
 export const createCollection = (
 	db: MemoriamDatabase,
 	name: string,
-	{ connectionId = LOCAL_CONNECTION_ID }: CollectionScope = {},
+	{ connectionId = LOCAL_CONNECTION_ID }: ConnectionScope = {},
 	now: number = Date.now()
 ): Promise<Named> =>
 	db.transaction('rw', writerTables(db), async () => {
@@ -144,7 +141,7 @@ export const renameCollection = (
 	db: MemoriamDatabase,
 	from: string,
 	name: string,
-	{ connectionId = LOCAL_CONNECTION_ID }: CollectionScope = {}
+	{ connectionId = LOCAL_CONNECTION_ID }: ConnectionScope = {}
 ): Promise<Named> =>
 	db.transaction('rw', writerTables(db), async () => {
 		const to = collectionPath(name);
@@ -217,7 +214,7 @@ export interface RemovedCollection {
 export const deleteCollection = (
 	db: MemoriamDatabase,
 	path: string,
-	{ connectionId = LOCAL_CONNECTION_ID }: CollectionScope = {}
+	{ connectionId = LOCAL_CONNECTION_ID }: ConnectionScope = {}
 ): Promise<RemovedCollection> =>
 	db.transaction('rw', writerTables(db), async () => {
 		const folders = (await rowsOf(db.folders, connectionId).toArray()).filter((folder) =>

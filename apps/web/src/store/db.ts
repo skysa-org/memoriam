@@ -180,20 +180,26 @@ export interface PreferenceRecord {
 }
 
 export type MemoriamDatabase = Dexie & {
-	notes: Table<NoteRecord, [string, string]>;
-	folders: Table<FolderRecord, [string, string]>;
+	notes: Table<NoteRecord, NoteKey>;
+	folders: Table<FolderRecord, FolderKey>;
 	prefs: Table<PreferenceRecord, string>;
 	syncState: Table<SyncStateRecord, string>;
 	opQueue: Table<OpQueueRecord, number>;
-	files: Table<FileRecord, [string, string]>;
-	fileBytes: Table<FileBytesRecord, [string, string]>;
+	files: Table<FileRecord, FileKey>;
+	fileBytes: Table<FileBytesRecord, FileKey>;
 	credentials: Table<CredentialRecord, string>;
 };
 
 export const DATABASE_NAME = 'memoriam';
 
-/** A note's primary key: the source it belongs to, then its id within it. */
+/** A note's primary key: the connection it belongs to, then its id within it. */
 export type NoteKey = [connectionId: string, id: string];
+
+/** A file's primary key, in `files` and `fileBytes`: its connection, then its id. */
+export type FileKey = [connectionId: string, id: string];
+
+/** A collection's primary key: its connection, then its path. */
+export type FolderKey = [connectionId: string, path: string];
 
 export const noteKey = (note: Pick<NoteRecord, 'connectionId' | 'id'>): NoteKey => [
 	note.connectionId,
@@ -258,6 +264,15 @@ export const watchTab = (db: Dexie): (() => void) => {
 	// behind (`store/frozenTab.ts`).
 	return letGoWhenFrozen(db);
 };
+
+/**
+ * Which connection a store call is about. Every reader and writer that takes
+ * one acts on the library's own rows (`LOCAL_CONNECTION_ID`) where it does not
+ * say.
+ */
+export interface ConnectionScope {
+	connectionId?: string;
+}
 
 export const db = createDatabase();
 watchTab(db);

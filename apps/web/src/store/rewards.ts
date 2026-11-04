@@ -18,6 +18,7 @@ import {
 import { useLiveQuery } from 'dexie-react-hooks';
 
 import {
+	type ConnectionScope,
 	db as defaultDb,
 	LOCAL_CONNECTION_ID,
 	type MemoriamDatabase,
@@ -121,7 +122,7 @@ export const useRewards = (
 export const recordBadges = (
 	db: MemoriamDatabase,
 	badges: ReadonlyMap<Badge, string>,
-	{ connectionId = LOCAL_CONNECTION_ID }: Readonly<{ connectionId?: string }> = {},
+	{ connectionId = LOCAL_CONNECTION_ID }: ConnectionScope = {},
 	now: Date = new Date()
 ): Promise<boolean> =>
 	db.transaction('rw', writerTables(db), () =>

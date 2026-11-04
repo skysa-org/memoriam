@@ -14,7 +14,7 @@ import {
 	writeProgress,
 } from '@memoriam/core';
 
-import { LOCAL_CONNECTION_ID, type MemoriamDatabase } from './db.js';
+import { type ConnectionScope, LOCAL_CONNECTION_ID, type MemoriamDatabase } from './db.js';
 import { rowFor } from './passages.js';
 import { getPreference } from './prefs.js';
 import { queuePracticeWrite } from './queue.js';
@@ -136,7 +136,7 @@ const addActivity = (
 export const recordPractice = (
 	db: MemoriamDatabase,
 	{ activity, device }: Readonly<{ activity: Omit<DayActivity, 'started'>; device: string }>,
-	{ connectionId = LOCAL_CONNECTION_ID }: Readonly<{ connectionId?: string }> = {},
+	{ connectionId = LOCAL_CONNECTION_ID }: ConnectionScope = {},
 	now: Date = new Date()
 ): Promise<boolean> =>
 	db.transaction('rw', writerTables(db), () =>
@@ -147,7 +147,7 @@ export const recordPractice = (
 export const recordPass = (
 	db: MemoriamDatabase,
 	pass: PassRecord,
-	{ connectionId = LOCAL_CONNECTION_ID }: Readonly<{ connectionId?: string }> = {},
+	{ connectionId = LOCAL_CONNECTION_ID }: ConnectionScope = {},
 	now: Date = new Date()
 ): Promise<Recorded> =>
 	db.transaction('rw', [...writerTables(db), db.prefs], async () => {

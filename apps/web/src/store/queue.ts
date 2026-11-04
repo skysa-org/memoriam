@@ -86,7 +86,7 @@ export const isBound = (db: Pick<MemoriamDatabase, 'syncState'>): PromiseExtende
 	db.syncState.count().then((count) => count > 0);
 
 /** The ops queued for one passage. */
-const opsFor = (
+export const opsFor = (
 	db: QueueDb,
 	note: Pick<NoteRecord, 'connectionId' | 'id'>
 ): PromiseExtended<OpQueueRecord[]> =>
@@ -276,7 +276,7 @@ export const queueRmdir = (
 			);
 
 /** The ops queued for one file, as `opsFor` for a passage. */
-const opsForFile = (
+export const opsForFile = (
 	db: QueueDb,
 	file: Pick<FileRecord, 'connectionId' | 'id'>
 ): PromiseExtended<OpQueueRecord[]> =>

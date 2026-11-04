@@ -19,7 +19,12 @@ import {
 } from '@memoriam/core';
 
 import { ensureCollections } from './collections.js';
-import { LOCAL_CONNECTION_ID, type MemoriamDatabase, type NoteRecord } from './db.js';
+import {
+	type ConnectionScope,
+	LOCAL_CONNECTION_ID,
+	type MemoriamDatabase,
+	type NoteRecord,
+} from './db.js';
 import { isBound, queueDelete, queueMove, queueRestore, queueWrite } from './queue.js';
 import { rowsOf } from './rows.js';
 import { isLive } from './rowStates.js';
@@ -41,10 +46,6 @@ import { writerTables } from './scopes.js';
  * the delete has been sent (`NoteRecord.deletedLocally`). Its name is free at
  * once, and nothing here will edit one.
  */
-
-export interface PassageScope {
-	connectionId?: string;
-}
 
 /** What the editor gives: a passage's words and the details around them. */
 export interface PassageDetails {
@@ -213,7 +214,7 @@ const namesIn = (rows: readonly NoteRecord[], folder: string, except?: string): 
 export const createPassage = (
 	db: MemoriamDatabase,
 	details: PassageDetails,
-	{ connectionId = LOCAL_CONNECTION_ID }: PassageScope = {},
+	{ connectionId = LOCAL_CONNECTION_ID }: ConnectionScope = {},
 	now: number = Date.now()
 ): Promise<NoteRecord> =>
 	db.transaction('rw', writerTables(db), async () => {
@@ -330,7 +331,7 @@ export const updatePassage = (
 	db: MemoriamDatabase,
 	id: string,
 	details: PassageDetails,
-	{ connectionId = LOCAL_CONNECTION_ID }: PassageScope = {},
+	{ connectionId = LOCAL_CONNECTION_ID }: ConnectionScope = {},
 	now: number = Date.now()
 ): Promise<Edited> =>
 	db.transaction('rw', writerTables(db), async () => {
@@ -392,7 +393,7 @@ export const updatePassage = (
 export const deletePassage = (
 	db: MemoriamDatabase,
 	id: string,
-	{ connectionId = LOCAL_CONNECTION_ID }: PassageScope = {}
+	{ connectionId = LOCAL_CONNECTION_ID }: ConnectionScope = {}
 ): Promise<NoteRecord | undefined> =>
 	db.transaction('rw', writerTables(db), async () => {
 		const row = await db.notes.get([connectionId, id]);

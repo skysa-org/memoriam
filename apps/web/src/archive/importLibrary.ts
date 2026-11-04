@@ -23,7 +23,12 @@ import {
 
 import { t } from '../i18n/t.js';
 import { addCollections } from '../store/collections.js';
-import { LOCAL_CONNECTION_ID, type MemoriamDatabase, type NoteRecord } from '../store/db.js';
+import {
+	type ConnectionScope,
+	LOCAL_CONNECTION_ID,
+	type MemoriamDatabase,
+	type NoteRecord,
+} from '../store/db.js';
 import { keptText, rowFor, titleFromText } from '../store/passages.js';
 import { queueByNotebook } from '../store/queue.js';
 import { rowsOf } from '../store/rows.js';
@@ -335,7 +340,7 @@ const place = (placing: Placing, file: Incoming, context: Context): Placing => {
 export const importLibrary = (
 	db: MemoriamDatabase,
 	gathered: Gathered,
-	{ connectionId = LOCAL_CONNECTION_ID }: Readonly<{ connectionId?: string }> = {},
+	{ connectionId = LOCAL_CONNECTION_ID }: ConnectionScope = {},
 	now: number = Date.now()
 ): Promise<ImportReport> =>
 	db.transaction('rw', writerTables(db), async () => {
