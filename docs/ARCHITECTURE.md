@@ -790,17 +790,29 @@ Fixing it means changing which row keeps which id in the engine's conflict rule,
 ## 11. Repository layout
 
 ```
+pnpm-workspace.yaml
+package.json           root scripts: dev, build, test, lint, knip, verify (the gate before a push),
+                       size, db:migrate, changeset
+eslint.config.js       the lint rules, and the layers below held by no-restricted-imports
+knip.json              what knip counts as used: the entries it cannot find on its own
+.changeset/            a changeset per pull request; README.md says how a release is cut
+.github/workflows/     ci.yml (the gate, the build and its size), cla.yml, release.yml
 apps/web/              the PWA
+  vite.config.ts       vite-plugin-pwa, the brand, the /api proxy
   brand/  brand.ts     the brand: name, colours, icons
   pwa.ts               manifest and service worker
-  public/_headers      CSP and HSTS
+  public/_headers      CSP and HSTS: nothing may be added to script-src (§9)
+  scripts/             bundleBudget.mjs: the size budget the build is held to (pnpm size)
   src/
-    routes/            TanStack Router, a file route per screen (hash history)
+    main.tsx jitless.ts the entry, and what it imports first: zod is never to use new Function
+    router.ts          the router, over hash history
+    routes/            TanStack Router, a file route per screen (routeTree.gen.ts, generated)
     components/        the screens' parts; shell/ for the app's frame (the bar, the palette, the
                        error, stale-tab and update screens), ui/ for the building blocks they share
     hooks/             React hooks the UI shares that hold no app state (from skysa-notes)
     practice/          the practice screen and keystroke capture
-    store/             Dexie: every local read and write, the push queue, credentials
+    store/             Dexie: every local read and write, the push queue, credentials, the day's
+                       plan; database.tsx: the database a screen reads, the app's or a test's
     api/               the typed client for apps/api (from S4)
     sync/              the Dexie SyncStore, tokens, providers, the scheduler, the account
     archive/           zip export and import
@@ -808,13 +820,23 @@ apps/web/              the PWA
     i18n/              t(), rich(), and the English catalog
     install/           the install banner
     styles/            the stylesheet, a file a part, imported in order by index.css
+  tests/               support/ for what the tests share: a fresh database, a connection, the
+                       scheduler's harness, the stylesheet's rules, a fake environment
 packages/core/         framework-free TypeScript: browser, Node and Workers
   src/
     index.ts           what the apps may use, by name; tests/exports.test.ts lists it
     cell.ts            cell(): the one way to hold a value that changes, where `let` is refused
+    config.ts          the names that stay put: the library's folder, the marker, .memoriam/
+    marker.ts paths.ts the marker file; paths as POSIX, relative to the library's root
+    hash.ts json.ts    content hashes and chunk keys; JSON from outside, read without throwing
+    day.ts             days as the user counts them, YYYY-MM-DD in local time
+    api.ts             the refusals the app and the Worker both speak: API_ERROR_CODES
+    files.ts           files in the library that are not passages
     passage/           body grammar, tokenizer, chunker, remap
     progress/          frontmatter codec, passage merge
-    providers/         storage adapters and the in-memory fake (from skysa-notes)
+    providers/         storage adapters and the in-memory fake (from skysa-notes): http.ts and
+                       adapter.ts for what the three share, gdrive/ by part, text.ts for a
+                       file's bytes as text or UnreadableError
     names/             a file's name: folded, slugged, cut to fit; a conflict copy's name
     sync/              the engine (pull/ and push/ by concern) and its store contract, a conflict
                        copy's contents, the merge
@@ -822,7 +844,9 @@ packages/core/         framework-free TypeScript: browser, Node and Workers
     schedule/          FSRS, the session planner
     rewards/           activity and its merge, streaks, mastery, badges
     markdown/          frontmatter/ in split, read and write (from skysa-notes), passage files
+  tests/               testing.ts is @memoriam/core/testing, the doubles the apps' tests use
 apps/api/              the Worker (S5): OAuth, per-connection credentials, tokens, grants
+  wrangler.toml        the D1 binding, [assets] from ../web/dist
   src/
     app.ts             createApp(options); reads no environment
     worker.ts          the default Worker entry, which reads the environment through env.ts
@@ -830,6 +854,10 @@ apps/api/              the Worker (S5): OAuth, per-connection credentials, token
     routes/            connect, token, connections
     oauth/             Dropbox, OneDrive, Google Drive, and what the three share (common.ts)
     db/                the D1 schema (drizzle), and the writes with a race to get right
+    credentials.ts     the per-connection credential: hash, bearer, grant lookup
+    crypto.ts          AES-GCM over the refresh tokens in D1, with Web Crypto only
+    device.ts          a device's name from its User-Agent, for the devices list
+    limits.ts log.ts   the seam an operator throttles through; the Worker's log
     flowCookies.ts     the signed OAuth flow cookies (there are no sessions)
     http.ts            fail(), tooMany, requireSameOrigin, jsonBody
     json.ts            parseJson (outside JSON checked by a zod schema), formatIssues
