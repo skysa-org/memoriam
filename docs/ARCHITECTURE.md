@@ -530,7 +530,10 @@ a passage. Every adapter's `read` is its `readBytes` decoded, and audio (Phase 3
 **The engine** (`sync/engine.ts`, `sync/store.ts`, from S2) is ported with its tests: the
 store contract (`tests/sync/storeContract.ts`), run against the in-memory store the engine tests
 use, the engine over every adapter's stub, and the randomized remote. The Google Drive tests that
-drive the engine through the adapter, held back in S1, are restored. Where it differs:
+drive the engine through the adapter, held back in S1, are restored. The engine's own tests are
+split by area into `tests/sync/engine/` (pull, push, conflicts, files, folders, deletions, paths
+and the rest), each file over one world made per test (`syncWorld`, `tests/sync/kit/`), as
+skysa-notes split them (#572 to #579). Where it differs:
 - **No clipboard.** skysa-notes' engine pulls a clipboard folder for its share target. Memoriam
   has neither, so that path is gone, from the pull and from its progress reports.
 - **The app's own folder.** The engine passes over hidden paths, except `.memoriam/` and its
@@ -703,6 +706,15 @@ suite (`apps/web/tests/syncStore.test.ts`). Where it differs:
   collection's rename, keeps the flag it had, and owes only the move. Marked dirty, it stayed dirty
   for good. The other device's next edit then made a conflict copy of the old words, and a delete
   there left it here, cut loose from the remote (found by the soak, S6).
+- **A queued row is read by its kind** (`toSyncOp`, from skysa-notes #545). Core's `SyncOp` is a
+  union by `op`, each kind with the fields it cannot be sent without, and the store reads each row
+  through a zod schema of those kinds. The rows are stored as they always were.
+  - A row that fits none, such as a move that lost its target or a kind a later version queued,
+    is read as `malformed`. It is never thrown on, so the rest of the queue still reads, and never
+    dropped.
+  - The engine fails it, as it fails any op it cannot send, and at the attempt limit it holds the
+    queue like any other. Settings names its path, and the scheduler names it `malformed`
+    rather than by a kind this version has no words for.
 
 **The sync client** (S4: `apps/web/src/api/client.ts`, `store/credentials.ts`,
 `sync/{tokens,providers,scheduler,account,runtime}.ts`) is skysa-notes' client, ported. Where it

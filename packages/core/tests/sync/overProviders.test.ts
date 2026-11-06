@@ -29,10 +29,10 @@ import { createMemoryStore, type MemoryStore } from './memoryStore.js';
 /**
  * skysa-notes' docs/ARCHITECTURE.md §7's conflict rule, and the engine as a whole, over every
  * provider: the in-memory fake in both of its folder modes and each adapter
- * over its wire stub. `engine.test.ts` pins every branch against the fake; this
- * asks whether the answers survive what each provider actually reports — a
- * move as a deletion and an entry, a feed with no paths, a version that changes
- * on a move.
+ * over its wire stub. The engine's own tests (`engine/*.test.ts`) pin every
+ * branch against the fake; this asks whether the answers survive what each
+ * provider actually reports — a move as a deletion and an entry, a feed with
+ * no paths, a version that changes on a move.
  *
  * Two devices share one remote. Each is an engine over its own store and its
  * own adapter, as two browsers would be, and the user's actions are made the
@@ -330,7 +330,9 @@ const removeFiles = (d: Device, path: string): void => {
 		.forEach((file) => {
 			d.store
 				.ops()
-				.filter((op) => op.fileId === file.id)
+				.filter(
+					(op) => (op.op === 'upload' || op.op === 'move-file') && op.fileId === file.id
+				)
 				.forEach((op) => {
 					d.store.unqueue(op.seq);
 				});
@@ -1222,7 +1224,7 @@ describe.each(REMOTES)('the engine over %s', (_, make) => {
 			});
 		};
 
-		// Every seed that has failed is a test in `engine.test.ts` too. A new
+		// Every seed that has failed is a test in `engine/twoDevices.test.ts` too. A new
 		// failure prints the steps that led to it.
 		it.each(Array.from({ length: 120 }, (__, seed) => seed + 1))(
 			'lose nothing and agree, seed %i',

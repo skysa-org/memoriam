@@ -3,7 +3,9 @@ import {
 	conflictContent,
 	type ConflictResolution,
 	foldName,
+	isFileChange,
 	isWithin,
+	type NewSyncOp,
 	normalizePath,
 	type OpOutcome,
 	parentPath,
@@ -20,6 +22,7 @@ import {
 	type SyncStore,
 	type UnreadableFile,
 } from '@memoriam/core';
+import { z } from 'zod';
 
 import {
 	type FileBytesRecord,
@@ -105,19 +108,50 @@ const toSyncFolder = (folder: FolderRecord): SyncFolder => ({
 	...(folder.remoteId === undefined ? {} : { remoteId: folder.remoteId }),
 });
 
-const toSyncOp = (record: OpQueueRecord): SyncOp => {
+/**
+ * A queued row as the op it is, by its kind (#447): each kind with what it
+ * cannot be sent without. Every version of the app has queued each kind
+ * with these, so a row that fits none is one a store lost a column of, or one of a
+ * kind a later version queued — read as `malformed` rather than thrown on,
+ * so the rest of the queue still reads, and kept: the engine fails it until
+ * the push stops on it and says why.
+ */
+const queued = { seq: z.number(), path: z.string(), attempts: z.number() };
+const opSchema = z.discriminatedUnion('op', [
+	z.object({ ...queued, op: z.literal('write'), noteId: z.string() }),
+	z.object({ ...queued, op: z.literal('move'), noteId: z.string(), targetPath: z.string() }),
+	z.object({ ...queued, op: z.literal('delete'), noteId: z.string() }),
+	z.object({ ...queued, op: z.literal('mkdir') }),
+	z.object({ ...queued, op: z.literal('rmdir'), remoteId: z.string().optional() }),
+	z.object({
+		...queued,
+		op: z.literal('upload'),
+		fileId: z.string(),
+		copyOf: z.string().optional(),
+	}),
+	z.object({
+		...queued,
+		op: z.literal('move-file'),
+		fileId: z.string(),
+		targetPath: z.string(),
+	}),
+	z.object({ ...queued, op: z.literal('delete-file'), remoteId: z.string() }),
+]) satisfies z.ZodType<Exclude<SyncOp, { op: 'malformed' }>>;
+
+export const toSyncOp = (record: OpQueueRecord): SyncOp => {
 	if (record.seq === undefined) throw new Error('A queued op was read back without its seq');
-	return {
-		seq: record.seq,
-		op: record.op,
-		...(record.noteId === undefined ? {} : { noteId: record.noteId }),
-		...(record.fileId === undefined ? {} : { fileId: record.fileId }),
-		path: record.path,
-		...(record.targetPath === undefined ? {} : { targetPath: record.targetPath }),
-		...(record.remoteId === undefined ? {} : { remoteId: record.remoteId }),
-		...(record.copyOf === undefined ? {} : { copyOf: record.copyOf }),
-		attempts: record.attempts,
-	};
+	const read = opSchema.safeParse(record);
+	return read.success
+		? read.data
+		: {
+				op: 'malformed',
+				seq: record.seq,
+				path: String(record.path),
+				// A row that lost its count too starts again from none, so
+				// that failing it counts up to the limit rather than to NaN.
+				attempts: Number.isFinite(record.attempts) ? record.attempts : 0,
+				problem: `${String(record.op)} ${z.prettifyError(read.error)}`,
+			};
 };
 
 const toSyncFile = (file: FileRecord): SyncFile => ({
@@ -127,20 +161,6 @@ const toSyncFile = (file: FileRecord): SyncFile => ({
 	...(file.remoteVersion === undefined ? {} : { remoteVersion: file.remoteVersion }),
 	size: file.size,
 });
-
-type FileChange = Extract<
-	PullChange,
-	{ kind: 'upsert-file' | 'displace-file' | 'delete-file' | 'reupload-file' }
->;
-
-const FILE_CHANGES: ReadonlySet<PullChange['kind']> = new Set([
-	'upsert-file',
-	'displace-file',
-	'delete-file',
-	'reupload-file',
-]);
-
-const isFileChange = (change: PullChange): change is FileChange => FILE_CHANGES.has(change.kind);
 
 type FileOutcome = Extract<OpOutcome, { kind: 'uploaded' | 'moved-file' | 'lost-file' }>;
 
@@ -373,10 +393,7 @@ export const createDexieSyncStore = (
 		await scope.folders.put({ connectionId: LIBRARY, path, createdAt: now() });
 	};
 
-	const queue = async (
-		scope: Scope,
-		op: Pick<OpQueueRecord, 'op' | 'noteId' | 'fileId' | 'path' | 'targetPath' | 'remoteId'>
-	): Promise<void> => {
+	const queue = async (scope: Scope, op: NewSyncOp): Promise<void> => {
 		await scope.opQueue.add({ connectionId: LIBRARY, attempts: 0, queuedAt: now(), ...op });
 	};
 
@@ -1180,14 +1197,6 @@ export const createDexieSyncStore = (
 			return file === undefined ? undefined : toSyncFile(file);
 		},
 
-		fileByPath: async (path) => {
-			const file = await db.files
-				.where('[connectionId+path]')
-				.equals([LIBRARY, path])
-				.first();
-			return file === undefined ? undefined : toSyncFile(file);
-		},
-
 		fileByRemoteId: async (remoteId) => {
 			const file = await db.files
 				.where('[connectionId+remoteId]')
@@ -1213,7 +1222,7 @@ export const createDexieSyncStore = (
 				return new Uint8Array(held.bytes);
 			}),
 
-		applyPull: async (batch: PullBatch) => {
+		applyChanges: async (batch: PullBatch) => {
 			const read = await readAll(batch.changes);
 			await inTransaction(async () => {
 				// One after another, in the order given: the engine decided each
@@ -1249,7 +1258,9 @@ export const createDexieSyncStore = (
 				const op = await queuedOp(db, seq);
 				// Withdrawn while it was failing: there is nothing left to retry.
 				if (op === undefined) return;
-				await db.opQueue.put({ ...op, attempts: op.attempts + 1, lastError: error });
+				// From none where a damaged row has lost its count (`toSyncOp`).
+				const attempts = Number.isFinite(op.attempts) ? op.attempts : 0;
+				await db.opQueue.put({ ...op, attempts: attempts + 1, lastError: error });
 			}),
 
 		resolveConflict: (seq, resolution) =>

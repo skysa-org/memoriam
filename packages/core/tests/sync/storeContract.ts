@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { RemoteEntry } from '../../src/providers/types.js';
 import { conflictContent } from '../../src/sync/conflicts.js';
-import type { SyncStore } from '../../src/sync/store.js';
+import type { NewSyncOp, SyncFile, SyncFolder, SyncNote, SyncStore } from '../../src/sync/store.js';
 
 /**
  * What any `SyncStore` has to do, whatever it is built on. The engine's
@@ -19,49 +19,27 @@ import type { SyncStore } from '../../src/sync/store.js';
 export interface StoreHarness {
 	store: SyncStore;
 	/** Seed a note directly, bypassing the engine. */
-	seed: (note: {
-		id: string;
-		path: string;
-		content: string;
-		remoteId?: string;
-		remoteVersion?: string;
-		syncedHash?: string;
-		dirty?: boolean;
-	}) => void | Promise<void>;
+	seed: (
+		note: Omit<SyncNote, 'dirty'> & Partial<Pick<SyncNote, 'dirty'>>
+	) => void | Promise<void>;
 	/**
 	 * Put a note under this id where the store cannot show it to the engine:
 	 * another connection's, on a device that holds more than one.
 	 */
 	seedElsewhere: (id: string) => void | Promise<void>;
-	seedFolder: (folder: { path: string; remoteId?: string }) => void | Promise<void>;
+	seedFolder: (folder: SyncFolder) => void | Promise<void>;
 	/**
 	 * Seed a file row, and the bytes held for it: `pinned` until they are
 	 * uploaded, or cached under `version`.
 	 */
 	seedFile: (
-		file: { id: string; path: string; remoteId?: string; remoteVersion?: string; size: number },
+		file: SyncFile,
 		bytes?: { bytes: Uint8Array<ArrayBuffer>; version?: string; pinned?: boolean }
 	) => void | Promise<void>;
 	/** Take a file row away, as the user deleting it does. */
 	dropFile: (id: string) => void | Promise<void>;
 	/** Queue an op and return the seq it was given. */
-	seedOp: (op: {
-		op:
-			| 'write'
-			| 'move'
-			| 'delete'
-			| 'mkdir'
-			| 'rmdir'
-			| 'upload'
-			| 'move-file'
-			| 'delete-file';
-		path: string;
-		noteId?: string;
-		fileId?: string;
-		targetPath?: string;
-		remoteId?: string;
-		copyOf?: string;
-	}) => number | Promise<number>;
+	seedOp: (op: NewSyncOp) => number | Promise<number>;
 	/** Take a queued op back out, as a later change of the user's does. */
 	withdrawOp: (seq: number) => void | Promise<void>;
 }
@@ -104,7 +82,7 @@ export const describeSyncStoreContract = (
 			it('takes a note of its own under that id, and the batch with it', async () => {
 				const { store, seedElsewhere } = await harness();
 				await seedElsewhere('n1');
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{
 							kind: 'upsert-note',
@@ -143,7 +121,7 @@ export const describeSyncStoreContract = (
 
 			it('records it with a note a pull brings in', async () => {
 				const { store } = await harness();
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{
 							kind: 'upsert-note',
@@ -176,7 +154,7 @@ export const describeSyncStoreContract = (
 					syncedHash: 'h2',
 				});
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{ kind: 'adopt-version', id: 'n1', remote: remote('a.md', 'r1', 'v2') },
 						{
@@ -190,7 +168,7 @@ export const describeSyncStoreContract = (
 				expect(await hashOf(store, 'n1')).toBe('h1');
 				expect(await hashOf(store, 'n2')).toBe('h2');
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{
 							kind: 'adopt-version',
@@ -223,7 +201,7 @@ export const describeSyncStoreContract = (
 					syncedHash: 'old',
 					dirty: true,
 				});
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{
 							kind: 'conflict',
@@ -284,7 +262,7 @@ export const describeSyncStoreContract = (
 					dirty: true,
 				});
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{ kind: 'detach-note', id: 'n1' },
 						{ kind: 'delete-folder', path: 'Work' },
@@ -432,10 +410,8 @@ export const describeSyncStoreContract = (
 				const seq = await seedOp({ op: 'rmdir', path: 'Work', remoteId: 'f1' });
 
 				const ops = await store.pendingOps();
-				expect(ops.map((op) => [op.op, op.path, op.remoteId])).toEqual([
-					['rmdir', 'Work', 'f1'],
-				]);
-				expect((await store.opBySeq(seq))?.remoteId).toBe('f1');
+				expect(ops).toMatchObject([{ op: 'rmdir', path: 'Work', remoteId: 'f1' }]);
+				expect(await store.opBySeq(seq)).toMatchObject({ remoteId: 'f1' });
 			});
 
 			it('has no cursor before the first pull', async () => {
@@ -444,10 +420,10 @@ export const describeSyncStoreContract = (
 			});
 		});
 
-		describe('applyPull', () => {
+		describe('applyChanges', () => {
 			it('stores a new note and the cursor together', async () => {
 				const { store } = await harness();
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{
 							kind: 'upsert-note',
@@ -471,7 +447,7 @@ export const describeSyncStoreContract = (
 				// batch, and a cursor written halfway through claims a scan that
 				// has not finished.
 				const { store } = await harness();
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{
 							kind: 'upsert-note',
@@ -497,7 +473,7 @@ export const describeSyncStoreContract = (
 					remoteId: 'r1',
 					remoteVersion: 'v1',
 				});
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{
 							kind: 'upsert-note',
@@ -527,7 +503,7 @@ export const describeSyncStoreContract = (
 					remoteVersion: 'v1',
 					dirty: true,
 				});
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{ kind: 'adopt-version', id: 'n1', remote: remote('a.md', 'r1', 'v2') },
 					],
@@ -550,7 +526,7 @@ export const describeSyncStoreContract = (
 					remoteVersion: 'v1',
 					dirty: true,
 				});
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [{ kind: 'detach-note', id: 'n1' }],
 					cursor: 'c1',
 				});
@@ -578,7 +554,7 @@ export const describeSyncStoreContract = (
 					syncedHash: 'h1',
 				});
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [{ kind: 'reupload-note', id: 'n1' }],
 					cursor: 'c1',
 				});
@@ -601,7 +577,7 @@ export const describeSyncStoreContract = (
 				await seedFolder({ path: 'Work', remoteId: 'f1' });
 				await seed({ id: 'n1', path: 'Work/a.md', content: 'x\n', remoteId: 'r1' });
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [{ kind: 'reupload-folder', path: 'Work' }],
 					cursor: 'c1',
 				});
@@ -622,7 +598,7 @@ export const describeSyncStoreContract = (
 				// A batch is decided before it is applied, and one the store
 				// rejects is retried for ever, since the cursor moves with it.
 				const { store } = await harness();
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{ kind: 'reupload-note', id: 'nope' },
 						{ kind: 'reupload-folder', path: 'Gone' },
@@ -646,7 +622,7 @@ export const describeSyncStoreContract = (
 				await seed({ id: 'n2', path: 'Work/Deep/b.md', content: 'x\n', remoteId: 'r2' });
 				await seed({ id: 'n3', path: 'Other/c.md', content: 'x\n', remoteId: 'r3' });
 
-				await store.applyPull({ changes: [{ kind: 'delete-folder', path: 'Work' }] });
+				await store.applyChanges({ changes: [{ kind: 'delete-folder', path: 'Work' }] });
 
 				expect(await store.folderByPath('Work')).toBeUndefined();
 				expect(await store.folderByPath('Work/Deep')).toBeUndefined();
@@ -666,7 +642,7 @@ export const describeSyncStoreContract = (
 				await seed({ id: 'n1', path: 'Work/a.md', content: 'x\n', remoteId: 'r1' });
 				await seed({ id: 'n2', path: 'Work/b.md', content: 'x\n', remoteId: 'r2' });
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [{ kind: 'delete-folder', path: 'Work', keep: ['n1', 'nope'] }],
 				});
 
@@ -688,7 +664,7 @@ export const describeSyncStoreContract = (
 				await seed({ id: 'n1', path: 'Work/a.md', content: 'x\n', remoteId: 'r1' });
 				await seedOp({ op: 'move', noteId: 'n1', path: 'a.md', targetPath: 'Work/a.md' });
 
-				await store.applyPull({ changes: [{ kind: 'delete-folder', path: 'Work' }] });
+				await store.applyChanges({ changes: [{ kind: 'delete-folder', path: 'Work' }] });
 
 				expect((await store.noteById('n1'))?.remoteId).toBe('r1');
 			});
@@ -706,7 +682,7 @@ export const describeSyncStoreContract = (
 					targetPath: 'Work/b.md',
 				});
 
-				await store.applyPull({ changes: [{ kind: 'delete-folder', path: 'Work' }] });
+				await store.applyChanges({ changes: [{ kind: 'delete-folder', path: 'Work' }] });
 
 				expect(await store.noteById('n1')).toBeUndefined();
 			});
@@ -731,7 +707,7 @@ export const describeSyncStoreContract = (
 					targetPath: 'Plans/b.md',
 				});
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [{ kind: 'delete-folder', path: 'Plans', was: 'Work' }],
 				});
 
@@ -753,7 +729,7 @@ export const describeSyncStoreContract = (
 					targetPath: 'b.md',
 				});
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{
 							kind: 'upsert-note',
@@ -769,7 +745,7 @@ export const describeSyncStoreContract = (
 				const op = await store.opBySeq(seq);
 				expect(op?.path).toBe('Work/a.md');
 				// The name the user chose is not what this is about.
-				expect(op?.targetPath).toBe('b.md');
+				expect(op).toMatchObject({ targetPath: 'b.md' });
 			});
 
 			it('points it there for a version the pull only adopts', async () => {
@@ -785,7 +761,7 @@ export const describeSyncStoreContract = (
 					targetPath: 'b.md',
 				});
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{
 							kind: 'adopt-version',
@@ -813,7 +789,7 @@ export const describeSyncStoreContract = (
 					dirty: true,
 				});
 
-				await store.applyPull({ changes: [{ kind: 'delete-folder', path: 'Work' }] });
+				await store.applyChanges({ changes: [{ kind: 'delete-folder', path: 'Work' }] });
 
 				const note = await store.noteById('n1');
 				expect(note?.content).toBe('mine\n');
@@ -829,7 +805,7 @@ export const describeSyncStoreContract = (
 				const { store, seed } = await harness();
 				await seed({ id: 'n1', path: 'a.md', content: 'x\n' });
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{
 							kind: 'upsert-note',
@@ -856,7 +832,7 @@ export const describeSyncStoreContract = (
 				const { store, seedFolder } = await harness();
 				await seedFolder({ path: 'Work', remoteId: 'f1' });
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [{ kind: 'ensure-folder', path: 'Work' }],
 					cursor: 'c1',
 				});
@@ -871,7 +847,7 @@ export const describeSyncStoreContract = (
 				const { store, seed } = await harness();
 				await seed({ id: 'n1', path: 'a.md', content: 'mine\n', dirty: true });
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [{ kind: 'displace-note', id: 'n1', path: 'a (conflict x).md' }],
 					cursor: 'c1',
 				});
@@ -892,7 +868,7 @@ export const describeSyncStoreContract = (
 				await seed({ id: 'ours', path: 'a.md', content: 'mine\n', dirty: true });
 				await seed({ id: 'theirs', path: 'b.md', content: 'theirs\n', remoteId: 'r2' });
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{
 							kind: 'move-note',
@@ -918,7 +894,7 @@ export const describeSyncStoreContract = (
 				await seed({ id: 'ours', path: 'a.md', content: 'mine\n', dirty: true });
 				await seed({ id: 'theirs', path: 'b.md', content: 'theirs\n', remoteId: 'r2' });
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{
 							kind: 'upsert-note',
@@ -953,7 +929,7 @@ export const describeSyncStoreContract = (
 					targetPath: 'Groceries.md',
 				});
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{ kind: 'displace-note', id: 'n1', path: 'Groceries (conflict x).md' },
 					],
@@ -961,7 +937,7 @@ export const describeSyncStoreContract = (
 				});
 
 				const op = (await store.pendingOps()).find((each) => each.seq === seq);
-				expect(op?.targetPath).toBe('Groceries (conflict x).md');
+				expect(op).toMatchObject({ targetPath: 'Groceries (conflict x).md' });
 			});
 
 			it('leaves another note\u2019s ops alone when one is displaced', async () => {
@@ -978,13 +954,13 @@ export const describeSyncStoreContract = (
 					targetPath: 'a.md',
 				});
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [{ kind: 'displace-note', id: 'n1', path: 'a (conflict x).md' }],
 					cursor: 'c1',
 				});
 
 				const op = (await store.pendingOps()).find((each) => each.seq === seq);
-				expect(op?.targetPath).toBe('a.md');
+				expect(op).toMatchObject({ targetPath: 'a.md' });
 			});
 
 			it('accepts a displacement of a note that is already gone', async () => {
@@ -992,7 +968,7 @@ export const describeSyncStoreContract = (
 				// retried for ever, because the cursor moves only with it.
 				const { store } = await harness();
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [{ kind: 'displace-note', id: 'nobody', path: 'x.md' }],
 					cursor: 'c1',
 				});
@@ -1010,7 +986,7 @@ export const describeSyncStoreContract = (
 				await seedFolder({ path: 'Work', remoteId: 'f1' });
 				await seed({ id: 'n1', path: 'Work/a.md', content: 'x\n', remoteId: 'r1' });
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{ kind: 'delete-folder', path: 'Work' },
 						{ kind: 'delete-note', id: 'n1' },
@@ -1032,7 +1008,7 @@ export const describeSyncStoreContract = (
 				const { store, seed } = await harness();
 				await seed({ id: 'n1', path: 'a.md', content: 'old\n', remoteId: 'r1' });
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{ kind: 'delete-note', id: 'n1' },
 						{
@@ -1057,7 +1033,7 @@ export const describeSyncStoreContract = (
 				const { store, seed } = await harness();
 				await seed({ id: 'n1', path: 'a.md', content: 'old\n', remoteId: 'r1' });
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{
 							kind: 'upsert-note',
@@ -1079,7 +1055,7 @@ export const describeSyncStoreContract = (
 				// batch that rejects is a batch that is retried for ever.
 				const { store } = await harness();
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [{ kind: 'delete-folder', path: 'Nowhere' }],
 					cursor: 'c1',
 				});
@@ -1105,7 +1081,7 @@ export const describeSyncStoreContract = (
 					await seed(edited);
 
 					await expect(
-						store.applyPull({
+						store.applyChanges({
 							changes: [
 								{
 									kind: 'upsert-note',
@@ -1131,7 +1107,7 @@ export const describeSyncStoreContract = (
 					await seed(edited);
 
 					await expect(
-						store.applyPull({
+						store.applyChanges({
 							changes: [{ kind: 'delete-note', id: 'n1' }],
 							cursor: 'c1',
 						})
@@ -1146,7 +1122,7 @@ export const describeSyncStoreContract = (
 					const { store, seed } = await harness();
 					await seed(edited);
 
-					await store.applyPull({
+					await store.applyChanges({
 						changes: [
 							{
 								kind: 'conflict',
@@ -1176,10 +1152,10 @@ export const describeSyncStoreContract = (
 				// happened, and nothing ever asks for it again.
 				const { store, seed } = await harness();
 				await seed({ id: 'n1', path: 'a.md', content: 'x\n', remoteId: 'r1' });
-				await store.applyPull({ changes: [], cursor: 'c1' });
+				await store.applyChanges({ changes: [], cursor: 'c1' });
 
 				await expect(
-					store.applyPull({
+					store.applyChanges({
 						changes: [
 							{
 								kind: 'upsert-note',
@@ -1222,7 +1198,7 @@ export const describeSyncStoreContract = (
 
 			it('lists a file with the batch that found it, cursor and all', async () => {
 				const { store } = await harness();
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [{ kind: 'unreadable', file: { remoteId: 'r1', path: 'a.md' } }],
 					cursor: 'c1',
 				});
@@ -1232,8 +1208,8 @@ export const describeSyncStoreContract = (
 
 			it('lists one with no cursor in the batch, as a scan’s pages and a push have none', async () => {
 				const { store } = await harness();
-				await store.applyPull({ changes: [], cursor: 'c1' });
-				await store.applyPull({
+				await store.applyChanges({ changes: [], cursor: 'c1' });
+				await store.applyChanges({
 					changes: [{ kind: 'unreadable', file: { remoteId: 'r1', path: 'a.md' } }],
 				});
 				expect(await listed(store)).toEqual(['r1 a.md']);
@@ -1244,7 +1220,7 @@ export const describeSyncStoreContract = (
 				// `movedAside` is the panel's to say. The note it names is moved by
 				// the `displace-note` in front of this change, not by this.
 				const { store } = await harness();
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{
 							kind: 'unreadable',
@@ -1271,7 +1247,7 @@ export const describeSyncStoreContract = (
 				// what it means to keep (`leaveUnread`), and the store never
 				// merges — a store that did could not be told to stop saying it.
 				const { store } = await harness();
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{
 							kind: 'unreadable',
@@ -1280,7 +1256,7 @@ export const describeSyncStoreContract = (
 					],
 				});
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [{ kind: 'unreadable', file: { remoteId: 'r1', path: 'b.md' } }],
 				});
 
@@ -1289,13 +1265,13 @@ export const describeSyncStoreContract = (
 
 			it('keeps one record per file: the same id again is the file renamed', async () => {
 				const { store } = await harness();
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{ kind: 'unreadable', file: { remoteId: 'r1', path: 'a.md' } },
 						{ kind: 'unreadable', file: { remoteId: 'r2', path: 'b.md' } },
 					],
 				});
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [{ kind: 'unreadable', file: { remoteId: 'r1', path: 'renamed.md' } }],
 				});
 				expect(await listed(store)).toEqual(['r1 renamed.md', 'r2 b.md']);
@@ -1303,7 +1279,7 @@ export const describeSyncStoreContract = (
 
 			it('keeps two files at one path apart, since the id is what names a file', async () => {
 				const { store } = await harness();
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{ kind: 'unreadable', file: { remoteId: 'r1', path: 'a.md' } },
 						{ kind: 'unreadable', file: { remoteId: 'r2', path: 'a.md' } },
@@ -1314,13 +1290,13 @@ export const describeSyncStoreContract = (
 
 			it('forgets a file by its id, and only that one', async () => {
 				const { store } = await harness();
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{ kind: 'unreadable', file: { remoteId: 'r1', path: 'a.md' } },
 						{ kind: 'unreadable', file: { remoteId: 'r2', path: 'b.md' } },
 					],
 				});
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [{ kind: 'forget-unreadable', remoteId: 'r1' }],
 					cursor: 'c1',
 				});
@@ -1332,7 +1308,7 @@ export const describeSyncStoreContract = (
 				// Same reasoning as the deletes: a batch the store rejects is
 				// retried for ever, since the cursor moves only with it.
 				const { store } = await harness();
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [{ kind: 'forget-unreadable', remoteId: 'never' }],
 					cursor: 'c1',
 				});
@@ -1344,10 +1320,10 @@ export const describeSyncStoreContract = (
 				// A move told as a deletion and then an entry: forgotten, then
 				// listed again where it went.
 				const { store } = await harness();
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [{ kind: 'unreadable', file: { remoteId: 'r1', path: 'a.md' } }],
 				});
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{ kind: 'forget-unreadable', remoteId: 'r1' },
 						{ kind: 'unreadable', file: { remoteId: 'r1', path: 'b.md' } },
@@ -1360,10 +1336,10 @@ export const describeSyncStoreContract = (
 				// The list would otherwise name a file from a batch whose cursor
 				// never moved, which the next pull decides all over again.
 				const { store } = await harness();
-				await store.applyPull({ changes: [], cursor: 'c1' });
+				await store.applyChanges({ changes: [], cursor: 'c1' });
 
 				await expect(
-					store.applyPull({
+					store.applyChanges({
 						changes: [
 							{ kind: 'unreadable', file: { remoteId: 'r1', path: 'a.md' } },
 							refused,
@@ -1379,7 +1355,7 @@ export const describeSyncStoreContract = (
 			it('forgets nothing in a batch that is refused, and leaves a rebased path where it was', async () => {
 				const { store, seedFolder } = await harness();
 				await seedFolder({ path: 'Work', remoteId: 'f1' });
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{ kind: 'unreadable', file: { remoteId: 'r1', path: 'a.md' } },
 						{ kind: 'unreadable', file: { remoteId: 'r2', path: 'Work/b.md' } },
@@ -1388,7 +1364,7 @@ export const describeSyncStoreContract = (
 				});
 
 				await expect(
-					store.applyPull({
+					store.applyChanges({
 						changes: [
 							{ kind: 'forget-unreadable', remoteId: 'r1' },
 							{ kind: 'move-folder', from: 'Work', to: 'Archive' },
@@ -1408,7 +1384,7 @@ export const describeSyncStoreContract = (
 				const { store, seedFolder } = await harness();
 				await seedFolder({ path: 'Work', remoteId: 'f1' });
 				await seedFolder({ path: 'Work/Old', remoteId: 'f2' });
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{ kind: 'unreadable', file: { remoteId: 'r1', path: 'Work/a.md' } },
 						{ kind: 'unreadable', file: { remoteId: 'r2', path: 'Work/Old/b.md' } },
@@ -1417,7 +1393,7 @@ export const describeSyncStoreContract = (
 					],
 				});
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{ kind: 'move-folder', from: 'Work', to: 'Archive/Work', remoteId: 'f1' },
 					],
@@ -1434,7 +1410,7 @@ export const describeSyncStoreContract = (
 				const { store, seedFolder } = await harness();
 				await seedFolder({ path: 'Work', remoteId: 'f1' });
 				await seedFolder({ path: 'Work/Old', remoteId: 'f2' });
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{ kind: 'unreadable', file: { remoteId: 'r1', path: 'Work/a.md' } },
 						{ kind: 'unreadable', file: { remoteId: 'r2', path: 'Work/Old/b.md' } },
@@ -1442,7 +1418,7 @@ export const describeSyncStoreContract = (
 					],
 				});
 
-				await store.applyPull({ changes: [{ kind: 'delete-folder', path: 'Work' }] });
+				await store.applyChanges({ changes: [{ kind: 'delete-folder', path: 'Work' }] });
 
 				expect(await listed(store)).toEqual(['r3 Workshop.md']);
 			});
@@ -1451,11 +1427,11 @@ export const describeSyncStoreContract = (
 				// The files are gone with the directory whether or not this device
 				// ever made a notebook of it.
 				const { store } = await harness();
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [{ kind: 'unreadable', file: { remoteId: 'r1', path: 'Work/a.md' } }],
 				});
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [{ kind: 'delete-folder', path: 'Work' }],
 					cursor: 'c1',
 				});
@@ -1473,10 +1449,12 @@ export const describeSyncStoreContract = (
 				await seed({ id: 'n1', path: 'Work/a.md', content: 'mine\n', dirty: true });
 				const before = await store.allNotes();
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [{ kind: 'unreadable', file: { remoteId: 'r1', path: 'Work/a.md' } }],
 				});
-				await store.applyPull({ changes: [{ kind: 'forget-unreadable', remoteId: 'r1' }] });
+				await store.applyChanges({
+					changes: [{ kind: 'forget-unreadable', remoteId: 'r1' }],
+				});
 
 				expect(await store.allNotes()).toEqual(before);
 				expect((await store.folderByPath('Work'))?.path).toBe('Work');
@@ -1490,7 +1468,7 @@ export const describeSyncStoreContract = (
 				await seed({ id: 'n1', path: 'Work/a.md', content: 'x\n', dirty: true });
 				const seq = await seedOp({ op: 'write', noteId: 'n1', path: 'Work/a.md' });
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [{ kind: 'move-folder', from: 'Work', to: 'Archive', remoteId: 'f1' }],
 					cursor: 'c1',
 				});
@@ -1517,7 +1495,7 @@ export const describeSyncStoreContract = (
 					targetPath: 'renamed.md',
 				});
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{ kind: 'move-note', id: 'n1', path: 'b.md', remote: remote('b.md', 'r1') },
 					],
@@ -1544,14 +1522,14 @@ export const describeSyncStoreContract = (
 					targetPath: 'Work/renamed.md',
 				});
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [{ kind: 'move-folder', from: 'Work', to: 'Archive', remoteId: 'f1' }],
 					cursor: 'c1',
 				});
 
 				const moved = (await store.pendingOps()).find((op) => op.seq === seq);
 				expect(moved?.path).toBe('Archive/a.md');
-				expect(moved?.targetPath).toBe('Archive/renamed.md');
+				expect(moved).toMatchObject({ targetPath: 'Archive/renamed.md' });
 			});
 
 			it('does not clean a dirty note on the way', async () => {
@@ -1559,7 +1537,7 @@ export const describeSyncStoreContract = (
 				await seedFolder({ path: 'Work', remoteId: 'f1' });
 				await seed({ id: 'n1', path: 'Work/a.md', content: 'mine\n', dirty: true });
 
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [{ kind: 'move-folder', from: 'Work', to: 'Archive', remoteId: 'f1' }],
 					cursor: 'c1',
 				});
@@ -1571,7 +1549,7 @@ export const describeSyncStoreContract = (
 			it('can be found again by its remote id afterwards', async () => {
 				const { store, seedFolder } = await harness();
 				await seedFolder({ path: 'Work', remoteId: 'f1' });
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [{ kind: 'move-folder', from: 'Work', to: 'Archive', remoteId: 'f1' }],
 					cursor: 'c1',
 				});
@@ -1608,7 +1586,7 @@ export const describeSyncStoreContract = (
 				const { store, seed, seedOp } = await harness();
 				await seed(mine);
 				await seedOp({ op: 'write', noteId: 'n1', path: 'a.md' });
-				await store.applyPull({ changes: [merge()], cursor: 'x' });
+				await store.applyChanges({ changes: [merge()], cursor: 'x' });
 
 				expect(await store.noteById('n1')).toMatchObject({
 					content: 'both\n',
@@ -1625,7 +1603,7 @@ export const describeSyncStoreContract = (
 			it('queues a write for a note that had none', async () => {
 				const { store, seed } = await harness();
 				await seed(mine);
-				await store.applyPull({ changes: [merge()] });
+				await store.applyChanges({ changes: [merge()] });
 
 				const writes = (await store.pendingOps()).filter((op) => op.op === 'write');
 				expect(writes.map((op) => [op.noteId, op.path])).toEqual([['n1', 'a.md']]);
@@ -1635,7 +1613,7 @@ export const describeSyncStoreContract = (
 				const { store, seed, seedOp } = await harness();
 				await seed(mine);
 				await seedOp({ op: 'write', noteId: 'n1', path: 'a.md' });
-				await store.applyPull({ changes: [merge({ clean: true })] });
+				await store.applyChanges({ changes: [merge({ clean: true })] });
 
 				expect((await store.noteById('n1'))?.dirty).toBe(false);
 				expect((await store.pendingOps()).filter((op) => op.op === 'write')).toEqual([]);
@@ -1645,7 +1623,7 @@ export const describeSyncStoreContract = (
 				const { store, seed, seedOp } = await harness();
 				await seed(mine);
 				await seedOp({ op: 'write', noteId: 'n1', path: 'a.md' });
-				await store.applyPull({ changes: [merge({ path: 'Psalms/a.md' })] });
+				await store.applyChanges({ changes: [merge({ path: 'Psalms/a.md' })] });
 
 				expect((await store.noteById('n1'))?.path).toBe('Psalms/a.md');
 				expect(await store.folderByPath('Psalms')).toBeDefined();
@@ -1659,7 +1637,7 @@ export const describeSyncStoreContract = (
 				const { store, seed } = await harness();
 				await seed({ ...mine, content: 'a newer pass\n' });
 				await expect(
-					store.applyPull({ changes: [merge()], cursor: 'x' })
+					store.applyChanges({ changes: [merge()], cursor: 'x' })
 				).rejects.toThrow();
 
 				expect((await store.noteById('n1'))?.content).toBe('a newer pass\n');
@@ -1688,7 +1666,10 @@ export const describeSyncStoreContract = (
 					remoteVersion: 'v1',
 					dirty: true,
 				});
-				await store.applyPull({ changes: [{ kind: 'conflict', resolution }], cursor: 'x' });
+				await store.applyChanges({
+					changes: [{ kind: 'conflict', resolution }],
+					cursor: 'x',
+				});
 
 				expect((await store.noteById('n1'))?.content).toBe('theirs\n');
 				expect((await store.noteById('n1'))?.dirty).toBe(false);
@@ -1706,7 +1687,10 @@ export const describeSyncStoreContract = (
 					remoteVersion: 'v1',
 					dirty: true,
 				});
-				await store.applyPull({ changes: [{ kind: 'conflict', resolution }], cursor: 'x' });
+				await store.applyChanges({
+					changes: [{ kind: 'conflict', resolution }],
+					cursor: 'x',
+				});
 
 				const ops = await store.pendingOps();
 				expect(ops.map((op) => op.path)).toContain('a (conflict 2026-09-15T14-32).md');
@@ -1730,7 +1714,10 @@ export const describeSyncStoreContract = (
 					dirty: true,
 				});
 				const seq = await seedOp({ op: 'write', noteId: 'n1', path: 'a.md' });
-				await store.applyPull({ changes: [{ kind: 'conflict', resolution }], cursor: 'x' });
+				await store.applyChanges({
+					changes: [{ kind: 'conflict', resolution }],
+					cursor: 'x',
+				});
 
 				const ops = await store.pendingOps();
 				expect(ops.some((op) => op.seq === seq)).toBe(false);
@@ -1756,7 +1743,10 @@ export const describeSyncStoreContract = (
 					path: 'a.md',
 					targetPath: 'b.md',
 				});
-				await store.applyPull({ changes: [{ kind: 'conflict', resolution }], cursor: 'x' });
+				await store.applyChanges({
+					changes: [{ kind: 'conflict', resolution }],
+					cursor: 'x',
+				});
 
 				expect((await store.pendingOps()).some((op) => op.seq === seq)).toBe(true);
 			});
@@ -1771,7 +1761,10 @@ export const describeSyncStoreContract = (
 					remoteVersion: 'v1',
 					dirty: true,
 				});
-				await store.applyPull({ changes: [{ kind: 'conflict', resolution }], cursor: 'x' });
+				await store.applyChanges({
+					changes: [{ kind: 'conflict', resolution }],
+					cursor: 'x',
+				});
 
 				// Two notes pointing at one remote file means the next push has
 				// them overwrite each other for ever.
@@ -2032,11 +2025,10 @@ export const describeSyncStoreContract = (
 			const opsOf = async (store: SyncStore) =>
 				(await store.pendingOps()).map(({ seq: _seq, attempts: _attempts, ...op }) => op);
 
-			it('reads a row by id, by path and by remote id, and under its folders', async () => {
+			it('reads a row by id and by remote id, and under its folders', async () => {
 				const { store, seedFile } = await harness();
 				await seedFile(bound);
 				expect(await store.fileById('x1')).toEqual(bound);
-				expect(await store.fileByPath('Trips/a.png')).toEqual(bound);
 				expect(await store.fileByRemoteId('f1')).toEqual(bound);
 				expect(await store.allFiles()).toEqual([bound]);
 				expect(await store.filesUnder('Trips')).toEqual([bound]);
@@ -2089,7 +2081,7 @@ export const describeSyncStoreContract = (
 			describe('a file a pull brings in', () => {
 				it('is put whole, bound to the remote, with the folders above it', async () => {
 					const { store } = await harness();
-					await store.applyPull({
+					await store.applyChanges({
 						changes: [
 							{
 								kind: 'upsert-file',
@@ -2108,7 +2100,7 @@ export const describeSyncStoreContract = (
 				it('leaves bytes cached under the version it had behind', async () => {
 					const { store, seedFile } = await harness();
 					await seedFile(bound, { bytes: BYTES, version: 'v1' });
-					await store.applyPull({
+					await store.applyChanges({
 						changes: [
 							{
 								kind: 'upsert-file',
@@ -2126,7 +2118,7 @@ export const describeSyncStoreContract = (
 					const { store, seedFile, seedOp } = await harness();
 					await seedFile(pending, { bytes: BYTES, pinned: true });
 					await seedOp({ op: 'upload', fileId: 'x1', path: 'Trips/a.png' });
-					await store.applyPull({
+					await store.applyChanges({
 						changes: [
 							{
 								kind: 'upsert-file',
@@ -2141,7 +2133,7 @@ export const describeSyncStoreContract = (
 					expect(await store.fileBytes('x1')).toEqual(BYTES);
 					expect(await store.pendingOps()).toEqual([]);
 					// Kept as the remote version's, not held: a newer one leaves them.
-					await store.applyPull({
+					await store.applyChanges({
 						changes: [
 							{
 								kind: 'upsert-file',
@@ -2158,7 +2150,7 @@ export const describeSyncStoreContract = (
 					const { store, seedFile } = await harness();
 					await seedFile(pending, { bytes: BYTES, pinned: true });
 					await expect(
-						store.applyPull({
+						store.applyChanges({
 							changes: [
 								{
 									kind: 'upsert-file',
@@ -2180,7 +2172,7 @@ export const describeSyncStoreContract = (
 					// every pull that mentioned the file, and every note's with it.
 					const { store, seedOp } = await harness();
 					await seedOp({ op: 'delete-file', path: 'Trips/a.png', remoteId: 'f1' });
-					await store.applyPull({
+					await store.applyChanges({
 						changes: [
 							{
 								kind: 'upsert-file',
@@ -2206,7 +2198,7 @@ export const describeSyncStoreContract = (
 					const { store, seedFile } = await harness();
 					if (row !== undefined) await seedFile(row, { bytes: BYTES, pinned: true });
 					await expect(
-						store.applyPull({
+						store.applyChanges({
 							changes: [
 								{
 									kind: 'upsert-file',
@@ -2240,7 +2232,7 @@ export const describeSyncStoreContract = (
 							path: 'Trips/a.png',
 							targetPath: 'Work/a.png',
 						});
-						await store.applyPull({
+						await store.applyChanges({
 							changes: [
 								{
 									kind: 'upsert-file',
@@ -2271,7 +2263,7 @@ export const describeSyncStoreContract = (
 				const { store, seedFile, seedOp } = await harness();
 				await seedFile(pending, { bytes: BYTES, pinned: true });
 				await seedOp({ op: 'upload', fileId: 'x1', path: 'Trips/a.png' });
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{ kind: 'displace-file', fileId: 'x1', path: 'Trips/a (conflict).png' },
 						{ kind: 'displace-file', fileId: 'nope', path: 'b.png' },
@@ -2289,7 +2281,7 @@ export const describeSyncStoreContract = (
 			it('moves a pending file aside into a folder it makes', async () => {
 				const { store, seedFile } = await harness();
 				await seedFile(pending, { bytes: BYTES, pinned: true });
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{ kind: 'displace-file', fileId: 'x1', path: 'New/a (conflict).png' },
 					],
@@ -2323,14 +2315,16 @@ export const describeSyncStoreContract = (
 					{ kind: 'delete-folder' as const, path: 'Trips' },
 				])('hands its bytes to the copy, on a $kind', async (change) => {
 					const { store } = await copying();
-					await store.applyPull({ changes: [change] });
+					await store.applyChanges({ changes: [change] });
 					expect(await store.fileBytes('x2')).toEqual(BYTES);
-					expect((await opsOf(store)).find((op) => op.fileId === 'x2')).toEqual(copy);
+					expect(
+						(await opsOf(store)).find((op) => 'fileId' in op && op.fileId === 'x2')
+					).toEqual(copy);
 				});
 
 				it('hands over nothing that is not the file as it is now', async () => {
 					const { store } = await copying('v0');
-					await store.applyPull({ changes: [{ kind: 'delete-file', fileId: 'x1' }] });
+					await store.applyChanges({ changes: [{ kind: 'delete-file', fileId: 'x1' }] });
 					expect(await store.fileBytes('x2')).toBeUndefined();
 					expect(await opsOf(store)).toEqual([{ ...copy, copyOf: 'f1' }]);
 				});
@@ -2350,7 +2344,7 @@ export const describeSyncStoreContract = (
 					path: 'Trips/a.png',
 					targetPath: 'Trips/b.png',
 				});
-				await store.applyPull({ changes: [change] });
+				await store.applyChanges({ changes: [change] });
 				expect((await opsOf(store)).filter((op) => op.op === 'move-file')).toEqual([]);
 			});
 
@@ -2358,7 +2352,7 @@ export const describeSyncStoreContract = (
 				it('takes the row and its bytes', async () => {
 					const { store, seedFile } = await harness();
 					await seedFile(bound, { bytes: BYTES, version: 'v1' });
-					await store.applyPull({
+					await store.applyChanges({
 						changes: [
 							{ kind: 'delete-file', fileId: 'x1' },
 							{ kind: 'delete-file', fileId: 'nope' },
@@ -2366,7 +2360,7 @@ export const describeSyncStoreContract = (
 					});
 					expect(await store.fileById('x1')).toBeUndefined();
 					// Back under the version its bytes were cached at, with none.
-					await store.applyPull({
+					await store.applyChanges({
 						changes: [
 							{
 								kind: 'upsert-file',
@@ -2383,7 +2377,7 @@ export const describeSyncStoreContract = (
 					const { store, seedFile } = await harness();
 					await seedFile(pending, { bytes: BYTES, pinned: true });
 					await expect(
-						store.applyPull({ changes: [{ kind: 'delete-file', fileId: 'x1' }] })
+						store.applyChanges({ changes: [{ kind: 'delete-file', fileId: 'x1' }] })
 					).rejects.toThrow();
 					expect(await store.fileBytes('x1')).toEqual(BYTES);
 				});
@@ -2393,7 +2387,7 @@ export const describeSyncStoreContract = (
 				it('goes back up from the bytes held here', async () => {
 					const { store, seedFile } = await harness();
 					await seedFile(bound, { bytes: BYTES, version: 'v1' });
-					await store.applyPull({
+					await store.applyChanges({
 						changes: [
 							{ kind: 'reupload-file', fileId: 'x1' },
 							{ kind: 'reupload-file', fileId: 'nope' },
@@ -2412,7 +2406,9 @@ export const describeSyncStoreContract = (
 					// is after this.
 					const { store, seedFile } = await harness();
 					await seedFile(bound, { bytes: BYTES, version: 'v0' });
-					await store.applyPull({ changes: [{ kind: 'reupload-file', fileId: 'x1' }] });
+					await store.applyChanges({
+						changes: [{ kind: 'reupload-file', fileId: 'x1' }],
+					});
 					expect(await store.fileById('x1')).toEqual(pending);
 					expect(await store.fileBytes('x1')).toBeUndefined();
 					expect(await opsOf(store)).toEqual([
@@ -2424,7 +2420,7 @@ export const describeSyncStoreContract = (
 					const { store, seedFile } = await harness();
 					await seedFile(bound);
 					const arrived = file('Trips/a.png', 'f2', 'w1');
-					await store.applyPull({
+					await store.applyChanges({
 						changes: [
 							{ kind: 'reupload-file', fileId: 'x1' },
 							{
@@ -2456,7 +2452,7 @@ export const describeSyncStoreContract = (
 					path: 'Trips/a.png',
 					targetPath: 'Trips/sub/a.png',
 				});
-				await store.applyPull({
+				await store.applyChanges({
 					changes: [
 						{ kind: 'move-folder', from: 'Trips', to: 'Holidays', remoteId: 'd1' },
 					],
@@ -2492,13 +2488,15 @@ export const describeSyncStoreContract = (
 						remoteVersion: 'v1',
 						size: 3,
 					});
-					await store.applyPull({ changes: [{ kind: 'delete-folder', path: 'Trips' }] });
+					await store.applyChanges({
+						changes: [{ kind: 'delete-folder', path: 'Trips' }],
+					});
 					expect((await store.allFiles()).map((each) => each.id).sort()).toEqual([
 						'x2',
 						'x3',
 					]);
 					expect(await store.fileBytes('x2')).toEqual(BYTES);
-					await store.applyPull({
+					await store.applyChanges({
 						changes: [
 							{
 								kind: 'upsert-file',
@@ -2543,7 +2541,7 @@ export const describeSyncStoreContract = (
 						path: 'Trips/old/c.png',
 						targetPath: 'Trips/c.png',
 					});
-					await store.applyPull({
+					await store.applyChanges({
 						changes: [
 							{ kind: 'delete-folder', path: 'Trips', keepFiles: ['x1', 'nope'] },
 						],
@@ -2566,7 +2564,7 @@ export const describeSyncStoreContract = (
 						path: 'Old/a.png',
 						targetPath: 'Trips/b.png',
 					});
-					await store.applyPull({
+					await store.applyChanges({
 						changes: [{ kind: 'delete-folder', path: 'Trips', was: 'Old' }],
 					});
 					expect(await store.allFiles()).toEqual([]);
@@ -2588,7 +2586,9 @@ export const describeSyncStoreContract = (
 						path: 'Trips/b.png',
 						targetPath: 'Trips/c.png',
 					});
-					await store.applyPull({ changes: [{ kind: 'delete-folder', path: 'Trips' }] });
+					await store.applyChanges({
+						changes: [{ kind: 'delete-folder', path: 'Trips' }],
+					});
 					expect((await store.allFiles()).map((each) => each.id)).toEqual(['x1']);
 				});
 			});
@@ -2607,7 +2607,7 @@ export const describeSyncStoreContract = (
 					expect(await store.fileById('x1')).toEqual(bound);
 					expect(await store.fileBytes('x1')).toEqual(BYTES);
 					expect(await store.pendingOps()).toEqual([]);
-					await store.applyPull({
+					await store.applyChanges({
 						changes: [
 							{
 								kind: 'upsert-file',
@@ -2906,7 +2906,7 @@ export const describeSyncStoreContract = (
 
 				it('keeps bytes held for an upload held, not cached', async () => {
 					const store = await moving({ bytes: BYTES, pinned: true });
-					await store.applyPull({
+					await store.applyChanges({
 						changes: [
 							{
 								kind: 'upsert-file',
@@ -2966,7 +2966,7 @@ export const describeSyncStoreContract = (
 					{ bytes: BYTES, pinned: true }
 				);
 				await expect(
-					store.applyPull({
+					store.applyChanges({
 						changes: [
 							{ kind: 'delete-file', fileId: 'x1' },
 							{ kind: 'delete-file', fileId: 'x2' },

@@ -1,17 +1,20 @@
 import { foldName } from '../../src/names/fold.js';
 import { isWithin, normalizePath, parentPath, rebasePath, ROOT } from '../../src/paths.js';
 import { conflictContent } from '../../src/sync/conflicts.js';
-import type {
-	ConflictResolution,
-	OpOutcome,
-	PullBatch,
-	PullChange,
-	SyncFile,
-	SyncFolder,
-	SyncNote,
-	SyncOp,
-	SyncStore,
-	UnreadableFile,
+import {
+	type ConflictResolution,
+	type FileChange,
+	isFileChange,
+	type NewSyncOp,
+	type OpOutcome,
+	type PullBatch,
+	type PullChange,
+	type SyncFile,
+	type SyncFolder,
+	type SyncNote,
+	type SyncOp,
+	type SyncStore,
+	type UnreadableFile,
 } from '../../src/sync/store.js';
 
 /**
@@ -21,8 +24,29 @@ import type {
  * relies on a convenience nobody promised fails here rather than in a browser.
  *
  * It also enforces the one promise the port makes that a lazy implementation
- * would quietly drop: `applyPull` is all-or-nothing, cursor included.
+ * would quietly drop: `applyChanges` is all-or-nothing, cursor included.
  */
+
+/** An op to queue: any a device queues, or one read back as `malformed`. */
+type QueuedOp = (NewSyncOp | Omit<Extract<SyncOp, { op: 'malformed' }>, 'seq' | 'attempts'>) & {
+	attempts?: number;
+};
+
+type Stored = SyncOp & { lastError?: string };
+
+/** The note a queued op is about, for the kinds that are about one. */
+const noteOfOp = (op: SyncOp): string | undefined =>
+	op.op === 'write' || op.op === 'move' || op.op === 'delete' ? op.noteId : undefined;
+
+/** The file a queued op is about, for the kinds that are about one. */
+const fileOfOp = (op: SyncOp): string | undefined =>
+	op.op === 'upload' || op.op === 'move-file' ? op.fileId : undefined;
+
+/** The op with its paths, `targetPath` too where it has one, each put through `rebase`. */
+const repathed = (op: Stored, rebase: (path: string) => string): Stored =>
+	op.op === 'move' || op.op === 'move-file'
+		? { ...op, path: rebase(op.path), targetPath: rebase(op.targetPath) }
+		: { ...op, path: rebase(op.path) };
 
 /**
  * A file's bytes as this device holds them: held until they are uploaded
@@ -51,10 +75,14 @@ export interface MemoryStore extends SyncStore {
 	readonly putFolder: (folder: SyncFolder) => void;
 	/** Drop a folder row, as the app does when the user deletes or renames one. */
 	readonly removeFolder: (path: string) => void;
-	readonly queue: (op: Omit<SyncOp, 'seq' | 'attempts'> & { attempts?: number }) => SyncOp;
+	/**
+	 * Queue an op. A `malformed` one too, which no device queues, so the engine
+	 * can be shown one as the web store reads a row that fits no kind.
+	 */
+	readonly queue: (op: QueuedOp) => SyncOp;
 	/** Withdraw a queued op, as the web queue does when a second rename replaces a move. */
 	readonly unqueue: (seq: number) => void;
-	/** Fail the next `applyPull`, to prove the cursor does not move without it. */
+	/** Fail the next `applyChanges`, to prove the cursor does not move without it. */
 	readonly breakNextApply: () => void;
 	/**
 	 * Every no-op the contract required this store to tolerate. The contract
@@ -72,7 +100,7 @@ export const createMemoryStore = (): MemoryStore => {
 	const files = new Map<string, SyncFile>();
 	const held = new Map<string, HeldBytes>();
 	const folders = new Map<string, SyncFolder>();
-	const ops = new Map<number, SyncOp & { lastError?: string }>();
+	const ops = new Map<number, Stored>();
 	/** By `remoteId`, which is what makes a second record for a file a rename. */
 	const unreadable = new Map<string, UnreadableFile>();
 	const state = new Map<'cursor', string>();
@@ -98,7 +126,7 @@ export const createMemoryStore = (): MemoryStore => {
 		folders.set(path, { path });
 	};
 
-	const queue = (input: Omit<SyncOp, 'seq' | 'attempts'> & { attempts?: number }): SyncOp => {
+	const queue = (input: QueuedOp): SyncOp => {
 		const op: SyncOp = { seq: nextSeq(), attempts: 0, ...input };
 		ops.set(op.seq, op);
 		return op;
@@ -162,9 +190,7 @@ export const createMemoryStore = (): MemoryStore => {
 	/** The same, and the ops queued for it: there is nothing left to send or move. */
 	const forgetFile = (id: string): void => {
 		dropFile(id);
-		[...ops.values()]
-			.filter((op) => op.fileId === id && (op.op === 'upload' || op.op === 'move-file'))
-			.forEach((op) => ops.delete(op.seq));
+		[...ops.values()].filter((op) => fileOfOp(op) === id).forEach((op) => ops.delete(op.seq));
 	};
 
 	/**
@@ -177,9 +203,9 @@ export const createMemoryStore = (): MemoryStore => {
 		const bytes = validBytes(file);
 		if (bytes === undefined || file.remoteId === undefined) return;
 		[...ops.values()]
-			.filter((op) => op.op === 'upload' && op.copyOf === file.remoteId)
+			.flatMap((op) => (op.op === 'upload' && op.copyOf === file.remoteId ? [op] : []))
 			.forEach(({ copyOf: _copyOf, ...op }) => {
-				if (op.fileId !== undefined) held.set(op.fileId, { bytes, pinned: true });
+				held.set(op.fileId, { bytes, pinned: true });
 				ops.set(op.seq, op);
 			});
 	};
@@ -208,12 +234,11 @@ export const createMemoryStore = (): MemoryStore => {
 	/** One file's queued ops, after it as it moves. */
 	const rebaseFileOps = (fileId: string, from: string, to: string): void => {
 		for (const op of [...ops.values()]) {
-			if (op.fileId !== fileId) continue;
-			ops.set(op.seq, {
-				...op,
-				path: op.path === from ? to : op.path,
-				...(op.targetPath === from ? { targetPath: to } : {}),
-			});
+			if (fileOfOp(op) !== fileId) continue;
+			ops.set(
+				op.seq,
+				repathed(op, (path) => (path === from ? to : path))
+			);
 		}
 	};
 
@@ -254,21 +279,6 @@ export const createMemoryStore = (): MemoryStore => {
 		}
 		fileOriginIsNow(change.fileId, change.remote.path);
 	};
-
-	type FileChange = Extract<
-		PullChange,
-		{ kind: 'upsert-file' | 'displace-file' | 'delete-file' | 'reupload-file' }
-	>;
-
-	const FILE_CHANGES: ReadonlySet<PullChange['kind']> = new Set([
-		'upsert-file',
-		'displace-file',
-		'delete-file',
-		'reupload-file',
-	]);
-
-	const isFileChange = (change: PullChange): change is FileChange =>
-		FILE_CHANGES.has(change.kind);
 
 	const applyFileChange = (change: FileChange): void => {
 		if (change.kind === 'upsert-file') {
@@ -319,7 +329,7 @@ export const createMemoryStore = (): MemoryStore => {
 				.sort((one, two) => one.seq - two.seq)
 				.reduce<Map<string, string>>(
 					(map, op) =>
-						op.op !== 'move-file' || op.fileId === undefined || map.has(op.fileId)
+						op.op !== 'move-file' || map.has(op.fileId)
 							? map
 							: map.set(op.fileId, op.path),
 					new Map()
@@ -384,12 +394,11 @@ export const createMemoryStore = (): MemoryStore => {
 	/** Point one note's queued ops at where it has just been moved to. */
 	const rebaseOps = (noteId: string, from: string, to: string): void => {
 		for (const op of [...ops.values()]) {
-			if (op.noteId !== noteId) continue;
-			ops.set(op.seq, {
-				...op,
-				path: op.path === from ? to : op.path,
-				...(op.targetPath === from ? { targetPath: to } : {}),
-			});
+			if (noteOfOp(op) !== noteId) continue;
+			ops.set(
+				op.seq,
+				repathed(op, (path) => (path === from ? to : path))
+			);
 		}
 	};
 
@@ -630,7 +639,7 @@ export const createMemoryStore = (): MemoryStore => {
 						.sort((one, two) => one.seq - two.seq)
 						.reduce<Map<string, string>>(
 							(map, op) =>
-								op.op !== 'move' || op.noteId === undefined || map.has(op.noteId)
+								op.op !== 'move' || map.has(op.noteId)
 									? map
 									: map.set(op.noteId, op.path),
 							new Map()
@@ -718,13 +727,10 @@ export const createMemoryStore = (): MemoryStore => {
 		// And so do the ops that name them, or a queued write would land at a
 		// path that no longer exists.
 		for (const op of [...ops.values()]) {
-			ops.set(op.seq, {
-				...op,
-				path: isWithin(op.path, from) ? rebasePath(op.path, from, to) : op.path,
-				...(op.targetPath !== undefined && isWithin(op.targetPath, from)
-					? { targetPath: rebasePath(op.targetPath, from, to) }
-					: {}),
-			});
+			ops.set(
+				op.seq,
+				repathed(op, (path) => (isWithin(path, from) ? rebasePath(path, from, to) : path))
+			);
 		}
 	};
 
@@ -936,8 +942,6 @@ export const createMemoryStore = (): MemoryStore => {
 			),
 		unreadable: () => Promise.resolve([...unreadable.values()]),
 		fileById: (id) => Promise.resolve(files.get(id)),
-		fileByPath: (path) =>
-			Promise.resolve([...files.values()].find((file) => file.path === path)),
 		fileByRemoteId: (remoteId) =>
 			Promise.resolve([...files.values()].find((file) => file.remoteId === remoteId)),
 		allFiles: () => Promise.resolve([...files.values()]),
@@ -949,7 +953,7 @@ export const createMemoryStore = (): MemoryStore => {
 			return Promise.resolve(file === undefined ? undefined : validBytes(file)?.slice());
 		},
 
-		applyPull: (batch: PullBatch) => {
+		applyChanges: (batch: PullBatch) => {
 			const before = snapshot();
 			try {
 				if (flags.get('break') === true) {
@@ -998,7 +1002,7 @@ export const createMemoryStore = (): MemoryStore => {
 			try {
 				applyConflict(resolution);
 			} catch (error) {
-				// One transaction, as `applyPull` is: a refused resolution leaves
+				// One transaction, as `applyChanges` is: a refused resolution leaves
 				// no half of itself behind.
 				restore(before);
 				return Promise.reject(error instanceof Error ? error : new Error(String(error)));

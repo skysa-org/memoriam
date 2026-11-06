@@ -1,5 +1,14 @@
 import { isWithin, rebasePath } from '../../paths.js';
-import type { PullChange, SyncNote, UnreadableFile } from '../store.js';
+import {
+	isNoteChange,
+	type NoteChange,
+	noteIdOf,
+	pathOf,
+	type PullChange,
+	remoteOf,
+	type SyncNote,
+	type UnreadableFile,
+} from '../store.js';
 
 /**
  * Where things are once a pull's decisions so far have been applied, asked
@@ -84,11 +93,12 @@ const placedBy =
 					}
 				: state;
 		}
-		return 'id' in change && change.id === note.id ? ownPlacement(state, change) : state;
+		if (!isNoteChange(change) || change.id !== note.id) return state;
+		return ownPlacement(state, change);
 	};
 
 /** Where a change naming the note leaves it. */
-const ownPlacement = (state: Placement, change: Extract<PullChange, { id: string }>): Placement => {
+const ownPlacement = (state: Placement, change: NoteChange): Placement => {
 	// The one change but a conflict that can leave a dirty note clean.
 	if (change.kind === 'merge-note') {
 		return { at: change.path, dirty: !change.clean, remoteId: change.remote.remoteId };
@@ -108,8 +118,10 @@ const ownPlacement = (state: Placement, change: Extract<PullChange, { id: string
 	// None of them changes `dirty`: the only kind that overwrites a
 	// note's bytes is `upsert-note`, and the engine never emits one
 	// for a note with unpushed edits — that is what `conflict` is.
-	const remoteId = 'remote' in change ? change.remote.remoteId : state.remoteId;
-	return 'path' in change ? { ...state, at: change.path, remoteId } : { ...state, remoteId };
+	const bound = remoteOf(change);
+	const remoteId = bound === undefined ? state.remoteId : bound.remoteId;
+	const at = pathOf(change);
+	return at === undefined ? { ...state, remoteId } : { ...state, at, remoteId };
 };
 
 const placedAt = (note: SyncNote): Placement => ({
@@ -135,12 +147,7 @@ export const placements = (decided: readonly PullChange[]): ((note: SyncNote) =>
 		change.kind === 'move-folder' || change.kind === 'delete-folder' ? [index] : []
 	);
 	const naming = decided.reduce<Map<string, number[]>>((map, change, index) => {
-		const id =
-			change.kind === 'conflict'
-				? change.resolution.noteId
-				: 'id' in change
-					? change.id
-					: undefined;
+		const id = change.kind === 'conflict' ? change.resolution.noteId : noteIdOf(change);
 		return id === undefined ? map : map.set(id, [...(map.get(id) ?? []), index]);
 	}, new Map());
 	return (note) => {

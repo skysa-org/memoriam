@@ -134,7 +134,7 @@ export const createConflictPush = (
 		unread?: UnreadableFile
 	): Promise<Settled> => {
 		const path = await freeNotePath(note.path, taken);
-		await store.applyPull({
+		await store.applyChanges({
 			changes: [
 				...(note.remoteId === undefined
 					? []
@@ -178,10 +178,7 @@ export const createConflictPush = (
 	 * it where it is.
 	 */
 	const setAsideForOp = async (op: SyncOp): Promise<Settled | undefined> => {
-		const note =
-			op.op === 'write' && op.noteId !== undefined
-				? await store.noteById(op.noteId)
-				: undefined;
+		const note = op.op === 'write' ? await store.noteById(op.noteId) : undefined;
 		return note === undefined ? undefined : setAside(op, note);
 	};
 
@@ -201,7 +198,7 @@ export const createConflictPush = (
 	): Promise<Settled> => {
 		const remote = { ...read.remote, version: read.version };
 		const clean = merged === read.content;
-		await store.applyPull({
+		await store.applyChanges({
 			changes: [
 				{
 					kind: 'merge-note',
@@ -244,10 +241,7 @@ export const createConflictPush = (
 		// somebody else's file. Those are failures, and stop the queue like any
 		// other. So is a write whose note has been purged since — completing the
 		// op would step over work that never ran.
-		const note =
-			op.op === 'write' && op.noteId !== undefined
-				? await store.noteById(op.noteId)
-				: undefined;
+		const note = op.op === 'write' ? await store.noteById(op.noteId) : undefined;
 		if (note === undefined) return undefined;
 
 		/**
@@ -284,7 +278,7 @@ export const createConflictPush = (
 			unread?: UnreadableFile
 		): Promise<undefined> => {
 			const path = await freeNotePath(note.path, [], true);
-			await store.applyPull({
+			await store.applyChanges({
 				changes: [
 					...(own === 'unreadable'
 						? [{ kind: 'detach-note' as const, id: note.id }]

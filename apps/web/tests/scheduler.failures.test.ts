@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ApiClient } from '../src/api/client.js';
 import { t } from '../src/i18n/t.js';
 import { bindLibrary } from '../src/store/connection.js';
-import type { MemoriamDatabase } from '../src/store/db.js';
+import { LOCAL_CONNECTION_ID, type MemoriamDatabase, type OpQueueRecord } from '../src/store/db.js';
 import type { SchedulerStatus, SyncPhase, SyncSchedulerOptions } from '../src/sync/scheduler.js';
 import { createDexieSyncStore } from '../src/sync/store.js';
 import { freshDatabase } from './support/db.js';
@@ -615,6 +615,32 @@ describe('failures', () => {
 				noteId: h.note.id,
 				attempts: 2,
 				error: '503',
+			});
+		});
+
+		it('names a row this version cannot read as one, not by a kind it has no words for (#447)', async () => {
+			// A kind a later version queued: the engine fails it until the push
+			// stops on it, and the scheduler names it as one this version cannot
+			// read, where its own kind means nothing here.
+			const db = await bound();
+			const h = started(db, { maxAttempts: 2 });
+			await reaches(h.scheduler, 'idle');
+			await db.opQueue.add({
+				connectionId: LOCAL_CONNECTION_ID,
+				op: 'teleport',
+				path: 'Away.md',
+				attempts: 2,
+				lastError: 'queued op 1: teleport',
+				queuedAt: 0,
+			} as unknown as OpQueueRecord);
+			await focused(h);
+
+			expect(h.scheduler.status().phase).toBe('attention');
+			expect(h.scheduler.status().stuck).toEqual({
+				op: 'malformed',
+				path: 'Away.md',
+				attempts: 2,
+				error: 'queued op 1: teleport',
 			});
 		});
 

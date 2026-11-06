@@ -49,17 +49,22 @@ export {
 	type SyncProgress,
 } from './sync/engine.js';
 
-export type {
-	ConflictResolution,
-	OpOutcome,
-	PullBatch,
-	PullChange,
-	SyncFile,
-	SyncFolder,
-	SyncNote,
-	SyncOp,
-	SyncStore,
-	UnreadableFile,
+export { messageOf } from './sync/outcome.js';
+
+export {
+	type ConflictResolution,
+	isFileChange,
+	type NewSyncOp,
+	type OpOutcome,
+	type PullBatch,
+	type PullChange,
+	type SyncFile,
+	type SyncFolder,
+	type SyncNote,
+	type SyncOp,
+	type SyncOperation,
+	type SyncStore,
+	type UnreadableFile,
 } from './sync/store.js';
 
 export { contentHash } from './hash.js';

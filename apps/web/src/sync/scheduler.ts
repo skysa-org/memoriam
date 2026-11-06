@@ -4,9 +4,11 @@ import {
 	isAuthError,
 	isRateLimitError,
 	mergeFile,
+	messageOf,
 	type ProviderKind,
 	type StorageProvider,
 	type SyncEngine,
+	type SyncOp,
 	type SyncOutcome,
 	type SyncProgress,
 } from '@memoriam/core';
@@ -19,11 +21,10 @@ import {
 	LOCAL_CONNECTION_ID,
 	type MemoriamDatabase,
 	type OpQueueRecord,
-	type QueuedOperation,
 	type SyncStateRecord,
 } from '../store/db.js';
 import { MAX_OP_ATTEMPTS, outOfAttempts } from '../store/queue.js';
-import { createDexieSyncStore } from './store.js';
+import { createDexieSyncStore, toSyncOp } from './store.js';
 import { createTokenSource, type TokenSource } from './tokens.js';
 
 /**
@@ -86,7 +87,8 @@ export type SyncPhase =
  * link to the passage it is about, without reading the queue itself.
  */
 export interface StuckOp {
-	readonly op: QueuedOperation;
+	/** `malformed` for a row this version cannot read (`toSyncOp`). */
+	readonly op: SyncOp['op'];
 	readonly path: string;
 	/** For a `move`, where it was going. */
 	readonly targetPath?: string;
@@ -292,9 +294,6 @@ const UNAUTHORIZED: SyncOutcome = {
 const together = (seen: readonly string[], more: readonly string[]): string[] => [
 	...new Set([...seen, ...more]),
 ];
-
-const messageOf = (error: unknown): string =>
-	error instanceof Error ? error.message : String(error);
 
 /**
  * The longest a provider's `Retry-After` is taken at its word. Beyond this the
@@ -510,12 +509,17 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 			.sort((a, b) => upload(a) - upload(b) || (a.seq ?? 0) - (b.seq ?? 0))
 			.at(0);
 		if (first === undefined) return undefined;
+		// As the engine read it: a row of a kind this version does not know is
+		// named as one it cannot read, not by a kind with no words for it.
+		const op = toSyncOp(first);
 		return {
-			op: first.op,
-			path: first.path,
-			attempts: first.attempts,
-			...(first.targetPath === undefined ? {} : { targetPath: first.targetPath }),
-			...(first.noteId === undefined ? {} : { noteId: first.noteId }),
+			op: op.op,
+			path: op.path,
+			attempts: op.attempts,
+			...(op.op === 'move' || op.op === 'move-file' ? { targetPath: op.targetPath } : {}),
+			...(op.op === 'write' || op.op === 'move' || op.op === 'delete'
+				? { noteId: op.noteId }
+				: {}),
 			...(first.lastError === undefined ? {} : { error: first.lastError }),
 		};
 	};
