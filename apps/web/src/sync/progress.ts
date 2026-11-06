@@ -9,7 +9,7 @@ import type { SyncProgress } from '@memoriam/core';
  *
  * As skysa-notes' `sync/progress.ts`.
  */
-export const PROGRESS_FROM = 20;
+const PROGRESS_FROM = 20;
 
 /**
  * A run long enough to count: what the status line in Settings gives a

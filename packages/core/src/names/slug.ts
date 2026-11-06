@@ -38,7 +38,7 @@ const LONE_SURROGATE = /\p{Surrogate}/gu;
 const RESERVED = /^(con|prn|aux|nul|(?:com|lpt)[0-9\u00b9\u00b2\u00b3])$/i;
 
 /** Filename for a passage with no usable title yet. */
-export const UNTITLED_SLUG = 'untitled';
+const UNTITLED_SLUG = 'untitled';
 
 /**
  * Two caps, and a name has to fit both.
@@ -98,13 +98,6 @@ export const slugify = (title: string): string => {
 	if (slug === '') return UNTITLED_SLUG;
 	return RESERVED.test(slug) ? `${slug}-passage` : slug;
 };
-
-/**
- * Same character rules, but a tag with nothing usable in it is dropped rather
- * than replaced by a placeholder — an empty tag is not a tag called `untitled`,
- * and a tag is not a filename, so reserved device names need no suffix here.
- */
-export const normalizeTag = (tag: string): string | undefined => toSlug(tag) || undefined;
 
 /**
  * Folder names are the collection names the user typed, and every provider

@@ -35,7 +35,7 @@ export interface PassageLine {
 	readonly words: readonly PassageWord[];
 }
 
-export interface Section {
+interface Section {
 	/** The `#` line above it, without the `#`. */
 	readonly label?: string;
 	readonly lines: readonly PassageLine[];

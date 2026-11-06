@@ -17,7 +17,7 @@ import { recall } from '../schedule/fsrs.js';
  */
 
 /** Stability, in days, at which a chunk counts as mastered. */
-export const MASTERED_STABILITY = 21;
+const MASTERED_STABILITY = 21;
 
 export interface Measure {
 	readonly words: number;

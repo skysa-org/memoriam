@@ -40,7 +40,7 @@ export const tasksOf = (steps: readonly Step[]): Task[] =>
 	);
 
 /** Where a task's words are in its passage. */
-export const spanOf = (task: Task, chunked: ChunkedPassage): Span | undefined =>
+const spanOf = (task: Task, chunked: ChunkedPassage): Span | undefined =>
 	'span' in task ? task.span : chunked.chunks[task.chunk];
 
 /** A chunk forgotten at review, relearnt once the reviews still to come are done. */

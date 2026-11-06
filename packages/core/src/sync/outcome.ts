@@ -9,7 +9,7 @@ import { isRateLimitError } from '../providers/types.js';
  * clipboard and its key file, have no counterpart here.
  */
 
-export type SyncStatus =
+type SyncStatus =
 	/** Everything queued reached the remote. */
 	| 'ok'
 	/** A token problem a refresh did not fix. The connection needs attention. */

@@ -14,14 +14,14 @@ import { cell } from '@memoriam/core';
  */
 
 /** Exactly what the callback can redirect with: `Outcome` in `apps/api/src/routes/connect.ts`. */
-export const CONNECT_OUTCOMES = ['ok', 'denied', 'failed', 'partial', 'expired'] as const;
+const CONNECT_OUTCOMES = ['ok', 'denied', 'failed', 'partial', 'expired'] as const;
 
 export type ConnectOutcome = (typeof CONNECT_OUTCOMES)[number];
 
 const PARAM = 'connect';
 
 /** Where the app opens once it has come back. */
-export const SETTINGS_HASH = '#/settings';
+const SETTINGS_HASH = '#/settings';
 
 /**
  * The outcome an address carries, and the address without it, at Settings.

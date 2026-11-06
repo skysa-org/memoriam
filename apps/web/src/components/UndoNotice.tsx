@@ -6,7 +6,7 @@ import { t } from '../i18n/t.js';
  * How long a delete can be taken back from here. Long enough to notice what has
  * gone and reach for the button.
  */
-export const UNDO_WINDOW_MS = 10_000;
+const UNDO_WINDOW_MS = 10_000;
 
 /** How soon after a touch a `mouseenter` is the touch's own, and not a mouse. */
 const TOUCH_ECHO_MS = 1000;

@@ -22,7 +22,7 @@
 		"db:generate": "pnpm --filter @memoriam/api run db:generate",
 		"db:migrate": "pnpm --filter @memoriam/api run db:migrate",
 		"db:migrate:remote": "pnpm --filter @memoriam/api run db:migrate:remote",
-		"verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+		"verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm knip && pnpm test",
 		"deploy": "pnpm typecheck && pnpm build && pnpm --filter @memoriam/api run deploy",
 		"changeset": "changeset",
 		"changeset:status": "changeset status",

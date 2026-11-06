@@ -89,7 +89,7 @@ export type SyncPhase =
  * also the one holding the queue up. Enough for the screen to name it and to
  * link to the passage it is about, without reading the queue itself.
  */
-export interface StuckOp {
+interface StuckOp {
 	/** `malformed` for a row this version cannot read (`toSyncOp`). */
 	readonly op: SyncOp['op'];
 	readonly path: string;
@@ -144,7 +144,7 @@ export interface SchedulerEnvironment {
 	readonly withLock: <T>(name: string, work: () => Promise<T>) => Promise<T>;
 }
 
-export const browserEnvironment = (): SchedulerEnvironment => ({
+const browserEnvironment = (): SchedulerEnvironment => ({
 	now: Date.now,
 	isOnline: () => navigator.onLine,
 	isVisible: () => document.visibilityState === 'visible',
@@ -168,7 +168,7 @@ export const browserEnvironment = (): SchedulerEnvironment => ({
 	withLock: (name, work) => ('locks' in navigator ? navigator.locks.request(name, work) : work()),
 });
 
-export interface ProviderInput {
+interface ProviderInput {
 	readonly connectionId: string;
 	readonly provider: ProviderKind;
 	/** The install's id, which the marker file reports. */

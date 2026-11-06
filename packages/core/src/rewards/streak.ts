@@ -16,19 +16,19 @@ import type { DayActivity } from './activity.js';
  * - today is never missed: it is not over.
  */
 
-export const MAX_FREEZES = 2;
+const MAX_FREEZES = 2;
 /** Days in a row that earn a freeze. */
-export const FREEZE_EVERY = 7;
+const FREEZE_EVERY = 7;
 /** Days after a miss in which a repair can be made. */
-export const REPAIR_DAYS = 2;
+const REPAIR_DAYS = 2;
 /** Practised days a usual day is measured over. */
 const USUAL_DAYS = 28;
 /** The fewest words a repair asks for. */
 export const REPAIR_FLOOR = 40;
 /** Days without practice that make coming back a comeback. */
-export const BREAK_DAYS = 7;
+const BREAK_DAYS = 7;
 /** Streak lengths worth marking: each a badge (`badges.ts`). */
-export const STREAK_MILESTONES = [7, 30, 100, 365] as const;
+const STREAK_MILESTONES = [7, 30, 100, 365] as const;
 
 /** How a day that was not practised was kept from breaking the streak. */
 export type Kept = 'freeze' | 'repair' | 'rest';

@@ -19,7 +19,7 @@ export const setPreference = async (
 	await db.prefs.put({ key, value });
 };
 
-export const INSTALL_DISMISSED_KEY = 'installDismissed';
+const INSTALL_DISMISSED_KEY = 'installDismissed';
 
 /**
  * Whether the banner offering to install the app has been dismissed on this

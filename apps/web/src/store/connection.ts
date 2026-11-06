@@ -57,7 +57,7 @@ export const boundConnection = async (
  * included — and its answer is not acted on (`sync/scheduler.ts`,
  * `sync/account.ts`). As skysa-notes counts them.
  */
-export const BINDINGS_KEY = 'sync.bindings';
+const BINDINGS_KEY = 'sync.bindings';
 
 export const bindingCount = (db: Pick<MemoriamDatabase, 'prefs'>): PromiseExtended<number> =>
 	db.prefs.get(BINDINGS_KEY).then((record) => Number(record?.value ?? 0));

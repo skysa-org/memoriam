@@ -11,7 +11,7 @@ import { UndoNotice } from './UndoNotice.js';
  */
 
 /** A change that can be taken back from a notice. */
-export interface Undoable {
+interface Undoable {
 	/** What was done, as the notice says it. */
 	readonly message: string;
 	readonly undo: () => Promise<unknown>;

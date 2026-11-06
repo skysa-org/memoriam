@@ -44,7 +44,7 @@ export interface ScheduleSettings {
 	readonly maxInterval: number;
 }
 
-export const DEFAULT_SCHEDULE: ScheduleSettings = {
+const DEFAULT_SCHEDULE: ScheduleSettings = {
 	retention: DEFAULT_RETENTION,
 	maxInterval: MAX_INTERVAL,
 };
