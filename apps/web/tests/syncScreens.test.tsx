@@ -20,6 +20,7 @@ import { createPassage, passageText, rowFor } from '../src/store/passages.js';
 import type { ConnectOutcome } from '../src/sync/connectReturn.js';
 import type { SchedulerStatus } from '../src/sync/scheduler.js';
 import { holdCredential } from './support/connection.js';
+import { over } from './support/database.js';
 import { freshDatabase } from './support/db.js';
 
 /**
@@ -104,13 +105,13 @@ afterEach(() => {
 
 const showSettings = (props: Parameters<typeof SyncSettings>[0]) => {
 	const rootRoute = createRootRoute({
-		component: () => <SyncSettings database={database} {...props} />,
+		component: () => <SyncSettings {...props} />,
 	});
 	const router = createRouter({
 		routeTree: rootRoute,
 		history: createMemoryHistory({ initialEntries: ['/'] }),
 	});
-	render(<RouterProvider router={router} />);
+	render(<RouterProvider router={router} />, over(database));
 };
 
 const bound = async () => {
@@ -424,7 +425,7 @@ describe('keeping the binding in step', () => {
 	it('takes up the connection a flow just consented to', async () => {
 		await beginConnect(database, 'dropbox');
 		const { client } = fakes();
-		render(<SyncKeeper database={database} client={client} scheduler={schedulerShowing()} />);
+		render(<SyncKeeper client={client} scheduler={schedulerShowing()} />, over(database));
 
 		await waitFor(async () => {
 			expect((await boundConnection(database))?.connectionId).toBe('c1');
@@ -443,10 +444,10 @@ describe('keeping the binding in step', () => {
 		const { client } = fakes({ ok: false, refusal: 'credential_revoked' });
 		render(
 			<SyncKeeper
-				database={database}
 				client={client}
 				scheduler={schedulerShowing({ phase: 'attention', refusal: 'credential_revoked' })}
-			/>
+			/>,
+			over(database)
 		);
 
 		await waitFor(async () => {
@@ -462,9 +463,7 @@ describe('keeping the binding in step', () => {
 			...client,
 			withCredential: () => ({ ...client, connection: unused }),
 		};
-		render(
-			<SyncKeeper database={database} client={unreachable} scheduler={schedulerShowing()} />
-		);
+		render(<SyncKeeper client={unreachable} scheduler={schedulerShowing()} />, over(database));
 
 		await new Promise((settle) => setTimeout(settle, 20));
 		expect(await boundConnection(database)).toBeDefined();

@@ -1,7 +1,9 @@
 import { localDay } from '@memoriam/core';
 
 import { noteExported } from '../store/backup.js';
-import { isLive, LOCAL_CONNECTION_ID, type MemoriamDatabase } from '../store/db.js';
+import { LOCAL_CONNECTION_ID, type MemoriamDatabase } from '../store/db.js';
+import { rowsOf } from '../store/rows.js';
+import { isLive } from '../store/rowStates.js';
 import { zipParts, type ZipWrite } from './zip.js';
 
 /**
@@ -18,12 +20,8 @@ export const libraryArchive = (
 	connectionId: string = LOCAL_CONNECTION_ID
 ): Promise<ZipWrite> =>
 	db.transaction('r', db.notes, db.folders, async () => {
-		const notes = await db.notes
-			.where('connectionId')
-			.equals(connectionId)
-			.filter(isLive)
-			.toArray();
-		const folders = await db.folders.where('connectionId').equals(connectionId).toArray();
+		const notes = await rowsOf(db.notes, connectionId).filter(isLive).toArray();
+		const folders = await rowsOf(db.folders, connectionId).toArray();
 		return zipParts(
 			[...notes]
 				.sort((a, b) => a.path.localeCompare(b.path) || a.id.localeCompare(b.id))

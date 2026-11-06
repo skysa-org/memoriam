@@ -2,13 +2,13 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 
 import { useCommand } from '../commands/context.js';
 import { ChunkedText } from '../components/ChunkedText.js';
-import { ErrorScreen } from '../components/ErrorScreen.js';
 import { Icon } from '../components/Icon.js';
 import { MasteryBar } from '../components/MasteryBar.js';
 import { MissingPassage } from '../components/MissingPassage.js';
 import { useNotices } from '../components/Notices.js';
+import { ErrorScreen } from '../components/shell/ErrorScreen.js';
 import { t } from '../i18n/t.js';
-import { db } from '../store/db.js';
+import { useDb } from '../store/database.js';
 import { usePassage } from '../store/hooks.js';
 import { deletePassage, restorePassages } from '../store/passages.js';
 import { useRewards } from '../store/rewards.js';
@@ -19,6 +19,7 @@ import { useRewards } from '../store/rewards.js';
  */
 
 const Passage = () => {
+	const db = useDb();
 	const { id } = Route.useParams();
 	const passage = usePassage(id);
 	const measure = useRewards()?.measures.get(id);

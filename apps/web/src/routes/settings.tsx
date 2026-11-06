@@ -3,11 +3,12 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useId } from 'react';
 
 import { Backup } from '../components/Backup.js';
-import { ErrorScreen } from '../components/ErrorScreen.js';
+import { ErrorScreen } from '../components/shell/ErrorScreen.js';
 import { SyncSettings } from '../components/SyncSettings.js';
 import { weekdayName } from '../i18n/dates.js';
 import { t } from '../i18n/t.js';
-import { db } from '../store/db.js';
+import { useDb } from '../store/database.js';
+import type { MemoriamDatabase } from '../store/db.js';
 import {
 	INTERVAL_CHOICES,
 	NEW_WORD_CHOICES,
@@ -23,11 +24,16 @@ import {
 const pick = <T extends number>(choices: readonly T[], value: string): T | undefined =>
 	choices.find((choice) => String(choice) === value);
 
-const save = <K extends keyof Settings>(key: K, value: Settings[K] | undefined) => {
+const save = <K extends keyof Settings>(
+	db: MemoriamDatabase,
+	key: K,
+	value: Settings[K] | undefined
+) => {
 	if (value !== undefined) void saveSetting(db, key, value);
 };
 
 const SettingsScreen = () => {
+	const db = useDb();
 	const settings = useSettings();
 	const id = useId();
 	if (settings === undefined) return <main className="screen" aria-busy="true" />;
@@ -59,7 +65,7 @@ const SettingsScreen = () => {
 					aria-describedby={hints.retention}
 					value={String(settings.retention)}
 					onChange={(event) => {
-						save('retention', pick(RETENTIONS, event.target.value));
+						save(db, 'retention', pick(RETENTIONS, event.target.value));
 					}}
 				>
 					{RETENTIONS.map((choice) => (
@@ -85,7 +91,7 @@ const SettingsScreen = () => {
 					aria-describedby={hints.newWords}
 					value={String(settings.newWords)}
 					onChange={(event) => {
-						save('newWords', pick(NEW_WORD_CHOICES, event.target.value));
+						save(db, 'newWords', pick(NEW_WORD_CHOICES, event.target.value));
 					}}
 				>
 					{NEW_WORD_CHOICES.map((choice) => (
@@ -106,7 +112,7 @@ const SettingsScreen = () => {
 					aria-describedby={hints.maxInterval}
 					value={String(settings.maxInterval)}
 					onChange={(event) => {
-						save('maxInterval', pick(INTERVAL_CHOICES, event.target.value));
+						save(db, 'maxInterval', pick(INTERVAL_CHOICES, event.target.value));
 					}}
 				>
 					{INTERVAL_CHOICES.map((choice) => (
@@ -127,7 +133,7 @@ const SettingsScreen = () => {
 						aria-describedby={hints.slips}
 						checked={settings.slips}
 						onChange={(event) => {
-							save('slips', event.target.checked);
+							save(db, 'slips', event.target.checked);
 						}}
 					/>
 					<label htmlFor={ids.slips}>{t('settings.slips.label')}</label>

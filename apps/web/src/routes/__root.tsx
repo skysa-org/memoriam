@@ -3,12 +3,12 @@ import { createRootRoute, Outlet } from '@tanstack/react-router';
 import { CommandsProvider, useShortcuts } from '../commands/context.js';
 import { AppCommands } from '../components/AppCommands.js';
 import { BadgeKeeper } from '../components/BadgeKeeper.js';
-import { ErrorScreen } from '../components/ErrorScreen.js';
-import { NavBar } from '../components/NavBar.js';
 import { NoticesProvider } from '../components/Notices.js';
+import { ErrorScreen } from '../components/shell/ErrorScreen.js';
+import { NavBar } from '../components/shell/NavBar.js';
+import { UpdatePrompt } from '../components/shell/UpdatePrompt.js';
 import { StorageKeeper } from '../components/StorageKeeper.js';
 import { SyncKeeper } from '../components/SyncKeeper.js';
-import { UpdatePrompt } from '../components/UpdatePrompt.js';
 import { InstallBanner } from '../install/InstallBanner.js';
 
 const Shortcuts = () => {

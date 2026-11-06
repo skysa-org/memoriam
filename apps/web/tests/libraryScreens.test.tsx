@@ -6,6 +6,8 @@ import { describe, expect, it } from 'vitest';
 import { createAppRouter } from '../src/router.js';
 import { db } from '../src/store/db.js';
 import { createPassage } from '../src/store/passages.js';
+import { over } from './support/database.js';
+import { freshDatabase } from './support/db.js';
 
 /**
  * The Library's screens, through the app's own router: adding a passage,
@@ -132,5 +134,34 @@ describe('the Library', () => {
 	it('says so when a passage is not there', async () => {
 		open('/passage/no-such-id');
 		expect(await screen.findByRole('heading', { name: 'Not in your library' })).toBeTruthy();
+	});
+});
+
+describe('the Library over a database of its own', () => {
+	it('adds, deletes and takes back there, and touches nothing in the app’s', async () => {
+		const own = freshDatabase();
+		const user = userEvent.setup();
+		const router = createAppRouter(createMemoryHistory({ initialEntries: ['/new'] }));
+		render(<RouterProvider router={router} />, over(own));
+
+		await user.type(await screen.findByRole('textbox', { name: 'Title' }), 'Ozymandias');
+		await user.type(
+			screen.getByRole('textbox', { name: 'Text' }),
+			'I met a traveller from an antique land'
+		);
+		await user.click(screen.getByRole('button', { name: 'Add to library' }));
+		expect(await screen.findByRole('heading', { name: 'Ozymandias' })).toBeTruthy();
+		const [added] = await own.notes.toArray();
+		expect(added?.title).toBe('Ozymandias');
+
+		await user.click(screen.getByRole('button', { name: 'Delete' }));
+		const notice = await screen.findByRole('status');
+		expect(await own.notes.count()).toBe(0);
+		await user.click(within(notice).getByRole('button', { name: 'Undo' }));
+		expect(await screen.findByRole('link', { name: /Ozymandias/ })).toBeTruthy();
+		expect(await own.notes.count()).toBe(1);
+
+		expect(await db.notes.count()).toBe(0);
+		expect(await db.prefs.count()).toBe(0);
 	});
 });

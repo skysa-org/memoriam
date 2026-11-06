@@ -11,15 +11,17 @@ import {
 
 import { t } from '../i18n/t.js';
 import {
+	type ConnectionScope,
 	type FolderRecord,
-	isLive,
 	LOCAL_CONNECTION_ID,
 	type MemoriamDatabase,
 	type NoteRecord,
-	writerTables,
 } from './db.js';
 import { buryOrDrop, restorePassages } from './passages.js';
 import { queueMkdir, queueMove, queueMoveFile, queueRmdir, withdrawMkdirs } from './queue.js';
+import { rowsOf } from './rows.js';
+import { isLive } from './rowStates.js';
+import { writerTables } from './scopes.js';
 
 /**
  * Collections: the folders of the library (docs/ARCHITECTURE.md §3). One is
@@ -35,10 +37,6 @@ import { queueMkdir, queueMove, queueMoveFile, queueRmdir, withdrawMkdirs } from
  * deletes that empty it.
  */
 
-export interface CollectionScope {
-	connectionId?: string;
-}
-
 /** What naming a collection came to. */
 export type Named =
 	| Readonly<{ ok: true; path: string }>
@@ -51,10 +49,8 @@ export const collectionPath = (name: string): string =>
 
 /** Every collection there is: the rows, and the folders passages are in. */
 const takenPaths = async (db: MemoriamDatabase, connectionId: string): Promise<string[]> => {
-	const folders = await db.folders.where('connectionId').equals(connectionId).toArray();
-	const notes = (await db.notes.where('connectionId').equals(connectionId).toArray()).filter(
-		isLive
-	);
+	const folders = await rowsOf(db.folders, connectionId).toArray();
+	const notes = (await rowsOf(db.notes, connectionId).toArray()).filter(isLive);
 	return [
 		...folders.map((folder) => folder.path),
 		...notes.map((note) => parentPath(note.path)).filter((path) => path !== ROOT),
@@ -121,7 +117,7 @@ export const ensureCollections = async (
 export const createCollection = (
 	db: MemoriamDatabase,
 	name: string,
-	{ connectionId = LOCAL_CONNECTION_ID }: CollectionScope = {},
+	{ connectionId = LOCAL_CONNECTION_ID }: ConnectionScope = {},
 	now: number = Date.now()
 ): Promise<Named> =>
 	db.transaction('rw', writerTables(db), async () => {
@@ -145,7 +141,7 @@ export const renameCollection = (
 	db: MemoriamDatabase,
 	from: string,
 	name: string,
-	{ connectionId = LOCAL_CONNECTION_ID }: CollectionScope = {}
+	{ connectionId = LOCAL_CONNECTION_ID }: ConnectionScope = {}
 ): Promise<Named> =>
 	db.transaction('rw', writerTables(db), async () => {
 		const to = collectionPath(name);
@@ -155,15 +151,15 @@ export const renameCollection = (
 		const existing = takenBy(others, to);
 		if (existing !== undefined) return { ok: false, reason: 'exists', path: existing } as const;
 
-		const leaving = (
-			await db.folders.where('connectionId').equals(connectionId).toArray()
-		).filter((folder) => isWithin(folder.path, from));
+		const leaving = (await rowsOf(db.folders, connectionId).toArray()).filter((folder) =>
+			isWithin(folder.path, from)
+		);
 		// By path, so the moves go in an order that can be told in advance.
-		const notes = (await db.notes.where('connectionId').equals(connectionId).toArray())
+		const notes = (await rowsOf(db.notes, connectionId).toArray())
 			.filter((note) => isWithin(note.path, from))
 			.sort((a, b) => a.path.localeCompare(b.path));
-		const files = (await db.files.where('connectionId').equals(connectionId).toArray()).filter(
-			(file) => isWithin(file.path, from)
+		const files = (await rowsOf(db.files, connectionId).toArray()).filter((file) =>
+			isWithin(file.path, from)
 		);
 		await db.folders.bulkDelete(leaving.map((folder) => [connectionId, folder.path]));
 		// Without their `remoteId`: the directory that id names is still at the
@@ -218,13 +214,13 @@ export interface RemovedCollection {
 export const deleteCollection = (
 	db: MemoriamDatabase,
 	path: string,
-	{ connectionId = LOCAL_CONNECTION_ID }: CollectionScope = {}
+	{ connectionId = LOCAL_CONNECTION_ID }: ConnectionScope = {}
 ): Promise<RemovedCollection> =>
 	db.transaction('rw', writerTables(db), async () => {
-		const folders = (
-			await db.folders.where('connectionId').equals(connectionId).toArray()
-		).filter((folder) => isWithin(folder.path, path));
-		const passages = (await db.notes.where('connectionId').equals(connectionId).toArray())
+		const folders = (await rowsOf(db.folders, connectionId).toArray()).filter((folder) =>
+			isWithin(folder.path, path)
+		);
+		const passages = (await rowsOf(db.notes, connectionId).toArray())
 			.filter(isLive)
 			.filter((note) => isWithin(note.path, path));
 		await db.folders.bulkDelete(folders.map((folder) => [connectionId, folder.path]));

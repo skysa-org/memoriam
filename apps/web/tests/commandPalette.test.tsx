@@ -11,7 +11,7 @@ import {
 	useShortcuts,
 } from '../src/commands/context.js';
 import { createCommandRegistry, reachable } from '../src/commands/registry.js';
-import { CommandPalette } from '../src/components/CommandPalette.js';
+import { CommandPalette } from '../src/components/shell/CommandPalette.js';
 
 /**
  * The registry exists so that one list serves both the keyboard and the
@@ -127,6 +127,49 @@ describe('the registry', () => {
 		// And the chord it held goes with it.
 		await userEvent.keyboard('{Meta>}k{/Meta}');
 		expect(run).not.toHaveBeenCalled();
+	});
+});
+
+describe('a command declared with a new `run` each render', () => {
+	it('is not registered again, so the palette is not told of a change', () => {
+		// A screen that does not memoise its handlers hands over a fresh `run`
+		// on every render, and the palette would draw itself again each time.
+		const seen = new Set<readonly unknown[]>();
+		const Lists = () => {
+			seen.add(useCommands());
+			return null;
+		};
+		const shown = (run: () => void) => (
+			<CommandsProvider>
+				<Declares id="a" run={run} />
+				<Lists />
+			</CommandsProvider>
+		);
+		const { rerender } = render(shown(() => undefined));
+		const before = seen.size;
+
+		rerender(shown(() => undefined));
+		rerender(shown(() => undefined));
+
+		expect(seen.size).toBe(before);
+	});
+
+	it('runs the latest one', async () => {
+		const first = vi.fn();
+		const latest = vi.fn();
+		const shown = (run: () => void) => (
+			<CommandsProvider>
+				<Declares id="a" run={run} />
+				<Shortcuts />
+			</CommandsProvider>
+		);
+		const { rerender } = render(shown(first));
+		rerender(shown(latest));
+
+		await userEvent.keyboard('{Meta>}k{/Meta}');
+
+		expect(latest).toHaveBeenCalledOnce();
+		expect(first).not.toHaveBeenCalled();
 	});
 });
 
@@ -497,6 +540,26 @@ describe('the palette as a dialog', () => {
 		button.focus();
 		return button;
 	};
+
+	it('closes on a press begun and let go on the page around it, as a dialog does', async () => {
+		const user = userEvent.setup();
+		const { onClose } = openOver(focused());
+		const backdrop = document.querySelector<HTMLElement>('.palette-backdrop');
+		if (backdrop === null) throw new Error('no backdrop');
+
+		// Begun there and let go on the palette: not a press outside, and the
+		// field keeps the focus, so Escape still closes it.
+		await user.pointer([
+			{ keys: '[MouseLeft>]', target: backdrop },
+			{ target: screen.getByRole('dialog') },
+			{ keys: '[/MouseLeft]' },
+		]);
+		expect(onClose).not.toHaveBeenCalled();
+		expect(document.activeElement).toBe(screen.getByRole('combobox'));
+
+		await user.click(backdrop);
+		expect(onClose).toHaveBeenCalledOnce();
+	});
 
 	it('gives focus back to whatever had it, when it closes having done nothing', () => {
 		// Removing the focused element does not return focus where it came from:

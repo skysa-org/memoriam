@@ -11,14 +11,8 @@ import {
 } from '@memoriam/core';
 import { useLiveQuery } from 'dexie-react-hooks';
 
-import {
-	db as appDatabase,
-	isLive,
-	LOCAL_CONNECTION_ID,
-	type MemoriamDatabase,
-	type NoteRecord,
-	writerTables,
-} from './db.js';
+import { useDb } from './database.js';
+import { LOCAL_CONNECTION_ID, type MemoriamDatabase, type NoteRecord } from './db.js';
 import {
 	buryOrDrop,
 	type Edited,
@@ -28,6 +22,9 @@ import {
 	updatePassage,
 } from './passages.js';
 import { queueMove, queueWrite } from './queue.js';
+import { rowsOf } from './rows.js';
+import { isLive } from './rowStates.js';
+import { writerTables } from './scopes.js';
 
 /**
  * Passages changed in two places at once (docs/ARCHITECTURE.md §10,
@@ -97,14 +94,13 @@ export const linesAgainst = (
 };
 
 /** The library's conflicts, live; `undefined` while they are read. */
-export const useConflicts = (database: MemoriamDatabase = appDatabase): Conflict[] | undefined =>
-	useLiveQuery(
-		async () =>
-			conflictsIn(
-				await database.notes.where('connectionId').equals(LOCAL_CONNECTION_ID).toArray()
-			),
-		[database]
+export const useConflicts = (): Conflict[] | undefined => {
+	const db = useDb();
+	return useLiveQuery(
+		async () => conflictsIn(await rowsOf(db.notes, LOCAL_CONNECTION_ID).toArray()),
+		[db]
 	);
+};
 
 /** What a choice came to, and how to take it back. */
 export type Resolved =
@@ -245,7 +241,7 @@ export const keepOrphan = (db: MemoriamDatabase, copyId: string): Promise<Edited
 		const copy = await db.notes.get([LOCAL_CONNECTION_ID, copyId]);
 		if (copy === undefined || !isLive(copy)) return { ok: false, reason: 'missing' } as const;
 		const folder = parentPath(copy.path);
-		const taken = (await db.notes.where('connectionId').equals(LOCAL_CONNECTION_ID).toArray())
+		const taken = (await rowsOf(db.notes, LOCAL_CONNECTION_ID).toArray())
 			.filter(
 				(row) =>
 					isLive(row) &&

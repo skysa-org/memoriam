@@ -24,10 +24,11 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { type ReactNode, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 
 import { Icon } from '../components/Icon.js';
-import { COARSE_POINTER, useMediaQuery } from '../components/layout.js';
 import { useNotices } from '../components/Notices.js';
+import { COARSE_POINTER, useMediaQuery } from '../components/ui/layout.js';
 import { t } from '../i18n/t.js';
-import { db } from '../store/db.js';
+import { useDb } from '../store/database.js';
+import type { MemoriamDatabase } from '../store/db.js';
 import { deviceId } from '../store/device.js';
 import { recordPass, recordPractice, usualPace } from '../store/practice.js';
 import type { Readied } from '../store/schedule.js';
@@ -177,6 +178,7 @@ const after = (
 
 /** A pass that has ended, written down: its chunk's progress, if it has one, and the day's practice. */
 const record = async (
+	db: MemoriamDatabase,
 	{
 		task,
 		passage,
@@ -329,6 +331,7 @@ export const Session = ({
 	/** Told once, as the last task is done. */
 	onFinish?: (tally: Tally) => void;
 }>) => {
+	const db = useDb();
 	const [run, setRun] = useState<Run>(() => {
 		const opening = firstPass(tasks, passages);
 		return {
@@ -343,7 +346,7 @@ export const Session = ({
 			started: false,
 		};
 	});
-	const pace = useLiveQuery(() => usualPace(db), []);
+	const pace = useLiveQuery(() => usualPace(db), [db]);
 	const touch = useMediaQuery(COARSE_POINTER);
 	const options = useMemo(
 		() => ({
@@ -403,13 +406,13 @@ export const Session = ({
 			graded,
 			settings,
 		};
-		void record(ended, new Date()).then(({ progress, problems }) => {
+		void record(db, ended, new Date()).then(({ progress, problems }) => {
 			if (progress !== undefined) setSaved({ count, progress });
 			problems.forEach((problem) => {
 				notices.tell(problem);
 			});
 		});
-	}, [done, pass, passage, summary, run.count, state.results, graded, settings, notices]);
+	}, [db, done, pass, passage, summary, run.count, state.results, graded, settings, notices]);
 
 	/** Start a pass: the input keeps the focus, and the clock starts. */
 	const begin = (next: Pass, queue: readonly Task[], more: Partial<Run> = {}) => {

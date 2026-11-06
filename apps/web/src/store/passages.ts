@@ -20,13 +20,15 @@ import {
 
 import { ensureCollections } from './collections.js';
 import {
-	isLive,
+	type ConnectionScope,
 	LOCAL_CONNECTION_ID,
 	type MemoriamDatabase,
 	type NoteRecord,
-	writerTables,
 } from './db.js';
 import { isBound, queueDelete, queueMove, queueRestore, queueWrite } from './queue.js';
+import { rowsOf } from './rows.js';
+import { isLive } from './rowStates.js';
+import { writerTables } from './scopes.js';
 
 /**
  * Passages: adding one, editing its words and details, deleting it and taking
@@ -44,10 +46,6 @@ import { isBound, queueDelete, queueMove, queueRestore, queueWrite } from './que
  * the delete has been sent (`NoteRecord.deletedLocally`). Its name is free at
  * once, and nothing here will edit one.
  */
-
-export interface PassageScope {
-	connectionId?: string;
-}
 
 /** What the editor gives: a passage's words and the details around them. */
 export interface PassageDetails {
@@ -212,14 +210,11 @@ const namesIn = (rows: readonly NoteRecord[], folder: string, except?: string): 
 		)
 		.map((row) => basename(row.path));
 
-const rowsOf = (db: MemoriamDatabase, connectionId: string): Promise<NoteRecord[]> =>
-	db.notes.where('connectionId').equals(connectionId).toArray();
-
 /** Add a passage. */
 export const createPassage = (
 	db: MemoriamDatabase,
 	details: PassageDetails,
-	{ connectionId = LOCAL_CONNECTION_ID }: PassageScope = {},
+	{ connectionId = LOCAL_CONNECTION_ID }: ConnectionScope = {},
 	now: number = Date.now()
 ): Promise<NoteRecord> =>
 	db.transaction('rw', writerTables(db), async () => {
@@ -227,7 +222,7 @@ export const createPassage = (
 		const title = chosenTitle(details);
 		const reference = details.reference.trim();
 		const stamp = new Date(now).toISOString();
-		const taken = namesIn(await rowsOf(db, connectionId), details.collection);
+		const taken = namesIn(await rowsOf(db.notes, connectionId).toArray(), details.collection);
 		const row = rowFor({
 			id,
 			connectionId,
@@ -336,7 +331,7 @@ export const updatePassage = (
 	db: MemoriamDatabase,
 	id: string,
 	details: PassageDetails,
-	{ connectionId = LOCAL_CONNECTION_ID }: PassageScope = {},
+	{ connectionId = LOCAL_CONNECTION_ID }: ConnectionScope = {},
 	now: number = Date.now()
 ): Promise<Edited> =>
 	db.transaction('rw', writerTables(db), async () => {
@@ -361,7 +356,11 @@ export const updatePassage = (
 		});
 		if (source === undefined) return { ok: false, reason: 'unreadable' } as const;
 
-		const taken = namesIn(await rowsOf(db, connectionId), details.collection, id);
+		const taken = namesIn(
+			await rowsOf(db.notes, connectionId).toArray(),
+			details.collection,
+			id
+		);
 		const name = basename(row.path);
 		const keepsName = !retitled && !taken.some((each) => foldName(each) === foldName(name));
 		const written = rowFor(
@@ -394,7 +393,7 @@ export const updatePassage = (
 export const deletePassage = (
 	db: MemoriamDatabase,
 	id: string,
-	{ connectionId = LOCAL_CONNECTION_ID }: PassageScope = {}
+	{ connectionId = LOCAL_CONNECTION_ID }: ConnectionScope = {}
 ): Promise<NoteRecord | undefined> =>
 	db.transaction('rw', writerTables(db), async () => {
 		const row = await db.notes.get([connectionId, id]);
@@ -503,7 +502,7 @@ export const restorePassages = (
 			.map((each) => each.row)
 			.filter((row) => was.get(row.id)?.remoteId !== undefined);
 		const held = new Set(keeping.map((row) => foldName(row.path)));
-		const live = (await rowsOf(db, connectionId)).filter(isLive);
+		const live = (await rowsOf(db.notes, connectionId).toArray()).filter(isLive);
 		const inTheWay = live.filter((row) => held.has(foldName(row.path)));
 		const settled = live.filter((row) => !held.has(foldName(row.path)));
 		const aside = freePaths([...settled, ...keeping], inTheWay);

@@ -2,13 +2,13 @@ import type { Measure } from '@memoriam/core';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState } from 'react';
 
-import { ConfirmDialog } from '../components/ConfirmDialog.js';
 import { ConflictsBanner } from '../components/ConflictsBanner.js';
-import { ErrorScreen } from '../components/ErrorScreen.js';
 import { Icon } from '../components/Icon.js';
 import { MasteryBar } from '../components/MasteryBar.js';
-import { NameDialog } from '../components/NameDialog.js';
 import { useNotices } from '../components/Notices.js';
+import { ErrorScreen } from '../components/shell/ErrorScreen.js';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog.js';
+import { NameDialog } from '../components/ui/NameDialog.js';
 import { t } from '../i18n/t.js';
 import {
 	createCollection,
@@ -16,7 +16,8 @@ import {
 	renameCollection,
 	restoreCollection,
 } from '../store/collections.js';
-import { db, type NoteRecord } from '../store/db.js';
+import { useDb } from '../store/database.js';
+import type { NoteRecord } from '../store/db.js';
 import { useLibrary } from '../store/hooks.js';
 import { collectionName, type CollectionView } from '../store/library.js';
 import { useRewards } from '../store/rewards.js';
@@ -54,6 +55,7 @@ type Asking =
 	| Readonly<{ kind: 'delete'; collection: CollectionView }>;
 
 const Library = () => {
+	const db = useDb();
 	const library = useLibrary();
 	const measures = useRewards()?.measures;
 	const notices = useNotices();

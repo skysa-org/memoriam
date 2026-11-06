@@ -13,12 +13,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createCollection, deleteCollection, renameCollection } from '../src/store/collections.js';
 import { bindLibrary } from '../src/store/connection.js';
-import {
-	isLive,
-	LOCAL_CONNECTION_ID,
-	type MemoriamDatabase,
-	type NoteRecord,
-} from '../src/store/db.js';
+import { LOCAL_CONNECTION_ID, type MemoriamDatabase, type NoteRecord } from '../src/store/db.js';
 import {
 	createPassage,
 	deletePassage,
@@ -28,6 +23,7 @@ import {
 	updatePassage,
 } from '../src/store/passages.js';
 import { recordPass } from '../src/store/practice.js';
+import { isLive } from '../src/store/rowStates.js';
 import { createDexieSyncStore } from '../src/sync/store.js';
 import { freshDatabase } from './support/db.js';
 

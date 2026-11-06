@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { exportLibrary } from '../archive/exportLibrary.js';
 import { t } from '../i18n/t.js';
 import { snoozeBackup, useBackupReminder } from '../store/backup.js';
-import { db } from '../store/db.js';
+import { useDb } from '../store/database.js';
 import { Icon } from './Icon.js';
 import { useNotices } from './Notices.js';
 
@@ -13,6 +13,7 @@ import { useNotices } from './Notices.js';
  * shows; only an export that could not be made is said here.
  */
 export const BackupReminder = () => {
+	const db = useDb();
 	const reminder = useBackupReminder();
 	const notices = useNotices();
 	const [busy, setBusy] = useState(false);
