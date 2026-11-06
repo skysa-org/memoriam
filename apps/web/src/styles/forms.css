@@ -1,0 +1,90 @@
+/* ---- Forms ---------------------------------------------------------------- */
+
+.field-row {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2xs);
+	margin-block-end: var(--space-l);
+}
+
+.field-row label {
+	font-weight: 500;
+}
+
+.field {
+	width: 100%;
+	min-height: 2.5rem;
+	padding: var(--space-xs) var(--space-m);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-s);
+	background: var(--surface-raised);
+	/* 16px at least, or iOS zooms the page in on focus. */
+	font-size: max(var(--text-body), var(--text-field-floor));
+}
+
+select.field {
+	padding-inline-end: var(--space-xl);
+}
+
+/* A box to tick, beside what it says. */
+.field-check {
+	display: flex;
+	align-items: center;
+	gap: var(--space-s);
+}
+
+.field-check input {
+	width: 1.25rem;
+	height: 1.25rem;
+	margin: 0;
+	accent-color: var(--brand);
+}
+
+.field[aria-invalid='true'] {
+	border-color: var(--bad);
+}
+
+textarea.field {
+	resize: vertical;
+	line-height: 1.6;
+}
+
+.passage-field {
+	font-family: var(--font-text);
+	font-size: max(var(--text-l), var(--text-field-floor));
+}
+
+.field-hint {
+	margin: 0;
+	color: var(--muted);
+	font-size: var(--text-m);
+	line-height: 1.5;
+}
+
+.field-problem,
+.form-problem {
+	margin: var(--space-xs) 0 0;
+	padding: var(--space-xs) var(--space-m);
+	border-inline-start: 4px solid var(--bad);
+	border-radius: var(--radius-s);
+	background: color-mix(in srgb, var(--bad) 10%, transparent);
+	font-size: var(--text-m);
+}
+
+.form-problem {
+	margin-block-end: var(--space-l);
+}
+
+.form-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-s);
+}
+
+.modal .field {
+	margin-block-end: var(--space-l);
+}
+
+.modal .field-problem {
+	margin-block: calc(-1 * var(--space-s)) var(--space-l);
+}

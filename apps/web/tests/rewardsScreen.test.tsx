@@ -86,9 +86,14 @@ describe('Progress', () => {
 		open('/');
 		await user.click(await screen.findByRole('link', { name: 'Progress' }));
 		expect(await screen.findByText('3 days in a row')).toBeTruthy();
-		expect(
-			screen.getByRole('img', { name: 'Practice over the last 26 weeks: 3 days practised.' })
-		).toBeTruthy();
+		const heatmap = screen.getByRole('img', {
+			name: 'Practice over the last 26 weeks: 3 days practised.',
+		});
+		// Each day says how much by an attribute, which the stylesheet colours.
+		const practisedDays = [...heatmap.querySelectorAll<HTMLElement>('.heatmap-cell')].filter(
+			(cell) => cell.dataset.level !== '0'
+		);
+		expect(practisedDays).toHaveLength(3);
 		expect(screen.getByText('First passage learnt')).toBeTruthy();
 		expect(screen.getAllByText('Not yet earned').length).toBeGreaterThan(0);
 	});
@@ -127,7 +132,7 @@ describe('the passage’s page', () => {
 		open(`/passage/${passage.id}`);
 		const marked = await screen.findByTitle('Missed 3 times');
 		expect(marked.textContent).toBe('wept');
-		expect(marked.className).toContain('heat-2');
+		expect(marked.dataset.heat).toBe('2');
 		// The line still reads as it is written.
 		expect(marked.closest('.passage-line')?.textContent).toBe('Jesus wept.');
 	});

@@ -1,0 +1,59 @@
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--fg);
+	-webkit-font-smoothing: antialiased;
+	-webkit-text-size-adjust: 100%;
+}
+
+body {
+	min-height: 100dvh;
+}
+
+a {
+	color: var(--brand);
+}
+
+button,
+input,
+select,
+textarea {
+	font: inherit;
+	color: inherit;
+}
+
+button,
+a {
+	-webkit-tap-highlight-color: transparent;
+}
+
+/* One focus ring for every control, shown for the keyboard and not for a tap. */
+:where(button, a, input, select, textarea, [role='button']):focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 1px;
+}
+
+:where(button, a, input, select, textarea, [role='button']) {
+	transition-property: color, background-color, border-color, box-shadow, opacity;
+	transition-duration: var(--duration-state);
+	transition-timing-function: var(--ease-out);
+}
+
+@keyframes arrive {
+	from {
+		opacity: 0;
+		translate: 0 var(--arrive-y, 0);
+		scale: var(--arrive-scale, 1);
+	}
+}
+
+@keyframes dim-in {
+	from {
+		background-color: transparent;
+	}
+}

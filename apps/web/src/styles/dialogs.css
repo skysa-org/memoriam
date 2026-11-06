@@ -1,0 +1,66 @@
+/* ---- Dialogs ------------------------------------------------------------ */
+
+/* A wrapper only so there is something to make inert; it must not become a box. */
+.tab-gate {
+	display: contents;
+}
+
+.tab-notice-backdrop,
+.modal-backdrop {
+	position: fixed;
+	inset: 0;
+	z-index: var(--z-dialog);
+	display: grid;
+	place-items: center;
+	padding: var(--space-l);
+	background: rgb(0 0 0 / 0.4);
+	animation: dim-in var(--duration-l) var(--ease-out);
+}
+
+.tab-notice,
+.modal {
+	width: 100%;
+	max-width: 28rem;
+	padding: 1.25rem var(--space-xl);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-m);
+	background: var(--surface-raised);
+	box-shadow: var(--shadow-l);
+	line-height: 1.6;
+	--arrive-y: 0.5rem;
+	--arrive-scale: 0.98;
+	animation: arrive var(--duration-l) var(--ease-out);
+}
+
+.tab-notice h2,
+.modal h2 {
+	margin: 0 0 var(--space-s);
+	font-size: var(--text-l);
+}
+
+.tab-notice button {
+	padding: var(--space-xs) var(--space-m);
+}
+
+.tab-notice-actions,
+.modal-actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: var(--space-s);
+}
+
+.tab-stale-bar {
+	inset-block-start: var(--space-l);
+	inset-block-end: auto;
+}
+
+/* On a phone the bar of screens is along the bottom, and what is raised from
+   the bottom is raised above it. After `notices.css`, to come after where each
+   is placed. */
+@media (max-width: 48rem) {
+	.update-prompt,
+	.toast-stack {
+		inset-block-end: calc(4.5rem + env(safe-area-inset-bottom));
+	}
+}

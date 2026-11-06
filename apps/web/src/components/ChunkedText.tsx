@@ -50,7 +50,8 @@ const Line = ({
 						word.text
 					) : (
 						<span
-							className={`passage-missed heat-${String(heatOf(count))}`}
+							className="passage-missed"
+							data-heat={heatOf(count)}
 							title={t('passage.missed', { count })}
 						>
 							{word.text}

@@ -1,0 +1,163 @@
+/* ---- Progress ------------------------------------------------------------- */
+
+.stats-card {
+	margin-block-end: var(--space-l);
+	padding: var(--space-l);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-m);
+	background: var(--surface-raised);
+}
+
+.stats-card h2 {
+	margin: 0 0 var(--space-m);
+	font-size: var(--text-body);
+}
+
+.stats-card p {
+	display: flex;
+	align-items: center;
+	gap: var(--space-xs);
+	margin: 0 0 var(--space-xs);
+}
+
+.stats-card p.field-hint {
+	display: block;
+}
+
+.stats-big {
+	font-size: var(--text-xl);
+	font-weight: 600;
+}
+
+.stats-big .icon-glyph {
+	color: var(--flame);
+}
+
+.stats-totals,
+.stats-passages {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.stats-totals {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+	gap: var(--space-s);
+}
+
+.stats-passages li {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2xs);
+	padding-block: var(--space-s);
+}
+
+.stats-passages li + li {
+	border-block-start: 1px solid var(--border);
+}
+
+.heatmap {
+	margin: 0;
+}
+
+/* A column a week, a row a day: it fills the card at any width. */
+.heatmap-grid {
+	display: grid;
+	grid-auto-flow: column;
+	grid-template-rows: repeat(7, auto);
+	gap: var(--space-3xs);
+}
+
+.heatmap-cell {
+	display: block;
+	aspect-ratio: 1;
+	border-radius: var(--radius-xs);
+	background: var(--surface);
+}
+
+.heatmap-cell[data-level='1'] {
+	background: color-mix(in srgb, var(--brand) 25%, var(--surface));
+}
+
+.heatmap-cell[data-level='2'] {
+	background: color-mix(in srgb, var(--brand) 50%, var(--surface));
+}
+
+.heatmap-cell[data-level='3'] {
+	background: color-mix(in srgb, var(--brand) 75%, var(--surface));
+}
+
+.heatmap-cell[data-level='4'] {
+	background: var(--brand);
+}
+
+/* Kept without practice: outlined, not filled. */
+.heatmap-cell[data-kept] {
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand) 60%, transparent);
+}
+
+.heatmap-legend {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: var(--space-3xs);
+	margin-block-start: var(--space-s);
+	color: var(--muted);
+	font-size: var(--text-xs);
+}
+
+.heatmap-legend .heatmap-cell {
+	width: 0.75rem;
+}
+
+.heatmap-legend span:first-child {
+	margin-inline-end: var(--space-2xs);
+}
+
+.heatmap-legend span:last-child {
+	margin-inline-start: var(--space-2xs);
+}
+
+.badge-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+	gap: var(--space-s);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.badge {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2xs);
+	padding: var(--space-m);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-s);
+}
+
+.badge.earned {
+	border-color: color-mix(in srgb, var(--brand) 40%, var(--border));
+	background: var(--brand-wash);
+}
+
+.badge.earned .icon-glyph {
+	color: var(--brand);
+}
+
+.badge.locked .icon-glyph {
+	color: var(--muted);
+	opacity: 0.5;
+}
+
+.badge-name {
+	font-weight: 600;
+}
+
+.badge-how,
+.badge-when {
+	color: var(--muted);
+	font-size: var(--text-s);
+	line-height: 1.4;
+}
