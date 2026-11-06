@@ -5,7 +5,7 @@ import type { FakeProvider } from '../../src/providers/fake.js';
 import { createGDriveProvider } from '../../src/providers/gdrive/index.js';
 import type { FetchLike } from '../../src/providers/http.js';
 import { createOneDriveProvider } from '../../src/providers/onedrive.js';
-import { decodeText, responseBytes, uploadType } from '../../src/providers/text.js';
+import { decodeText, responseBytes, uploadType, withoutNul } from '../../src/providers/text.js';
 import {
 	isUnreadableError,
 	type StorageProvider,
@@ -87,6 +87,18 @@ const trickled = (body: Uint8Array, init: ResponseInit): Response => {
 	});
 	return new Response(stream, init);
 };
+
+describe('withoutNul', () => {
+	it('drops every U+0000 and nothing else', () => {
+		expect(withoutNul('a\u0000b\u0000\u0000c\u0001')).toBe('abc\u0001');
+		expect(withoutNul(WIDE)).toBe(WIDE);
+	});
+
+	it('leaves text `decodeText` reads back as it was', () => {
+		const saved = withoutNul('The Lord\u0000 is my shepherd\n');
+		expect(decodeText(new TextEncoder().encode(saved), 'a.md')).toBe(saved);
+	});
+});
 
 describe('responseBytes', () => {
 	it('reads a character split across network chunks as one character', async () => {

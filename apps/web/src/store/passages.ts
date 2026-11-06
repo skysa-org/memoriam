@@ -16,6 +16,7 @@ import {
 	toLf,
 	uniqueFilename,
 	UNTITLED_TITLE,
+	withoutNul,
 } from '@memoriam/core';
 
 import { ensureCollections } from './collections.js';
@@ -92,6 +93,18 @@ export const titleFromText = (text: string): string => {
 		.join(' ')
 		.replace(/[\p{P}\s]+$/u, '');
 };
+
+/**
+ * The details as they may be saved: without a U+0000. A paste can carry one,
+ * and a passage holding one would be unreadable to every device that pulled
+ * its file, this one included (`withoutNul`).
+ */
+const savable = (details: PassageDetails): PassageDetails => ({
+	...details,
+	title: withoutNul(details.title),
+	reference: withoutNul(details.reference),
+	text: withoutNul(details.text),
+});
 
 const chosenTitle = (details: PassageDetails): string =>
 	details.title.trim() || titleFromText(details.text) || UNTITLED_TITLE;
@@ -213,11 +226,12 @@ const namesIn = (rows: readonly NoteRecord[], folder: string, except?: string): 
 /** Add a passage. */
 export const createPassage = (
 	db: MemoriamDatabase,
-	details: PassageDetails,
+	typed: PassageDetails,
 	{ connectionId = LOCAL_CONNECTION_ID }: ConnectionScope = {},
 	now: number = Date.now()
 ): Promise<NoteRecord> =>
 	db.transaction('rw', writerTables(db), async () => {
+		const details = savable(typed);
 		const id = crypto.randomUUID();
 		const title = chosenTitle(details);
 		const reference = details.reference.trim();
@@ -330,11 +344,12 @@ const editedSource = (
 export const updatePassage = (
 	db: MemoriamDatabase,
 	id: string,
-	details: PassageDetails,
+	typed: PassageDetails,
 	{ connectionId = LOCAL_CONNECTION_ID }: ConnectionScope = {},
 	now: number = Date.now()
 ): Promise<Edited> =>
 	db.transaction('rw', writerTables(db), async () => {
+		const details = savable(typed);
 		const row = await db.notes.get([connectionId, id]);
 		if (row === undefined || !isLive(row)) return { ok: false, reason: 'missing' } as const;
 

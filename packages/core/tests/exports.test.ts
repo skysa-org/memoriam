@@ -99,6 +99,7 @@ const SURFACE = [
 	'toLf',
 	'typing',
 	'uniqueFilename',
+	'withoutNul',
 	'writeProgress',
 ];
 

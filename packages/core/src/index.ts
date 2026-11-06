@@ -35,6 +35,7 @@ export type { FetchLike } from './providers/http.js';
 export { createGDriveProvider } from './providers/gdrive/index.js';
 
 export { createOneDriveProvider } from './providers/onedrive.js';
+export { withoutNul } from './providers/text.js';
 
 export { mergeFile } from './sync/merge.js';
 
