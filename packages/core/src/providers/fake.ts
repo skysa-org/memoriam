@@ -215,6 +215,16 @@ export const createFakeProvider = (options: FakeProviderOptions = {}): FakeProvi
 		return nodes.get(normalizePath(ref.path));
 	};
 
+	/**
+	 * The root as the entry to delete or move, by its path or its id:
+	 * refused as every adapter refuses it (`refuseRoot` in `adapter.ts`).
+	 */
+	const refuseRoot = (ref: EntryRef): void => {
+		if (normalizePath(ref.path) === ROOT || ref.remoteId === rootEntry().remoteId) {
+			throw new NotFoundError(ROOT);
+		}
+	};
+
 	const isFolder = (path: string): boolean => path === ROOT || nodes.get(path)?.kind === 'folder';
 
 	const requireParent = (path: string): void => {
@@ -416,6 +426,7 @@ export const createFakeProvider = (options: FakeProviderOptions = {}): FakeProvi
 
 	const move = (ref: EntryRef, newPath: string): Promise<RemoteEntry> =>
 		settle('move', ref.path, () => {
+			refuseRoot(ref);
 			const node = resolve(ref);
 			if (node === undefined) throw new NotFoundError(ref.path);
 
@@ -460,6 +471,7 @@ export const createFakeProvider = (options: FakeProviderOptions = {}): FakeProvi
 
 	const remove = (ref: EntryRef): Promise<void> =>
 		settle('delete', ref.path, () => {
+			refuseRoot(ref);
 			const node = resolve(ref);
 			// Idempotent: a push queue that crashed mid-drain must be replayable.
 			if (node === undefined) return;
