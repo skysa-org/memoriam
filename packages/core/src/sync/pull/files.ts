@@ -6,8 +6,8 @@ import { rebaseThrough, survives } from './replay.js';
  * The files that are not notes, as a pull's decisions leave them: where each
  * row is and where its file is (`FilePlace`), from the rows the batch starts
  * from (`FileBase`), one decision at a time as the store applies it
- * (`placedFiles`). What the engine replays to ask where a file is before
- * anything is applied (`filesNow` in `engine.ts`).
+ * (`placedFiles`). What the pull replays to ask where a file is before
+ * anything is applied (`filesNow` in `attachments.ts`).
  */
 
 /**
