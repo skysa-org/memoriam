@@ -8,6 +8,8 @@ import { readActivity } from '../../src/rewards/activity.js';
 import { createSyncEngine, type MergeInput } from '../../src/sync/engine.js';
 import { mergeFile } from '../../src/sync/merge.js';
 import type { SyncStore } from '../../src/sync/store.js';
+import { entryAt } from './kit/remote.js';
+import { editHere } from './kit/userActions.js';
 import { createMemoryStore, type MemoryStore } from './memoryStore.js';
 
 /**
@@ -120,10 +122,10 @@ describe('the engine, merging', () => {
 		await engine.pull();
 		const note = noteAt('two.md');
 		if (note === undefined) throw new Error('not pulled');
-		store.put({ ...note, content: local, dirty: true });
-		store.queue({ op: 'write', noteId: note.id, path: 'two.md' });
-		const there = provider.snapshot().find((node) => node.path === 'two.md');
-		await provider.write('two.md', remote, { expectedVersion: there?.version ?? '' });
+		editHere(store, note, local);
+		await provider.write('two.md', remote, {
+			expectedVersion: entryAt(provider, 'two.md').version,
+		});
 		return engine;
 	};
 
