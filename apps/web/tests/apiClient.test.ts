@@ -6,7 +6,7 @@ import { ApiError, createApiClient, type FetchLike } from '../src/api/client.js'
  * The typed client for `apps/api` (docs/ARCHITECTURE.md §10, "The sync
  * client"): what it sends, and how it reads what comes back. Ported from
  * skysa-notes' `tests/apiClient.test.ts`, less the operator's gate, its connect
- * codes, the change relay and the policy's word beside a `not_entitled`.
+ * codes, the change relay and the policy's `not_entitled`.
  */
 
 /** A `fetch` that answers every request with this status and body. */
@@ -30,17 +30,14 @@ describe('the API client', () => {
 		});
 	});
 
-	it('answers a not_entitled as the refusal alone, whatever else the body says', async () => {
+	it('throws on a not_entitled, which this server has no policy to answer', async () => {
 		const { fetch } = answering(403, {
 			error: 'not_entitled',
 			code: 'lapsed',
 			reason: 'Your plan ended on 3 May.',
 		});
 
-		expect(await createApiClient({ fetch }).token()).toEqual({
-			ok: false,
-			refusal: 'not_entitled',
-		});
+		await expect(createApiClient({ fetch }).token()).rejects.toBeInstanceOf(ApiError);
 	});
 
 	it('asks after the one connection its credential reaches, presenting it', async () => {

@@ -1,3 +1,4 @@
+import { PROVIDER_KINDS } from '@memoriam/core';
 import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 /**
@@ -23,7 +24,7 @@ export const connections = sqliteTable(
 	'storage_connections',
 	{
 		id: text('id').primaryKey(),
-		provider: text('provider', { enum: ['gdrive', 'onedrive', 'dropbox'] }).notNull(),
+		provider: text('provider', { enum: PROVIDER_KINDS }).notNull(),
 		/**
 		 * The provider's own id for the account this connection points at, and the
 		 * only identity a connection has. `NOT NULL`, because it is the upsert

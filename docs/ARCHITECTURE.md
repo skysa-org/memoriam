@@ -729,8 +729,8 @@ differs:
 - **No change relay, and no connect gate.** skysa-notes' server can run a relay, which tells a
   device as soon as another has pushed, and an operator's gate in front of connecting: a message,
   a code its policy checks, and the reasons beside a refusal. Memoriam's server has neither. So
-  the client has no relay tickets, no connect code, no gate, and no reasons beside
-  `not_entitled`. A device hears of another's changes at its next sync: on opening, on focus, on
+  the client has no relay tickets, no connect code and no gate, and does not read `not_entitled`.
+  A device hears of another's changes at its next sync: on opening, on focus, on
   coming into view, and every minute while in view.
 - **Credentials** are skysa-notes':
   - `sk1_` and 32 random bytes, made by the device, written down before the browser leaves for
@@ -800,11 +800,28 @@ It mints access tokens from the refresh token, lists the devices holding a conne
 any of them out. The one Worker serves the app as well, so `/api` and the app share an origin.
 `docs/self-hosting.md` says how to run one. Where it differs:
 - **No entitlement policy.** skysa-notes asks an operator's policy at the callback and at
-  `/token`. Memoriam does not: every account that connects may sync, and `not_entitled` is never
-  the answer. The rate-limit seam stays, in `apps/api/src/limits.ts` rather than core, and ships
+  `/token`. Memoriam does not: every account that connects may sync, and there is no
+  `not_entitled` to answer. The rate-limit seam stays, in `apps/api/src/limits.ts` rather than core, and ships
   `neverLimited`.
 - **No connect gate, connect codes or change relay**, as the client has none ("The sync client").
 - **No `AUTH_MODE` and no WebDAV.**
+- **Routes get what they need once.** `createApp` builds one `RouteDeps` (the config, the rate
+  limiter, the provider `fetch` and the keys) and hands it to every router; a request carries only
+  its database. Each route that acts on a connection mounts `requireBearer` itself, typed
+  `AuthedEnv`, so one that forgot it has no `bearer` to read. A path under `/api/connection` that
+  is not a route answers 404, not 401.
+- **Signing out the last device takes the account with it, in one transaction.** The grant is
+  nulled and the connection no live grant reaches is deleted in one `db.batch` (`revokeGrant` in
+  `apps/api/src/db/connections.ts`). As two statements, a sign-out cut off between them left the
+  row: a sealed refresh token that no credential reaches, and so nothing can use or revoke.
+- **Each provider's settings are named once**, in `OAUTH_ENV` in `apps/api/src/env.ts`, keyed by
+  the flows in `oauth/providers.ts`. A provider added to one and not the other does not compile.
+  The schema, the boot check and the credentials `createApp` is handed all read it. What the
+  providers whose grant carries an ID token do alike is one test (`tests/oauthContract.test.ts`).
+- **One list of error codes.** Every refusal is `{ error }` with a code from core's
+  `API_ERROR_CODES` (`packages/core/src/api.ts`), and goes out through `fail` in
+  `apps/api/src/http.ts`. The client's refusals are a part of that list, so the two ends cannot
+  drift. A test reads the server's source for an error written by hand.
 - **One migration.** The schema starts as skysa-notes' seven migrations leave it, less the two
   tables nothing reads (`users` and `identities`), in a single `0000_init.sql`.
 - **Tests** run the real drizzle D1 driver over Node's `node:sqlite`, as skysa-notes' do. A
@@ -818,6 +835,11 @@ any of them out. The one Worker serves the app as well, so `/api` and the app sh
   its place. So `main.tsx` reads the outcome out of the real query before the router is made, puts
   the address back without it, and opens Settings (`sync/connectReturn.ts`). Settings says the
   outcome once.
+- **The callback never answers in JSON**, since a browser is on it. With no flow of this browser's
+  it sends it to `/?connect=expired`. Any other failure goes back to the flow's path with
+  `?connect=failed`, and is logged: a provider turned off since the flow started, a callback with
+  neither a code nor an error, or the callback's rate limit. These are checked after the flow, so
+  asking again is told the same. `/start` is a fetch from the app, and still answers them in JSON.
 - **Keeping the binding in step** (`components/SyncKeeper.tsx`, in the root layout). Once a page
   load, it takes up a connection a flow has just consented to, or asks after the bound one
   (`claimConnection`). When the scheduler is told the credential reaches nothing, it asks again,
@@ -929,9 +951,15 @@ packages/core/         framework-free TypeScript: browser, Node and Workers
     markdown/          frontmatter/ in split, read and write (from skysa-notes), passage files
 apps/api/              the Worker (S5): OAuth, per-connection credentials, tokens, grants
   src/
+    app.ts             createApp(options); reads no environment
+    worker.ts          the default Worker entry, which reads the environment through env.ts
+    context.ts         AppEnv (a request's bindings and db), AuthedEnv (+ bearer), RouteDeps
     routes/            connect, token, connections
-    oauth/             Dropbox, OneDrive, Google Drive
-    db/                the D1 schema (drizzle)
+    oauth/             Dropbox, OneDrive, Google Drive, and what the three share (common.ts)
+    db/                the D1 schema (drizzle), and the writes with a race to get right
+    flowCookies.ts     the signed OAuth flow cookies (there are no sessions)
+    http.ts            fail(), tooMany, requireSameOrigin, jsonBody
+    json.ts            parseJson (outside JSON checked by a zod schema), formatIssues
   migrations/          generated by drizzle-kit, applied by wrangler
 docs/
   ARCHITECTURE.md      this file

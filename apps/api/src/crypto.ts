@@ -1,3 +1,7 @@
+import { z } from 'zod';
+
+import { parseJson } from './json.js';
+
 /**
  * AES-256-GCM over the secrets in D1: an OAuth refresh token. Web Crypto only —
  * the Worker runs without `nodejs_compat` (skysa-notes' `docs/ARCHITECTURE.md`
@@ -26,9 +30,9 @@ const toBase64 = (bytes: Uint8Array): string =>
 	btoa(Array.from(bytes, (byte) => String.fromCharCode(byte)).join(''));
 
 /**
- * Accepts base64 and base64url alike, padded or not. `env.ts` normalizes the
- * same way before checking `SECRETS_KEY`'s length, and the two had better agree:
- * a key this rejects but the validator accepts is a deployment that passes its
+ * Accepts base64 and base64url alike, padded or not. `env.ts` checks
+ * `SECRETS_KEY`'s length with this same decoder, since the two must agree: a
+ * key this rejects but the validator accepts is a deployment that passes its
  * boot check and then fails every request.
  */
 const fromBase64 = (value: string): Uint8Array => {
@@ -88,6 +92,27 @@ export const open = async (secret: SecretKey, sealed: SealedSecret): Promise<str
 	return new TextDecoder().decode(plaintext);
 };
 
+/** The three columns a connection's sealed secret is stored in. */
+export interface SecretColumns {
+	secretCiphertext: string;
+	secretIv: string;
+	secretKeyId: string;
+}
+
+/** A connection row's sealed secret, as `open` takes it. */
+export const sealedOf = (row: SecretColumns): SealedSecret => ({
+	ciphertext: row.secretCiphertext,
+	iv: row.secretIv,
+	keyId: row.secretKeyId,
+});
+
+/** A sealed secret, as a connection row stores it. */
+export const secretColumns = (sealed: SealedSecret): SecretColumns => ({
+	secretCiphertext: sealed.ciphertext,
+	secretIv: sealed.iv,
+	secretKeyId: sealed.keyId,
+});
+
 /** What an OAuth connection stores. */
 export interface OAuthSecret {
 	refreshToken: string;
@@ -96,14 +121,32 @@ export interface OAuthSecret {
 export const sealOAuthSecret = (secret: SecretKey, value: OAuthSecret): Promise<SealedSecret> =>
 	seal(secret, JSON.stringify(value));
 
+/**
+ * Every OAuth connection stored since the first release holds this and nothing
+ * else. An empty token would only be refused at the provider, as something
+ * other than a lapsed grant, and asked again: refused here, it asks for a
+ * reconnect.
+ */
+const oauthSecretSchema = z.object({
+	refreshToken: z.string().min(1),
+}) satisfies z.ZodType<OAuthSecret>;
+
+/** The secret a row seals; a throw, as a key that cannot open it is, where it is not one. */
 export const openOAuthSecret = async (
 	secret: SecretKey,
 	sealed: SealedSecret
-): Promise<OAuthSecret> => JSON.parse(await open(secret, sealed)) as OAuthSecret;
+): Promise<OAuthSecret> => {
+	const value = parseJson(await open(secret, sealed), oauthSecretSchema);
+	if (value === undefined) throw new Error('The sealed secret is not an OAuth secret');
+	return value;
+};
+
+/** Base64 made URL-safe and unpadded: what a query string, OAuth and cookies want. */
+export const urlSafe = (base64: string): string =>
+	base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
 /** URL-safe base64 without padding, which is what OAuth and cookies both want. */
-export const toBase64Url = (bytes: Uint8Array): string =>
-	toBase64(bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+export const toBase64Url = (bytes: Uint8Array): string => urlSafe(toBase64(bytes));
 
 /**
  * base64url in, bytes out. The same decoder as plain base64 — `fromBase64`

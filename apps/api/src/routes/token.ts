@@ -1,12 +1,12 @@
-import { eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 
-import type { AppEnv } from '../app.js';
-import { openOAuthSecret, sealOAuthSecret } from '../crypto.js';
-import { schema } from '../db/client.js';
+import type { AppEnv, RouteDeps } from '../context.js';
+import { openOAuthSecret, sealedOf, sealOAuthSecret } from '../crypto.js';
+import { recordRefresh } from '../db/connections.js';
+import { fail, requireBearer, tooMany } from '../http.js';
 import { logFailure } from '../log.js';
 import { oauthFor } from '../oauth/providers.js';
-import { type FetchLike, isGrantRefused } from '../oauth/types.js';
+import { isGrantRefused } from '../oauth/types.js';
 
 /**
  * Minting a provider access token for the client, which then talks to the
@@ -19,43 +19,37 @@ import { type FetchLike, isGrantRefused } from '../oauth/types.js';
  * request would be a second answer to a question already settled.
  */
 
-export const tokenRoutes = (doFetch: FetchLike) => {
+export const tokenRoutes = (deps: RouteDeps) => {
+	const { config, rateLimiter, fetch: doFetch, keys } = deps;
 	const app = new Hono<AppEnv>();
 
-	app.post('/token', async (c) => {
+	app.post('/token', requireBearer, async (c) => {
 		const db = c.get('db');
-		const config = c.get('config');
 		const { connection } = c.get('bearer');
 
 		// A refresh is an outbound provider call, so it is throttleable too —
 		// keyed on the connection, since holding a credential is already the
 		// price of asking.
-		const limit = await c.get('rateLimiter').check(`token:${connection.id}`);
-		if (!limit.allowed) {
-			if (limit.retryAfter !== undefined) {
-				c.header('Retry-After', String(Math.ceil(limit.retryAfter)));
-			}
-			return c.json({ error: 'rate_limited' }, 429);
-		}
+		const limit = await rateLimiter.check(`token:${connection.id}`);
+		if (!limit.allowed) return tooMany(c, limit.retryAfter);
 
 		// skysa-notes asks an entitlement policy here. Memoriam has none: every
-		// connected device may mint tokens, so `not_entitled` is never the answer.
+		// connected device may mint tokens, so there is no `not_entitled` to answer.
 
 		// A connection to a provider the operator has since turned off cannot be
 		// refreshed from here, whatever the reason; the operator has to act.
 		const resolved = oauthFor(config, connection.provider);
-		if (!resolved.ok) return c.json({ error: 'provider_not_configured' }, 501);
+		if (!resolved.ok) return fail(c, 'provider_not_configured', 501);
 		const { client, credentials } = resolved;
 
 		// A row sealed under a key this deployment no longer holds cannot be
 		// recovered here, and the client can do nothing about it by retrying. It
 		// is the same answer as a revoked grant: reconnect.
-		const secret = await openOAuthSecret(c.get('secretKey'), {
-			ciphertext: connection.secretCiphertext,
-			iv: connection.secretIv,
-			keyId: connection.secretKeyId,
-		}).catch(() => undefined);
-		if (secret === undefined) return c.json({ error: 'reauthorize_required' }, 401);
+		const { secretKey } = await keys();
+		const secret = await openOAuthSecret(secretKey, sealedOf(connection)).catch(
+			() => undefined
+		);
+		if (secret === undefined) return fail(c, 'reauthorize_required', 401);
 
 		const refreshed = await client
 			.refreshAccessToken(doFetch, credentials, { refreshToken: secret.refreshToken })
@@ -66,14 +60,14 @@ export const tokenRoutes = (doFetch: FetchLike) => {
 		// can retry its way out of, so say so plainly and let the UI ask for a
 		// reconnect rather than looping.
 		if (!refreshed.ok && isGrantRefused(refreshed.error)) {
-			return c.json({ error: 'reauthorize_required' }, 401);
+			return fail(c, 'reauthorize_required', 401);
 		}
 		// Anything else is not the user's to fix: an expired client secret, a
 		// provider outage, a timeout. Logged, since otherwise nothing would say
 		// so, and answered as a failure the client retries.
 		if (!refreshed.ok) {
 			logFailure('token refresh failed', refreshed.error);
-			return c.json({ error: 'provider_unavailable' }, 502);
+			return fail(c, 'provider_unavailable', 502);
 		}
 		const { tokens } = refreshed;
 
@@ -83,21 +77,9 @@ export const tokenRoutes = (doFetch: FetchLike) => {
 		const rotated =
 			tokens.refreshToken === undefined || tokens.refreshToken === secret.refreshToken
 				? undefined
-				: await sealOAuthSecret(c.get('secretKey'), { refreshToken: tokens.refreshToken });
+				: await sealOAuthSecret(secretKey, { refreshToken: tokens.refreshToken });
 
-		await db
-			.update(schema.connections)
-			.set({
-				lastUsedAt: new Date(),
-				...(rotated === undefined
-					? {}
-					: {
-							secretCiphertext: rotated.ciphertext,
-							secretIv: rotated.iv,
-							secretKeyId: rotated.keyId,
-						}),
-			})
-			.where(eq(schema.connections.id, connection.id));
+		await recordRefresh(db, connection.id, rotated, Date.now());
 
 		return c.json({ accessToken: tokens.accessToken, expiresAt: tokens.expiresAt });
 	});

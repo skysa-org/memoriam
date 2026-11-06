@@ -16,6 +16,8 @@ export {
 	type ProviderKind,
 } from './config.js';
 
+export { API_ERROR_CODES, type ApiErrorCode } from './api.js';
+
 export { type Cell, cell } from './cell.js';
 
 export {
