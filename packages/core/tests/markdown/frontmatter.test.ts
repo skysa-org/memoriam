@@ -4,11 +4,14 @@ import { parseDocument } from 'yaml';
 import {
 	joinFrontmatter,
 	readFrontmatter,
+	readPassageMetadata,
+	readPassageTimes,
 	splitFrontmatter,
 	writeFrontmatter,
-} from '../../src/markdown/frontmatter.js';
+} from '../../src/markdown/frontmatter/index.js';
 import { type LineEnding, withLineEnding } from '../../src/markdown/lineEndings.js';
 import { serializePassageFile } from '../../src/markdown/passage.js';
+import { mulberry32 } from '../support/random.js';
 
 describe('splitFrontmatter', () => {
 	it('splits a fenced YAML mapping from the body', () => {
@@ -1068,17 +1071,6 @@ describe('writeFrontmatter, where lifting a pair out by line is not enough', () 
  * is the same failure on every machine, and names the seed it came from.
  */
 describe('writeFrontmatter, over blocks put together at random', () => {
-	// https://gist.github.com/tommyettinger/46a874533244883189143505d203312c
-	const mulberry32 = (seed: number): (() => number) => {
-		let state = seed;
-		return () => {
-			state = (state + 0x6d2b79f5) | 0;
-			const a = Math.imul(state ^ (state >>> 15), 1 | state);
-			const b = (a + Math.imul(a ^ (a >>> 7), 61 | a)) ^ a;
-			return ((b ^ (b >>> 14)) >>> 0) / 4294967296;
-		};
-	};
-
 	/** Ways a file spells each key; `null` is the key left out. */
 	const SPELLINGS: Readonly<Record<string, readonly (string | null)[]>> = {
 		id: [null, 'id: abc', 'id: "abc"', 'id: 0123 # mine', 'id:'],
@@ -1210,6 +1202,25 @@ describe('writeFrontmatter, over blocks put together at random', () => {
 			}
 
 			expect(writeFrontmatter(written, patch), `again, ${about}`).toBe(written);
+		});
+	});
+});
+
+describe('readPassageMetadata', () => {
+	it.each([
+		null,
+		'',
+		'title: Psalm 23\nid: abc\ntags: [psalms, kjv]\nsource: King James Version',
+		'created: 2026-01-02T03:04:05Z\nmodified: 2026-02-03',
+		'date created: 2024-05-06\nlastmod: not a time\nupdated: 2025-01-01',
+		'chunker: 1\nprogress:\n  c1: { due: 2026-03-01 }',
+		'title: [unclosed',
+		'- just\n- a list',
+		'id: 202409141302\ntitle: Zettel',
+	])('reads %j as readFrontmatter and readPassageTimes each do', (block) => {
+		expect(readPassageMetadata(block)).toEqual({
+			fields: readFrontmatter(block),
+			times: readPassageTimes(block),
 		});
 	});
 });

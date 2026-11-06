@@ -1,4 +1,4 @@
-import type { ProgressBlock } from '../markdown/frontmatter.js';
+import type { ProgressBlock } from '../markdown/frontmatter/index.js';
 import {
 	type ChunkProgress,
 	type Progress,

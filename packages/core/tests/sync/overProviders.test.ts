@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { PASSAGE_EXTENSION } from '../../src/config.js';
-import { foldName } from '../../src/markdown/slug.js';
+import { conflictFilePath } from '../../src/names/conflicts.js';
+import { isPassageName } from '../../src/names/fold.js';
 import {
 	ancestorPaths,
 	basename,
@@ -15,12 +15,12 @@ import { createFakeProvider, type FakeProvider } from '../../src/providers/fake.
 import { createGDriveProvider } from '../../src/providers/gdrive.js';
 import { createOneDriveProvider } from '../../src/providers/onedrive.js';
 import type { StorageProvider } from '../../src/providers/types.js';
-import { conflictFilePath } from '../../src/sync/conflicts.js';
 import { createSyncEngine, type SyncEngine, type SyncOutcome } from '../../src/sync/engine.js';
 import type { SyncNote } from '../../src/sync/store.js';
 import { createDropboxStub } from '../providers/dropboxStub.js';
 import { createGDriveStub } from '../providers/gdriveStub.js';
 import { createOneDriveStub } from '../providers/onedriveStub.js';
+import { mulberry32 } from '../support/random.js';
 import { createMemoryStore, type MemoryStore } from './memoryStore.js';
 
 /**
@@ -439,9 +439,6 @@ const remoteFiles = (remote: Remote): Record<string, string> =>
 			})
 	);
 
-/** A note, by the engine's rule: `.md`, in any case. */
-const isNotePath = (path: string): boolean => foldName(path).endsWith(PASSAGE_EXTENSION);
-
 /**
  * The files the remote holds that no device can read, which each device lists
  * for its user instead (skysa-notes' docs/ARCHITECTURE.md §7). Only what would have been a note.
@@ -453,7 +450,7 @@ const remoteUnreadable = (remote: Remote): string[] =>
 			(entry) =>
 				entry.kind === 'file' &&
 				!isHidden(entry.path) &&
-				isNotePath(entry.path) &&
+				isPassageName(entry.path) &&
 				remote.backing.contentAt(entry.path) === undefined
 		)
 		.map((entry) => entry.path)
@@ -473,7 +470,7 @@ const remoteAttachments = (remote: Remote): Place[] =>
 	remote.backing
 		.snapshot()
 		.filter(
-			(entry) => entry.kind === 'file' && !isHidden(entry.path) && !isNotePath(entry.path)
+			(entry) => entry.kind === 'file' && !isHidden(entry.path) && !isPassageName(entry.path)
 		)
 		.map((entry) => ({ path: entry.path, remoteId: entry.remoteId, size: entry.size }))
 		.sort(byPlace);
@@ -1122,17 +1119,6 @@ describe.each(REMOTES)('the engine over %s', (_, make) => {
 
 // ---------------------------------------------------------------- the soak
 
-/** mulberry32: small, seedable, and the same on every machine. */
-const random = (seed: number): (() => number) => {
-	const state = { value: seed >>> 0 };
-	return () => {
-		state.value = (state.value + 0x6d2b79f5) >>> 0;
-		const t1 = Math.imul(state.value ^ (state.value >>> 15), 1 | state.value);
-		const t2 = (t1 + Math.imul(t1 ^ (t1 >>> 7), 61 | t1)) ^ t1;
-		return ((t2 ^ (t2 >>> 14)) >>> 0) / 4294967296;
-	};
-};
-
 const PATHS = ['a.md', 'b.md', 'c.md', 'Work/d.md', 'Work/e.md'];
 /** Where the soak adds files: beside the notes, and in each notebook. */
 const FILE_FOLDERS = ['', 'Work', 'Play', 'Work/Inner'];
@@ -1162,10 +1148,10 @@ const NOTEBOOKS = ['Work', 'Play', 'Work/Inner'];
  * device deleted, while that note still pointed at the deleted file, may go.
  */
 const createSoak = (seed: number, devices: readonly Device[], attaching = false) => {
-	const next = random(seed);
+	const next = mulberry32(seed);
 	// Files are added on a stream of their own, so the seeds without them
 	// take the same steps they always have.
-	const nextFile = random(seed ^ 0x5bd1e995);
+	const nextFile = mulberry32(seed ^ 0x5bd1e995);
 	const tokens: string[] = [];
 	const files: string[] = [];
 	const doomed = new Set<string>();

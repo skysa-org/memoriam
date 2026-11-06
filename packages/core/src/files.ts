@@ -1,17 +1,10 @@
-import { extensionAt, foldName } from './markdown/slug.js';
+import { extensionOf } from './names/extension.js';
 
 /**
  * Files in the library that are not passages. The app writes none yet, but a
  * user may keep one in the library's folder, and sync mirrors it as the
  * provider lists it (docs/ARCHITECTURE.md §10).
  */
-
-/**
- * A file's extension, folded, without its dot: `Photo.PNG` is `png`. Empty
- * where there is none, a hidden file's leading dot included.
- */
-export const extensionOf = (name: string): string =>
-	foldName(name.slice(extensionAt(name)).slice(1));
 
 /**
  * The type to tell a provider a file is, as it is uploaded, by its name. This

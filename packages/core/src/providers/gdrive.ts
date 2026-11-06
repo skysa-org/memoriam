@@ -1,14 +1,15 @@
 import { z } from 'zod';
 
-import { APP_FOLDER_NAME, MARKER_FILE, PASSAGE_EXTENSION } from '../config.js';
-import { foldName } from '../markdown/slug.js';
+import { APP_FOLDER_NAME, MARKER_FILE } from '../config.js';
+import { asObject, parseJson } from '../json.js';
 import { buildMarker, serializeMarker } from '../marker.js';
-import { basename, joinPath, normalizePath, parentPath, pathSegments, ROOT } from '../paths.js';
 import {
 	conflictFilename,
 	conflictFolderName,
 	conflictNameKeepingExtension,
-} from '../sync/conflicts.js';
+} from '../names/conflicts.js';
+import { isPassageName } from '../names/fold.js';
+import { basename, joinPath, normalizePath, parentPath, pathSegments, ROOT } from '../paths.js';
 import type { FetchLike } from './dropbox.js';
 import {
 	applyItem,
@@ -246,9 +247,6 @@ const byAge = (files: readonly DriveFile[]): DriveFile[] =>
 
 const earliest = (files: readonly DriveFile[]): DriveFile | undefined => byAge(files)[0];
 
-/** A note by its name, folded as the engine asks it (`decide`), so `Report.MD` is one. */
-const isNoteName = (name: string): boolean => foldName(name).endsWith(PASSAGE_EXTENSION);
-
 /**
  * Two files at one name with the same bytes: one is a copy of the other, and
  * the copy can go to the trash without anything of the user's going with it.
@@ -264,7 +262,7 @@ const isNoteName = (name: string): boolean => foldName(name).endsWith(PASSAGE_EX
 const sameBytes = (canonical: DriveFile, other: DriveFile): boolean =>
 	!isFolder(canonical) &&
 	!isFolder(other) &&
-	!isNoteName(other.name ?? '') &&
+	!isPassageName(other.name ?? '') &&
 	canonical.md5Checksum !== undefined &&
 	canonical.md5Checksum === other.md5Checksum &&
 	canonical.size === other.size;
@@ -277,7 +275,7 @@ const sameBytes = (canonical: DriveFile, other: DriveFile): boolean =>
  */
 const nameBeside = (file: DriveFile, name: string, at: Date, taken: readonly string[]): string => {
 	if (isFolder(file)) return conflictFolderName(name, at, taken);
-	return isNoteName(name)
+	return isPassageName(name)
 		? conflictFilename(name, at, taken)
 		: conflictNameKeepingExtension(name, at, taken);
 };
@@ -376,14 +374,7 @@ const cursorSchema = z.object({
 type DriveCursor = z.infer<typeof cursorSchema>;
 
 const parseCursor = (cursor: string): DriveCursor => {
-	const parsed = ((): unknown => {
-		try {
-			return JSON.parse(cursor);
-		} catch {
-			return undefined;
-		}
-	})();
-	const result = cursorSchema.safeParse(parsed);
+	const result = cursorSchema.safeParse(parseJson(cursor));
 	if (!result.success) throw new CursorResetError('gdrive cursor is not one this adapter wrote');
 	return result.data;
 };
@@ -434,16 +425,8 @@ export const createGDriveProvider = (options: GDriveProviderOptions): StoragePro
 
 	const failureOf = async (response: Response): Promise<DriveFailure> => {
 		const text = await response.text().catch(() => '');
-		const parsed = ((): {
-			error?: { message?: unknown; errors?: unknown; status?: unknown };
-		} => {
-			try {
-				const value: unknown = JSON.parse(text);
-				return typeof value === 'object' && value !== null ? value : {};
-			} catch {
-				return {};
-			}
-		})();
+		const parsed: { error?: { message?: unknown; errors?: unknown; status?: unknown } } =
+			asObject(parseJson(text));
 		const errors = Array.isArray(parsed.error?.errors)
 			? (parsed.error.errors as unknown[])
 			: [];
