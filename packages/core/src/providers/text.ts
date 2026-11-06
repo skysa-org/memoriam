@@ -11,9 +11,8 @@ import { UnreadableError } from './types.js';
  *
  * Nor is text holding a U+0000. UTF-16 without a BOM, and most binaries, are
  * valid UTF-8 as far as a decoder is concerned, with a NUL for every other
- * byte, and markdown never carries one. Nothing the app saves strips one yet,
- * so a passage that took one in from a paste or an import would be refused
- * here too, on every device that pulled it.
+ * byte, and markdown never carries one. The app strips them from what it
+ * saves (`withoutNul`), so the rule cannot turn on a passage of its own.
  *
  * A UTF-8 BOM is dropped, as `response.text()` dropped it, so the hashes of
  * files already synced do not move. `ignoreBOM` stays false, and is said
@@ -33,6 +32,15 @@ export const decodeText = (bytes: ArrayBuffer | Uint8Array, path: string): strin
 	})();
 	return text.includes('\u0000') ? unreadable() : text;
 };
+
+/**
+ * Text as this app may save it: without the U+0000 `decodeText` refuses. A NUL
+ * is never markdown, but a paste can carry one, and a passage pushed with it
+ * would be unreadable to every device that pulled the file, this one included.
+ * So what the app writes never holds one, and the rule above can only ever
+ * turn on a file some other tool made.
+ */
+export const withoutNul = (text: string): string => text.replaceAll('\u0000', '');
 
 /** `type/subtype`, as RFC 6838 spells the two names, and nothing else. */
 const MEDIA_TYPE = /^[a-z0-9][a-z0-9!#$&^_.+-]*\/[a-z0-9][a-z0-9!#$&^_.+-]*$/;
