@@ -1,6 +1,6 @@
-import { type PassageWord, type Shown, type Typing } from '@memoriam/core';
+import type { PassageWord, Shown, Typing } from '@memoriam/core';
 
-import { type ShownLine } from '../components/shownPassage.js';
+import type { ShownLine } from '../components/shownPassage.js';
 
 /**
  * A chunk being typed: each word as far as the pass has got (docs/ARCHITECTURE.md

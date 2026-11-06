@@ -1,4 +1,4 @@
-import { type ProviderKind } from '@memoriam/core';
+import type { ProviderKind } from '@memoriam/core';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
 
@@ -16,7 +16,7 @@ import {
 } from '../sync/account.js';
 import { type ConnectOutcome, connectReturn as appConnectReturn } from '../sync/connectReturn.js';
 import { syncScheduler, useSyncStatus } from '../sync/runtime.js';
-import { type SchedulerStatus, type SyncScheduler } from '../sync/scheduler.js';
+import type { SchedulerStatus, SyncScheduler } from '../sync/scheduler.js';
 import { ConfirmDialog } from './ConfirmDialog.js';
 import { ConflictsBanner } from './ConflictsBanner.js';
 import { Icon } from './Icon.js';

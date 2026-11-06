@@ -8,7 +8,7 @@ import {
 } from 'ts-fsrs';
 
 import { addDays, instant, localDay } from '../day.js';
-import { type Grade } from '../practice/grade.js';
+import type { Grade } from '../practice/grade.js';
 import { type ChunkProgress, MAX_LEVEL } from '../progress/codec.js';
 
 /**

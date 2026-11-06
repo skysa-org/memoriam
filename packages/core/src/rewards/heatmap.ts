@@ -1,6 +1,6 @@
 import { addDays, daysBetween, weekday } from '../day.js';
-import { type DayActivity } from './activity.js';
-import { type Kept } from './streak.js';
+import type { DayActivity } from './activity.js';
+import type { Kept } from './streak.js';
 
 /**
  * Practice by the day, as weeks of cells (docs/ARCHITECTURE.md §6): each day's

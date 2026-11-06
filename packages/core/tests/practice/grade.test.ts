@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { grade, type GradeOptions } from '../../src/practice/grade.js';
-import { type PassSummary } from '../../src/practice/pass.js';
+import type { PassSummary } from '../../src/practice/pass.js';
 
 const pass = (over: Partial<PassSummary> = {}): PassSummary => {
 	const words = over.words ?? 20;

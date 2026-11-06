@@ -1,4 +1,4 @@
-import { type Streak } from '@memoriam/core';
+import type { Streak } from '@memoriam/core';
 import { createFileRoute, Link } from '@tanstack/react-router';
 
 import { BackupReminder } from '../components/BackupReminder.js';

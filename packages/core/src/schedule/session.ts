@@ -1,6 +1,6 @@
-import { type ChunkedPassage } from '../passage/chunk.js';
+import type { ChunkedPassage } from '../passage/chunk.js';
 import { isLearnt } from '../practice/learn.js';
-import { type Progress } from '../progress/codec.js';
+import type { Progress } from '../progress/codec.js';
 import { isDue, isRelearning, recall } from './fsrs.js';
 
 /**

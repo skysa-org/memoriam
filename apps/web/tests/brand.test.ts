@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { type ViteDevServer } from 'vite';
+import type { ViteDevServer } from 'vite';
 import { describe, expect, it } from 'vitest';
 
 import {

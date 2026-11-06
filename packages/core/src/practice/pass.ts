@@ -1,4 +1,4 @@
-import { type WordResult } from './typing.js';
+import type { WordResult } from './typing.js';
 
 /**
  * A pass over a chunk, summed up for what follows it: its grade (`grade.ts`),

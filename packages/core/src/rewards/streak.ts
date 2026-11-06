@@ -1,6 +1,6 @@
 import { addDays, daysBetween, weekday } from '../day.js';
 import { median } from '../practice/pass.js';
-import { type DayActivity } from './activity.js';
+import type { DayActivity } from './activity.js';
 
 /**
  * The streak, worked out afresh from the days practised (docs/ARCHITECTURE.md

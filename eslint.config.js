@@ -1,3 +1,5 @@
+import { builtinModules } from 'node:module';
+
 import js from '@eslint/js';
 import prettierConfig from 'eslint-config-prettier';
 import functional from 'eslint-plugin-functional';
@@ -23,11 +25,39 @@ const RESTRICTED_SYNTAX = [
 		message: "'else if' is not allowed, use early returns instead.",
 	},
 	{
+		// `no-import-type-side-effects`, for re-exports, which it does not look
+		// at: `export { type X } from 'm'` is kept as `export {} from 'm'`.
+		selector:
+			"ExportNamedDeclaration[source][exportKind='value']:not(:has(ExportSpecifier[exportKind='value']))",
+		message:
+			"a re-export of nothing but types is 'export type { … } from', which loads nothing.",
+	},
+	{
 		selector: 'AwaitExpression > ImportExpression',
 		message:
 			'Await with dynamic imports (await import()) is not allowed. Use static imports at the top of the file instead.',
 	},
 ];
+
+/**
+ * Every Node built-in, by bare name and by `node:` — read from Node itself, so a
+ * hand-kept list cannot leave one out. Neither core nor the Worker has them:
+ * core runs in the browser and Workers too, and the Worker runs without
+ * `nodejs_compat`. Names that start with `_` are Node's internals, not modules
+ * anyone imports.
+ */
+const NODE_BUILTINS = ['node:*', ...builtinModules.filter((name) => !name.startsWith('_'))];
+
+/**
+ * Restricted import patterns for a folder of the web app that sits below
+ * others: it may not reach up into the folders named, so the layers stay one
+ * way round. `**` either side because a file one folder deeper writes
+ * `../../components/…`.
+ */
+const NOT_ABOVE = (folders, message) => ({
+	group: folders.map((folder) => `**/${folder}/**`),
+	message,
+});
 
 /**
  * Words the user reads, written straight into JSX: a sentence there is one no
@@ -131,6 +161,10 @@ const typescriptRules = {
 	'simple-import-sort/imports': 'error',
 	'unused-imports/no-unused-imports': 'error',
 	'@typescript-eslint/consistent-type-imports': 'error',
+	// An import whose every name is a type is `import type`: with
+	// `verbatimModuleSyntax`, `import { type X }` is kept as `import {}`, which
+	// still loads the module — and whatever it builds as it loads.
+	'@typescript-eslint/no-import-type-side-effects': 'error',
 
 	// Where typescript-eslint has a type-aware version of a core rule, the core
 	// one is off and that one is on.
@@ -226,7 +260,7 @@ export default tseslint.config(
 	// ---- React --------------------------------------------------------------
 
 	{
-		files: ['apps/web/**/*.tsx'],
+		files: ['apps/web/**/*.{ts,tsx}'],
 		extends: [
 			react.configs.flat.recommended,
 			react.configs.flat['jsx-runtime'], // new JSX transform — no `React` import needed
@@ -286,7 +320,7 @@ export default tseslint.config(
 				{
 					patterns: [
 						{
-							group: ['node:*', 'fs', 'path', 'crypto', 'stream'],
+							group: NODE_BUILTINS,
 							message: 'packages/core must not depend on Node built-ins.',
 						},
 						{
@@ -315,7 +349,7 @@ export default tseslint.config(
 						{
 							// wrangler.toml sets no `nodejs_compat`, so the Worker
 							// runtime has none of these.
-							group: ['node:*', 'fs', 'path', 'stream'],
+							group: NODE_BUILTINS,
 							message:
 								'the Worker runs without nodejs_compat — Web Crypto and fetch only.',
 						},
@@ -340,7 +374,7 @@ export default tseslint.config(
 				{
 					patterns: [
 						{
-							group: ['node:*', 'fs', 'path', 'stream'],
+							group: NODE_BUILTINS,
 							message:
 								'the Worker runs without nodejs_compat — Web Crypto and fetch only.',
 						},
@@ -390,6 +424,65 @@ export default tseslint.config(
 		// places that report an error, not opened up across the API.
 		files: ['apps/api/src/worker.ts', 'apps/api/src/app.ts', 'apps/api/src/log.ts'],
 		rules: { 'no-console': 'off' },
+	},
+
+	{
+		// The web app's lower layers. The store is the data layer: Dexie tables
+		// and the hooks that read them. The sync layer drives the engine against
+		// that store. Neither may import the UI or the features built on top of
+		// them, so each can be read, tested and changed without the screens.
+		files: ['apps/web/src/store/**/*.{ts,tsx}'],
+		rules: {
+			'no-restricted-imports': [
+				'error',
+				{
+					patterns: [
+						NOT_ABOVE(
+							[
+								'components',
+								'routes',
+								'sync',
+								'practice',
+								'archive',
+								'install',
+								'commands',
+							],
+							'the store is the data layer: it does not import the sync layer or the UI.'
+						),
+					],
+				},
+			],
+		},
+	},
+	{
+		files: ['apps/web/src/sync/**/*.{ts,tsx}'],
+		rules: {
+			'no-restricted-imports': [
+				'error',
+				{
+					patterns: [
+						NOT_ABOVE(
+							['components', 'routes', 'practice', 'archive', 'install', 'commands'],
+							'the sync layer drives the store; it does not import the UI.'
+						),
+					],
+				},
+			],
+		},
+	},
+
+	// ---- File size ----------------------------------------------------------
+
+	{
+		// A warning, not an error, while the long files that came from
+		// skysa-notes (the sync engine, the Drive adapter, the web sync store
+		// and scheduler) are split: it says which those are, and keeps a split
+		// file from growing back. Code lines only — the comments here are long
+		// on purpose. Tests are left out for now.
+		files: ['packages/*/src/**/*.ts', 'apps/*/src/**/*.{ts,tsx}'],
+		rules: {
+			'max-lines': ['warn', { max: 600, skipBlankLines: true, skipComments: true }],
+		},
 	},
 
 	// ---- Relaxations --------------------------------------------------------

@@ -1,4 +1,4 @@
-import { type ChunkedPassage, type PassageLine, type PassageWord } from '@memoriam/core';
+import type { ChunkedPassage, PassageLine, PassageWord } from '@memoriam/core';
 
 /**
  * A passage laid out as the Passage screen shows it: each section under its

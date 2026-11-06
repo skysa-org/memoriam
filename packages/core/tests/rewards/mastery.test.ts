@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { type ChunkedPassage, chunkPassage } from '../../src/passage/chunk.js';
-import { type ChunkProgress, type Progress } from '../../src/progress/codec.js';
+import type { ChunkProgress, Progress } from '../../src/progress/codec.js';
 import { daysHeld, measure } from '../../src/rewards/mastery.js';
 
 const cut = (body: string): ChunkedPassage => {

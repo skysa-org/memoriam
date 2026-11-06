@@ -12,7 +12,7 @@ import {
 } from '@memoriam/core';
 import { liveQuery } from 'dexie';
 
-import { type ApiClient, type Refusal } from '../api/client.js';
+import type { ApiClient, Refusal } from '../api/client.js';
 import { t } from '../i18n/t.js';
 import { bindingCount, boundConnection, updateBinding } from '../store/connection.js';
 import {

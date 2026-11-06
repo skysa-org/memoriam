@@ -1,6 +1,6 @@
-import { type ProviderKind } from '@memoriam/core';
+import type { ProviderKind } from '@memoriam/core';
 
-import { type ApiClient, type Connection, type Refusal, type Result } from '../api/client.js';
+import type { ApiClient, Connection, Refusal, Result } from '../api/client.js';
 import {
 	bindingCount,
 	bindLibrary,
@@ -15,7 +15,7 @@ import {
 	keepCredential,
 	pendingCredential,
 } from '../store/credentials.js';
-import { type CredentialRecord, type MemoriamDatabase } from '../store/db.js';
+import type { CredentialRecord, MemoriamDatabase } from '../store/db.js';
 
 /**
  * The storage account, as the server knows it, reconciled with the library
