@@ -120,6 +120,74 @@ const passage = (progress: string, updated = '2026-10-01T09:00:00Z') =>
 	`---\nid: p1\ntitle: Two verses\ncreated: 2026-10-01T09:00:00Z\nupdated: ${updated}\nchunker: 1\n${progress}---\n${BODY}`;
 
 describe('the Dexie sync store, beyond the contract', () => {
+	it('reads only the passages beneath a collection, and none whose path only starts like it', async () => {
+		// The engine asks once or more for every passage a round names, and a
+		// read of the whole table each time cost a round the passages it moved
+		// times the passages held. `Work 2` and `Work.md` sort just before
+		// `Work/`, and `Workshop` just after where it ends.
+		const db = freshDatabase();
+		const read = { notes: 0 };
+		db.use({
+			stack: 'dbcore',
+			name: 'rowsRead',
+			create: (down) => ({
+				...down,
+				table: (name) => {
+					const table = down.table(name);
+					if (name !== 'notes') return table;
+					return {
+						...table,
+						query: async (req) => {
+							const answer = await table.query(req);
+							read.notes += answer.result.length;
+							return answer;
+						},
+					};
+				},
+			}),
+		});
+		const store = await boundStore(db);
+		const seed = async (id: string, path: string, connectionId = LOCAL_CONNECTION_ID) => {
+			await db.notes.put(
+				pulledRow({ id, connectionId, path, source: 'x\n', existing: undefined, now: 0 })
+			);
+		};
+		await seed('n3', 'Work/a.md');
+		await seed('n1', 'Work/Deep/b.md');
+		await seed('n2', 'Work/c.md');
+		await seed('o1', 'Work 2/d.md');
+		await seed('o2', 'Work.md');
+		await seed('o3', 'Workshop/e.md');
+		await seed('o4', 'Work0/f.md');
+		await seed('o5', 'loose.md');
+		await seed('o6', 'Work/a.md', 'elsewhere');
+		await deletePassage(db, 'n2');
+
+		read.notes = 0;
+		const under = await store.notesUnder('Work');
+		// In id order, as the whole-table read gave them; the tombstone too.
+		expect(under.map((note) => note.id)).toEqual(['n1', 'n2', 'n3']);
+		expect(read.notes).toBe(3);
+
+		expect((await store.notesUnder('Work/')).map((note) => note.id)).toEqual([
+			'n1',
+			'n2',
+			'n3',
+		]);
+		expect((await store.notesUnder('Work/Deep')).map((note) => note.id)).toEqual(['n1']);
+		expect(await store.notesUnder('Wor')).toEqual([]);
+		expect((await store.notesUnder('')).map((note) => note.id).sort()).toEqual([
+			'n1',
+			'n2',
+			'n3',
+			'o1',
+			'o2',
+			'o3',
+			'o4',
+			'o5',
+		]);
+	});
+
 	it('writes nothing once the library is bound to another connection, or none', async () => {
 		const db = freshDatabase();
 		const store = await boundStore(db);

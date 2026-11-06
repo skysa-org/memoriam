@@ -98,7 +98,7 @@ export interface CreateFileOptions {
  * - `createFolder` and `delete` are idempotent, so a queued op is always safe
  *   to replay.
  * - The root is a folder that is there, and nothing else: no file is written or
- *   created at it, nothing is moved onto it, and it is never deleted or
+ *   created at it, nothing is moved onto it, and it is never deleted, left or
  *   moved — named by its path or by its `rootId` — each refused with
  *   `NotFoundError` (`outsideRoot` and `refuseRoot` in `adapter.ts`).
  * - `move` may or may not change `version` — Dropbox's `rev` survives a move,
@@ -153,12 +153,27 @@ export interface StorageProvider {
 	 * is invisible here (skysa-notes' docs/ARCHITECTURE.md §5.1), and a listing that comes back empty
 	 * is no evidence the folder is. The engine removes a folder on the strength
 	 * of a listing (`rmdir`), and will not where this is false, because deleting
-	 * a folder takes everything under it — seen or not.
+	 * a folder takes everything under it — seen or not. It leaves the folder
+	 * instead (`leaveFolder`).
 	 *
 	 * True on Dropbox and OneDrive, which give the app its own folder and
 	 * everything in it.
 	 */
 	readonly listsEverything: boolean;
+	/**
+	 * Where `listsEverything` is false, what the engine does instead of deleting
+	 * a folder it has emptied (`rmdir`): marks the folder as one the app has
+	 * left, and touches nothing in it. From then on, while nothing the app can
+	 * see is beneath it — no file, and no folder not left too — `changes`
+	 * reports it deleted and a scan leaves it out, so no device shows it as an
+	 * empty notebook. Anything the app puts beneath it brings it back, and
+	 * `createFolder` at its path takes the mark off. `list` still lists it: it
+	 * is there, and whatever the user put in it is there too.
+	 *
+	 * Absent on Dropbox and OneDrive, which delete. On Google Drive the mark is
+	 * a private `appProperties` key (docs/ARCHITECTURE.md §5.1).
+	 */
+	readonly leaveFolder?: (entry: EntryRef) => Promise<void>;
 	/**
 	 * How many notes a push may write at once; one where absent.
 	 *

@@ -10,6 +10,9 @@ export const shell = {
 	},
 	update: {
 		available: 'A new version is available.',
+		/** After Reload, while the new version is asked to take over. */
+		updating: 'Updating…',
+		slow: 'Still updating. If the app has not reloaded in a few minutes, close all of its windows and open it again.',
 	},
 	/** The notice a delete leaves: the only way back from it, so it waits while held. */
 	undo: {

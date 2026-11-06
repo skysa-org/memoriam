@@ -242,6 +242,30 @@ export const createDexieSyncStore = (
 	const notesOf = (scope: Scope): Promise<NoteRecord[]> =>
 		scope.notes.where('connectionId').equals(LIBRARY).toArray();
 
+	/**
+	 * The library's passages at or beneath `folderPath`, tombstones included,
+	 * read by the `[connectionId+path]` index: only those rows, not every
+	 * passage's with its words. The engine asks once or more for every
+	 * passage a round names (`displaceOccupant`), so a whole-table read cost a
+	 * round the passages it moved times the passages held: minutes, on a
+	 * phone, after a collection moved on another device. Paths are compared
+	 * as `noteByPath` compares them, as stored. Everything beneath `a/b` sorts
+	 * from `a/b/` up to `a/b0`, `0` being the character after `/`; `a/b 2`
+	 * and `a/b.md` sort before it, `a/bc` after. Sorted by id, as the
+	 * whole-table read gave them, so nothing the engine decides from the
+	 * order moves. The root is every passage.
+	 */
+	const notesWithin = async (scope: Scope, folderPath: string): Promise<NoteRecord[]> => {
+		const folder = normalizePath(folderPath);
+		if (folder === ROOT) return notesOf(scope);
+		const byPath = scope.notes.where('[connectionId+path]');
+		const [at, beneath] = await Promise.all([
+			byPath.equals([LIBRARY, folder]).toArray(),
+			byPath.between([LIBRARY, `${folder}/`], [LIBRARY, `${folder}0`], true, false).toArray(),
+		]);
+		return [...at, ...beneath].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+	};
+
 	const foldersOf = (scope: Scope): Promise<FolderRecord[]> =>
 		scope.folders.where('connectionId').equals(LIBRARY).toArray();
 
@@ -519,7 +543,7 @@ export const createDexieSyncStore = (
 
 		// Passages move with the collection even when dirty: the move is
 		// metadata and cannot conflict with an edit to the words.
-		const notes = (await notesOf(scope)).filter((note) => isWithin(note.path, from));
+		const notes = await notesWithin(scope, from);
 		await scope.notes.bulkPut(
 			notes.map((note) => ({ ...note, path: rebasePath(note.path, from, to) }))
 		);
@@ -1132,8 +1156,7 @@ export const createDexieSyncStore = (
 
 		allNotes: async () => (await notesOf(db)).map(toSyncNote),
 
-		notesUnder: async (folderPath) =>
-			(await notesOf(db)).filter((note) => isWithin(note.path, folderPath)).map(toSyncNote),
+		notesUnder: async (folderPath) => (await notesWithin(db, folderPath)).map(toSyncNote),
 
 		folderByRemoteId: async (remoteId) => {
 			const folder = (await foldersOf(db)).find((each) => each.remoteId === remoteId);

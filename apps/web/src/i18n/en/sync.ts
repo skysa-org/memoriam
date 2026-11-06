@@ -17,6 +17,15 @@ export const sync = {
 		syncsWith: 'Syncing with {provider}.',
 		syncsWithAccount: 'Syncing with {provider} as {account}.',
 		syncNow: 'Sync now',
+		/** Shown while a sync goes: it stops it, and starts no other until asked. */
+		pause: 'Pause syncing',
+		/** What Pause syncing does, before it is pressed. */
+		pauseHint:
+			'Pausing stops this sync now. Nothing syncs on this device until you resume it, or open the app again.',
+		/** Sync now, while syncing is paused. */
+		resume: 'Resume syncing',
+		/** The bar under the status line during a long sync. */
+		progress: 'Sync progress',
 		disconnect: 'Disconnect',
 		connectAgain: 'Connect again',
 	},
@@ -24,6 +33,25 @@ export const sync = {
 		idle: 'Up to date.',
 		idleSince: 'Up to date. Last synced {time}.',
 		syncing: 'Syncing…',
+		/** Syncing, held up behind another tab's or window's sync (`status.waiting`). */
+		waiting:
+			'Waiting for another tab or window of Memoriam to finish syncing. This one syncs after it.',
+		/** Reading what has changed since the last sync, before it has found enough to count. */
+		checking: 'Checking {provider} for changes…',
+		/** The same, with how many changed passages it has found so far. */
+		checkingFound: {
+			one: 'Checking {provider} for changes: {count} changed passage found so far.',
+			other: 'Checking {provider} for changes: {count} changed passages found so far.',
+		},
+		/** A first sync, or a re-scan, before it has found enough to count. */
+		lookingStart: 'Looking for passages in {provider}…',
+		looking: {
+			one: 'Looking for passages in {provider}: {count} found so far.',
+			other: 'Looking for passages in {provider}: {count} found so far.',
+		},
+		receiving: 'Receiving passages from {provider}: {done} of {total}.',
+		sending: 'Sending changes to {provider}: {done} of {total}.',
+		paused: 'Syncing with {provider} is paused on this device. Your changes are kept here, and sent when you resume it.',
 		offline:
 			'Offline. Your changes are kept on this device, and sent when you are back online.',
 		retrying: 'Sync could not finish ({error}). It will try again shortly.',
