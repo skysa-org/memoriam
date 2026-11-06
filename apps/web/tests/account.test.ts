@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import { ROOT } from '@memoriam/core';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { ApiClient, Connection, Refusal, Result } from '../src/api/client.js';
 import {
@@ -23,7 +23,6 @@ import {
 	pendingCredential,
 } from '../src/store/credentials.js';
 import {
-	createDatabase,
 	isLive,
 	LOCAL_CONNECTION_ID,
 	type MemoriamDatabase,
@@ -37,6 +36,8 @@ import {
 	startConnecting,
 	stopSyncingHere,
 } from '../src/sync/account.js';
+import { holdCredential } from './support/connection.js';
+import { freshDatabase } from './support/db.js';
 
 /**
  * Connecting, and the server's word on the connection the library is bound to
@@ -48,11 +49,7 @@ import {
 let db: MemoriamDatabase;
 
 beforeEach(() => {
-	db = createDatabase(`account-${crypto.randomUUID()}`);
-});
-
-afterEach(async () => {
-	await db.delete();
+	db = freshDatabase();
 });
 
 const connectionNamed = (id: string, overrides: Partial<Connection> = {}): Connection => ({
@@ -118,12 +115,7 @@ const PSALM = { title: 'Psalm 23', reference: '', collection: ROOT, text: 'The L
 /** The library bound to `id`, with a credential for it that the server answers. */
 const boundTo = async (server: Server, id: string): Promise<string> => {
 	const credential = newCredential();
-	await keepCredential(db, id, {
-		id,
-		credential,
-		provider: 'dropbox',
-		createdAt: 1,
-	});
+	await holdCredential(db, id, { credential, createdAt: 1 });
 	await bindLibrary(db, { connectionId: id, provider: 'dropbox' });
 	server.answers.set(credential, { ok: true, value: connectionNamed(id) });
 	return credential;
@@ -380,12 +372,7 @@ describe('the server’s word on the binding', () => {
 		const server = newServer();
 		const first = await boundTo(server, 'c1');
 		const second = newCredential();
-		await keepCredential(db, 'c2', {
-			id: 'c2',
-			credential: second,
-			provider: 'dropbox',
-			createdAt: 2,
-		});
+		await holdCredential(db, 'c2', { credential: second, createdAt: 2 });
 		server.answers.set(second, { ok: true, value: connectionNamed('c2') });
 		const client = clientFor(server);
 		const racing: ApiClient = {

@@ -14,16 +14,13 @@ import { SyncKeeper } from '../src/components/SyncKeeper.js';
 import { SyncSettings } from '../src/components/SyncSettings.js';
 import { createAppRouter } from '../src/router.js';
 import { bindLibrary, boundConnection } from '../src/store/connection.js';
-import {
-	beginConnect,
-	keepCredential,
-	newCredential,
-	pendingCredential,
-} from '../src/store/credentials.js';
-import { createDatabase, db, type MemoriamDatabase, type NoteRecord } from '../src/store/db.js';
+import { beginConnect, newCredential, pendingCredential } from '../src/store/credentials.js';
+import { db, type MemoriamDatabase, type NoteRecord } from '../src/store/db.js';
 import { createPassage, passageText, rowFor } from '../src/store/passages.js';
 import type { ConnectOutcome } from '../src/sync/connectReturn.js';
 import type { SchedulerStatus } from '../src/sync/scheduler.js';
+import { holdCredential } from './support/connection.js';
+import { freshDatabase } from './support/db.js';
 
 /**
  * Sync on the Settings screen — connecting, how it stands, letting it go —
@@ -97,13 +94,11 @@ const holding = (outcome?: ConnectOutcome) => {
 let database: MemoriamDatabase;
 
 beforeEach(() => {
-	database = createDatabase(`sync-screens-${crypto.randomUUID()}`);
+	database = freshDatabase();
 });
 
-afterEach(async () => {
-	cleanup();
+afterEach(() => {
 	vi.restoreAllMocks();
-	await database.delete();
 });
 
 const showSettings = (props: Parameters<typeof SyncSettings>[0]) => {
@@ -118,12 +113,7 @@ const showSettings = (props: Parameters<typeof SyncSettings>[0]) => {
 };
 
 const bound = async () => {
-	await keepCredential(database, 'c1', {
-		id: 'c1',
-		credential: newCredential(),
-		provider: 'dropbox',
-		createdAt: 1,
-	});
+	await holdCredential(database, 'c1', { credential: newCredential(), createdAt: 1 });
 	await bindLibrary(database, { connectionId: 'c1', provider: 'dropbox', displayName: 'Ann' });
 };
 
@@ -342,12 +332,6 @@ describe('the conflicts screen', () => {
 		render(<RouterProvider router={router} />);
 		return router;
 	};
-
-	beforeEach(async () => {
-		await db.notes.clear();
-		await db.folders.clear();
-		await db.opQueue.clear();
-	});
 
 	const conflict = async (): Promise<{ original: NoteRecord; copy: NoteRecord }> => {
 		const original = await createPassage(db, {

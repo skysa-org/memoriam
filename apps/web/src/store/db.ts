@@ -256,14 +256,24 @@ export const createDatabase = (name: string = DATABASE_NAME): MemoriamDatabase =
 	// reached with. IndexedDB, never localStorage (CLAUDE.md).
 	db.version(3).stores({ credentials: 'id' });
 
-	// A build with a later version, opening this database in another tab, must
-	// find this tab stopped rather than still writing (`store/staleTab.ts`).
-	watchForNewerTab(db);
-	// And a frozen tab must not hold reads open that every other tab then waits
-	// behind (`store/frozenTab.ts`).
-	letGoWhenFrozen(db);
-
 	return db;
 };
 
+/**
+ * What the tab watches `db` for, set up before it opens. Only the app's own
+ * database is watched: the frozen-tab watch adds a listener to `document`, and
+ * a database made for a test, or beside the app's for a moment, would leave one
+ * behind it for every one made. Returns the way to stop watching.
+ */
+export const watchTab = (db: Dexie): (() => void) => {
+	// A build with a later version than the last one in `createDatabase`,
+	// opening this database in another tab, must find this tab stopped rather
+	// than still writing (`store/staleTab.ts`).
+	watchForNewerTab(db);
+	// And a frozen tab must not hold reads open that every other tab then waits
+	// behind (`store/frozenTab.ts`).
+	return letGoWhenFrozen(db);
+};
+
 export const db = createDatabase();
+watchTab(db);

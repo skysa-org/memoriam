@@ -1,6 +1,30 @@
 // Dexie needs a real IndexedDB; Node has none.
 import 'fake-indexeddb/auto';
 
+import { cleanup, configure } from '@testing-library/react';
+import { afterEach } from 'vitest';
+
+import { deleteFreshDatabases, resetSharedDb } from './support/db.js';
+
+// After every test, in this order: what it rendered is unmounted, then every
+// test starts from an empty database (tests/support/db.ts). Testing Library
+// only cleans up by itself where `afterEach` is a global, and here it is
+// imported. A setup file's `afterEach` runs after the test file's own, so a
+// file's hook still sees what its test rendered.
+afterEach(async () => {
+	cleanup();
+	await deleteFreshDatabases();
+	await resetSharedDb();
+});
+
+// How long `waitFor` and `findBy…` wait for what they are told will happen.
+// Testing Library's second is the time the app takes on an idle machine, and a
+// loaded one (CI, or the whole suite at once) can take longer. Longer costs
+// nothing where the thing happens, only a slower failure where it does not,
+// and nothing here waits on a `waitFor` giving up. Inside the five seconds
+// vitest gives a test, so a test still fails as itself.
+configure({ asyncUtilTimeout: 4_000 });
+
 // jsdom has no layout, so it implements none of the scrolling API. A component
 // that keeps the active row in view calls this, and an undefined method is a
 // TypeError rather than the "nothing scrolled" that a page with no viewport

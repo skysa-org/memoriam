@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createDatabase, type MemoriamDatabase } from '../src/store/db.js';
+import type { MemoriamDatabase } from '../src/store/db.js';
 import { rowFor } from '../src/store/passages.js';
 import {
 	ASK_AGAIN_DAYS,
@@ -10,6 +10,7 @@ import {
 	type StorageApi,
 } from '../src/store/persistence.js';
 import { getPreference, setPreference } from '../src/store/prefs.js';
+import { freshDatabase } from './support/db.js';
 
 /** Asking the browser to keep the library: once there is one, and not too often. */
 
@@ -19,11 +20,7 @@ const DAY = 86_400_000;
 let db: MemoriamDatabase;
 
 beforeEach(() => {
-	db = createDatabase(`persist-${crypto.randomUUID()}`);
-});
-
-afterEach(async () => {
-	await db.delete();
+	db = freshDatabase();
 });
 
 /** A browser that keeps nothing for good until asked, and then answers `grants`. */

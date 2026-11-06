@@ -6,20 +6,17 @@ import {
 	readProgress,
 	ROOT,
 } from '@memoriam/core';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
-import { createDatabase, type MemoriamDatabase } from '../src/store/db.js';
+import type { MemoriamDatabase } from '../src/store/db.js';
 import { createPassage } from '../src/store/passages.js';
 import { type PassRecord, recordPass, recordPractice, usualPace } from '../src/store/practice.js';
+import { freshDatabase } from './support/db.js';
 
 let db: MemoriamDatabase;
 
 beforeEach(() => {
-	db = createDatabase(`practice-${crypto.randomUUID()}`);
-});
-
-afterEach(async () => {
-	await db.delete();
+	db = freshDatabase();
 });
 
 const TEXT =

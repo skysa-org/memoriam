@@ -1,21 +1,18 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
-import { createDatabase, type MemoriamDatabase } from '../src/store/db.js';
+import type { MemoriamDatabase } from '../src/store/db.js';
 import {
 	dismissInstall,
 	getInstallDismissed,
 	getPreference,
 	setPreference,
 } from '../src/store/prefs.js';
+import { freshDatabase } from './support/db.js';
 
 let db: MemoriamDatabase;
 
 beforeEach(() => {
-	db = createDatabase(`prefs-${crypto.randomUUID()}`);
-});
-
-afterEach(async () => {
-	await db.delete();
+	db = freshDatabase();
 });
 
 describe('preferences', () => {
