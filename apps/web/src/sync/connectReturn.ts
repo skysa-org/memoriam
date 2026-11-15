@@ -13,7 +13,11 @@ import { cell } from '@memoriam/core';
  * again. It is held here until Settings has shown it.
  */
 
-/** Exactly what the callback can redirect with: `Outcome` in the kit's server (`@skysa/server`). */
+/**
+ * What the callback can redirect with: `Outcome` in the kit's server
+ * (`@skysa/server`), but `refused`, which only an operator's entitlement
+ * policy sends, and this app's entry passes none.
+ */
 const CONNECT_OUTCOMES = ['ok', 'denied', 'failed', 'partial', 'expired'] as const;
 
 export type ConnectOutcome = (typeof CONNECT_OUTCOMES)[number];

@@ -87,6 +87,9 @@ importers:
         specifier: 1.1.0
         version: 1.1.0(vitest@5.0.4)
     devDependencies:
+      '@memoriam/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.5

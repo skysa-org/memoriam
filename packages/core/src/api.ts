@@ -1,12 +1,13 @@
 /**
  * The API's answers that are not the thing asked for, as the Worker gives them
- * and the app reads them. Kept here so the two ends cannot drift: the server
- * answers only with a code on this list (`fail` in `apps/api/src/http.ts`), and
- * the app's `Refusal` is a part of it.
+ * and the app reads them, and the app's `Refusal` is a part of this list. The
+ * Worker is the shared kit's server, which answers from the kit's list
+ * (`API_ERROR_CODES` in `@skysa/protocol`), and every code here is one of its,
+ * which `apps/api/tests/errorCodes.test.ts` holds.
  *
- * Each is `{ error: code }`, with its HTTP status. skysa-notes' list also has
- * its change relay's codes and `not_entitled`, its operator's policy saying no;
- * this server has neither (docs/ARCHITECTURE.md §10, "The sync client").
+ * Each is `{ error: code }`, with its HTTP status. The kit's list also has its
+ * change relay's codes and `not_entitled`, its operator's policy saying no; this
+ * app's entry runs neither (docs/ARCHITECTURE.md §10, "The server").
  */
 export const API_ERROR_CODES = [
 	/** 401: no credential was presented. */

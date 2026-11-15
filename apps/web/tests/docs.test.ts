@@ -110,7 +110,7 @@ const hasName = (doc: Doc, number: string, name: string): boolean =>
  * test's to check.
  */
 const MARKER =
-	/(?:skysa-notes'\s*`?(?:docs\/)?ARCHITECTURE\.md`?|`?(?:docs\/)?(ARCHITECTURE|research)\.md`?|RFC \d+|OpenID Connect Core|APPNOTE\.TXT|skysa-notes'|(?<![\w-])\[?kit(?:'s)?)[,(]?\s*/gu;
+	/(?:skysa-notes'\s*`?(?:docs\/)?ARCHITECTURE\.md`?|`?(?:docs\/)?(ARCHITECTURE|research)\.md`?|RFC \d+|OpenID Connect Core|APPNOTE\.TXT|skysa-notes'|\[kit|the kit's\s*`?(?:docs\/)?ARCHITECTURE\.md`?)[,(]?\s*/gu;
 const docOf = (word: string | undefined): Doc | undefined =>
 	word === 'ARCHITECTURE' || word === 'research' ? word : undefined;
 
@@ -151,7 +151,7 @@ const citations = (file: string, text: string): readonly Citation[] => {
 
 /** Each anchor of this repo's ARCHITECTURE a text links to: not the shared kit's, which is its own. */
 const citedAnchors = (text: string): readonly string[] =>
-	[...text.matchAll(/(?<!skysa-kit\/blob\/main\/docs\/)ARCHITECTURE\.md#([a-z0-9-]+)/gu)].map(
+	[...text.matchAll(/(?<!skysa-kit\/blob\/[^/\s)]+\/docs\/)ARCHITECTURE\.md#([a-z0-9-]+)/gu)].map(
 		([, id]) => String(id)
 	);
 
@@ -219,9 +219,14 @@ describe('the docs', () => {
 				'([kit §6, "Backend"](https://github.com/skysa-org/skysa-kit/blob/main/docs/ARCHITECTURE.md#backend))'
 			)
 		).toEqual([]);
+		expect(citations('a.ts', `the kit's docs/ARCHITECTURE.md §7, "Sync engine"`)).toEqual([]);
+		expect(citations('a.ts', `the kit's server; see §10, "Push timing"`)).toEqual([
+			{ doc: 'ARCHITECTURE', number: '10', name: 'Push timing', exact: false },
+		]);
 		expect(
 			citedAnchors(
-				'(https://github.com/skysa-org/skysa-kit/blob/main/docs/ARCHITECTURE.md#backend)'
+				'(https://github.com/skysa-org/skysa-kit/blob/main/docs/ARCHITECTURE.md#backend)' +
+					' (https://github.com/skysa-org/skysa-kit/blob/v1.1.0/docs/ARCHITECTURE.md#backend)'
 			)
 		).toEqual([]);
 	});

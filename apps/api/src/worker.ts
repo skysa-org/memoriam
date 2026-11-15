@@ -24,7 +24,17 @@ const build = (env: Env): AppOrError => {
 		envWarnings(env).forEach((warning) => {
 			console.warn(`Environment: ${warning}`);
 		});
-		return createApp({ config: parseEnv(env) });
+		const config = parseEnv(env);
+		// The kit's server reads `RELAY`, but this entry hands it no relay
+		// (docs/ARCHITECTURE.md §10, "The server"), so the setting does nothing,
+		// and the operator is told as the kit tells of its own.
+		if (config.relay) {
+			console.warn(
+				'Environment: RELAY: this app runs no change relay, so the setting does nothing ' +
+					'(docs/self-hosting.md)'
+			);
+		}
+		return createApp({ config });
 	} catch (err) {
 		return err instanceof Error ? err : new Error(String(err));
 	}

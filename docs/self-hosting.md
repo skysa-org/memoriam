@@ -6,9 +6,9 @@ Cloudflare account: one Worker serves the app and `/api`, and a D1 database hold
 
 The Worker connects an account through OAuth, keeps its refresh token encrypted, and mints access
 tokens for the devices connected to it. It never sees a passage: those go straight from the browser
-to the storage provider. Ported from skysa-notes' Worker (`docs/ARCHITECTURE.md` §10), it has none
-of skysa-notes' change relay, connect gate, entitlement policy or WebDAV: every device connected to
-an account may sync.
+to the storage provider. It is the shared kit's server behind this app's own entry
+(`docs/ARCHITECTURE.md` §10, "The server"), which runs none of the kit's change relay, connect gate
+or entitlement policy, and no WebDAV: every device connected to an account may sync.
 
 Budget about fifteen minutes, plus however long the provider app registration takes. Dropbox is
 minutes; Google is the longest.
@@ -232,6 +232,17 @@ carried it, but a Worker deployed from `main` in that time has it. Migrated as i
 database fails at the kit's second migration and changes nothing, since wrangler takes the kit's
 first for the one it applied. Reset it onto the kit's migrations instead: drop its two tables and
 wrangler's record of what it applied, then apply them all.
+
+Check first that it is such a database. The reset drops every connection, so it is for this
+database alone, not for a migration that failed for another reason:
+
+```bash
+pnpm --filter @memoriam/api exec wrangler d1 execute memoriam --remote \
+  --command "SELECT name FROM d1_migrations"
+```
+
+It is one when that lists `0000_init.sql` and nothing else, and `apply` above stopped at
+`0001_connection_per_provider.sql` with `no such table: main.connections`. Then:
 
 ```bash
 pnpm --filter @memoriam/api exec wrangler d1 execute memoriam --remote \

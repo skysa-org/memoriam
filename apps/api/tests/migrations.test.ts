@@ -50,7 +50,7 @@ const OLD = join(API, 'tests', 'fixtures', 'pre-kit-0000_init.sql');
 
 /** The reset's statements, as docs/self-hosting.md, "A database from before the kit", gives them. */
 const RESET =
-	/### A database from before the kit[\s\S]*?--command "([^"]+)"/u.exec(
+	/### A database from before the kit[\s\S]*?--command "(DROP[^"]+)"/u.exec(
 		readFileSync(join(API, '..', '..', 'docs', 'self-hosting.md'), 'utf8')
 	)?.[1] ?? '';
 

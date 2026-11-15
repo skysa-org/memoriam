@@ -22,6 +22,7 @@
 		"@skysa/storage": "1.1.0"
 	},
 	"devDependencies": {
+		"@memoriam/core": "workspace:*",
 		"@types/node": "catalog:",
 		"vitest": "catalog:",
 		"wrangler": "^4.132.0"

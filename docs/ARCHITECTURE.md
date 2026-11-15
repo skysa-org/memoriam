@@ -631,7 +631,7 @@ Where it differs:
 **The sync client** (S4: `apps/web/src/api/client.ts`, `store/credentials.ts`, `sync/{tokens,providers,scheduler,account,runtime}.ts`) is skysa-notes' client, ported.
 Where it differs:
 - **No change relay, and no connect gate.** skysa-notes' server can run a relay, which tells a device as soon as another has pushed, and an operator's gate in front of connecting: a message, a code its policy checks, and the reasons beside a refusal.
-  Memoriam's server has neither.
+  Memoriam's server runs neither ("The server").
   So the client has no relay tickets, no connect code and no gate, and does not read `not_entitled`.
   A device hears of another's changes at its next sync: on opening, on focus, on coming into view, and every minute while in view.
 - **Credentials** are skysa-notes':
@@ -694,8 +694,10 @@ The one Worker serves the app as well, so `/api` and the app share an origin.
 What is this app's:
 - **The Worker entry** (`src/worker.ts`), the only module that reads the environment.
   It builds the kit's `createApp` with the seams' defaults: every account that connects may sync, and nothing is throttled.
-- **What an operator's own entry imports** (`src/index.ts`): `createApp`, `parseEnv`, `envWarnings` and `misconfigured` from the kit's server, and the seams from its protocol, `RateLimiter` and `neverLimited` as before the kit, and `EntitlementProvider` and `alwaysAllowed`.
-  An entry that passes a policy of its own is answered `not_entitled` where the policy says no, which the app reads as a failure like any other (below, "Connecting").
+- **What an operator's own entry imports** (`src/index.ts`): `createApp`, `parseEnv`, `envWarnings` and `misconfigured` from the kit's server, and the rate-limit seam, `RateLimiter` and `neverLimited`, from its protocol, as before the kit.
+- **No entitlement policy, connect gate or change relay.**
+  The kit's server can take a policy, with a gate in front of connecting, and run a relay.
+  This app shows no gate and no policy's refusal, and listens for no relay ("The sync client"), so the stock entry passes none of them, and says so at boot where `RELAY` is set.
 - **The migrations are the kit's**, which `wrangler.toml` reaches in `node_modules` (`migrations_dir = "node_modules/@skysa/server/migrations"`).
   Before the kit this app kept one of its own, `0000_init.sql`, under the kit's first's name; a database made with it is reset onto the kit's (`docs/self-hosting.md`, "A database from before the kit"), which `tests/migrations.test.ts` holds.
 
