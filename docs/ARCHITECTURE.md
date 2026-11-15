@@ -416,6 +416,25 @@ copy of the library is the one in this browser, so a backup is a file the user k
 - Words are never pieced together in code.
 - An ESLint rule (`INLINE_WORDS`) refuses literal words in JSX.
 
+**The stylesheet** (`apps/web/src/styles/`, the method from skysa-notes #458). It is a file for
+each part of the app, which `styles/index.css` imports in the order they cascade. A later rule of
+the same specificity wins, so the order is part of what is drawn. The split cut the single
+`styles.css` into slices in its own order, and the CSS it builds was byte for byte the same.
+`tests/styles.test.ts` holds the folder to the imports.
+- **Tokens.** `styles/tokens.css` names the steps everything is drawn in: spacing (`--space-*`),
+  corners (`--radius-*`), how far something is lifted (`--shadow-*`), sizes of words (`--text-*`)
+  and what is over what (`--z-*`). A test checks that every variable the sheet uses is declared,
+  and that every step is declared in `tokens.css`.
+- **Sizes of words are steps only.** A test refuses a `font-size` between the steps. A field's
+  size is a step held to `--text-field-floor`, 16px, below which Safari on a phone zooms in when
+  it is focused; a size in `em` follows the words around it.
+- **Spacing is steps where a step is near.** Padding, margins and gaps within two pixels of a
+  `--space-*` step were moved onto it. The few further from one are kept as they are: the
+  1.25rem inside a dialog and the error screen, and the palette's 4rem from the top.
+- **Brand defaults.** `--brand` and `--on-brand` have defaults there, the default brand's colours,
+  under `:where(:root)`. It weighs nothing, so the brand's stylesheet wins whichever loads first,
+  and a page without it still has its colours. A test keeps them equal to `brand/brand.json`.
+
 **A newer build in another tab ends this one.** As skysa-notes (`store/staleTab.ts`): the older
 tab flushes what it holds, closes its database for good, and says it is out of date. A frozen tab
 lets go of the database (`store/frozenTab.ts`). Only the app's own database is watched for either
@@ -935,6 +954,7 @@ apps/web/              the PWA
     commands/          command registry, chords, palette
     i18n/              t(), rich(), and the English catalog
     install/           the install banner
+    styles/            the stylesheet, a file a part, imported in order by index.css
 packages/core/         framework-free TypeScript: browser, Node and Workers
   src/
     index.ts           what the apps may use, by name; tests/exports.test.ts lists it

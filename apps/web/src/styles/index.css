@@ -1,0 +1,24 @@
+/*
+ * The app's stylesheet, in the order it cascades. The order is the one the
+ * single `styles.css` had, and it matters: a later rule of equal specificity
+ * wins, so moving a line here can change what is drawn.
+ */
+@import './tokens.css';
+@import './base.css';
+@import './buttons.css';
+@import './frame.css';
+@import './nav.css';
+@import './library.css';
+@import './passage.css';
+@import './practice.css';
+@import './forms.css';
+@import './notices.css';
+@import './error.css';
+@import './dialogs.css';
+@import './today.css';
+@import './mastery.css';
+@import './progress.css';
+@import './celebration.css';
+@import './settings.css';
+@import './palette.css';
+@import './conflicts.css';

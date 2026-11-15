@@ -48,9 +48,9 @@ export const Heatmap = ({
 				{cells.map((cell) => (
 					<span
 						key={cell.day}
-						className={`heatmap-cell level-${String(cell.level)}${
-							cell.kept === undefined ? '' : ` kept-${cell.kept}`
-						}`}
+						className="heatmap-cell"
+						data-level={cell.level}
+						data-kept={cell.kept}
 						title={titleOf(cell.day, cell.words, cell.kept)}
 					/>
 				))}
@@ -58,7 +58,7 @@ export const Heatmap = ({
 			<figcaption className="heatmap-legend" aria-hidden="true">
 				<span>{t('stats.heat.less')}</span>
 				{[0, 1, 2, 3, 4].map((level) => (
-					<span key={level} className={`heatmap-cell level-${String(level)}`} />
+					<span key={level} className="heatmap-cell" data-level={level} />
 				))}
 				<span>{t('stats.heat.more')}</span>
 			</figcaption>

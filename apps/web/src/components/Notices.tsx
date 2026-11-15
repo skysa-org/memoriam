@@ -76,7 +76,7 @@ export const NoticesProvider = ({ children }: { children: ReactNode }) => {
 					/>
 				)}
 				{problem !== null && (
-					<div className="toast toast-error" role="alert">
+					<div className="toast" data-toast-tone="error" role="alert">
 						<span>{problem}</span>
 						<button type="button" className="ghost" onClick={dismissProblem}>
 							{t('common.dismiss')}
