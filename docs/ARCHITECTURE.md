@@ -324,7 +324,7 @@ Both keep still under `prefers-reduced-motion`.
 ## 7. Local store and the app
 
 **IndexedDB through Dexie** (`apps/web/src/store/db.ts`):
-- The tables mirror skysa-notes': `notes` keyed `[connectionId+id]`, `folders`, `prefs`.
+- The tables mirror those in skysa-notes' `docs/ARCHITECTURE.md` §7, "IndexedDB schema (Dexie)": `notes` keyed `[connectionId+id]`, `folders`, `prefs`.
   A "note" is any markdown file in the library: a passage, or a year's activity.
 - Every row has `connectionId = 'local'`, connected or not (§10, "The web store").
 - Each row also keeps its title and source read out of the file, so a list need not parse every file.

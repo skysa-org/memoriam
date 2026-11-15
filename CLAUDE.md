@@ -2,8 +2,8 @@
 
 Memoriam is a local-first PWA for learning passages of text by heart. The user types the first
 letter of each word while words are progressively hidden. Review is scheduled with FSRS and
-practice is rewarded. It is built on the foundations of `../skysa-notes`. Optional sync to Dropbox,
-Drive or OneDrive is Phase 2.
+practice is rewarded. It is built on the foundations of `../skysa-notes`, and syncs, where the user
+asks it to, to Dropbox, Drive or OneDrive through the shared kit (Phase 2).
 
 Read `docs/ARCHITECTURE.md` before any non-trivial task. It is the source of truth for the
 architecture and the decisions behind it. `docs/research.md` is the evidence behind practice and

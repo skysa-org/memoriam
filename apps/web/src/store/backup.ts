@@ -11,8 +11,8 @@ import { isLive } from './rowStates.js';
 
 /**
  * When to remind the user to export a backup (docs/ARCHITECTURE.md §8,
- * "Keeping data"). Until sync, the library is only in this browser, which may
- * lose it: so once a week, if anything has changed since the last backup,
+ * "Keeping data"). Unless it syncs, the library is only in this browser, which
+ * may lose it: so once a week, if anything has changed since the last backup,
  * Today says so. "Not now" puts it off for a few days. A library that syncs is
  * kept in the user's own storage as well, and is not reminded.
  */

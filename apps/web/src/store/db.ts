@@ -19,8 +19,8 @@ import { watchForNewerTab } from './staleTab.js';
  */
 
 /**
- * IndexedDB cannot index a boolean, and sync will need to find dirty rows by
- * index rather than by scanning every one. 0/1 it is.
+ * IndexedDB cannot index a boolean, and sync finds dirty rows by index rather
+ * than by scanning every one. 0/1 it is.
  */
 type Flag = 0 | 1;
 

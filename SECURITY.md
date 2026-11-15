@@ -30,9 +30,10 @@ and `main` are supported; older releases are not.
 
 ## What is in scope
 
-This repository: `apps/web` (the PWA), `packages/core`, and `apps/api` (the Worker's entry). Sync,
-the Worker's routes and the PWA build are the shared kit's,
-[skysa-kit](https://github.com/skysa-org/skysa-kit), and a finding in them is reported there.
+This repository: `apps/web` (the PWA), `packages/core`, and `apps/api` (the Worker's entry). The
+shared kit's packages are in scope as this app uses them: sync's engine and client, the Worker's
+routes and the PWA build ([skysa-kit](https://github.com/skysa-org/skysa-kit)). Report a finding
+in them here, and it is fixed in the kit.
 
 Especially worth looking at:
 

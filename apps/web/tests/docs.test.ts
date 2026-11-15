@@ -114,7 +114,7 @@ const hasName = (doc: Doc, number: string, name: string): boolean =>
  * document only of a `§` right after it.
  */
 const MARKER =
-	/(?:([Ss]kysa-notes['’])(\s*`?(?:docs\/)?ARCHITECTURE\.md`?)?|`?(?:docs\/)?(ARCHITECTURE|research)\.md`?|RFC \d+|OpenID Connect Core|APPNOTE\.TXT|\[kit|the kit['’]s\s*`?(?:docs\/)?ARCHITECTURE\.md`?)\s*[,(]?\s*/gu;
+	/(?:([Ss]kysa-notes(?:['’]s?)?)(\s*(?:own\s+)?`?(?:docs\/)?ARCHITECTURE(?:\.md)?`?)?|`?(?:docs\/)?(ARCHITECTURE|research)\.md`?|RFC \d+|OpenID Connect Core|APPNOTE\.TXT|\[kit|(?:the (?:shared )?kit|skysa-kit)['’]s\s*`?(?:docs\/)?ARCHITECTURE\.md`?)\s*[,(:]?\s*/gu;
 type Cited = Doc | 'skysa-notes';
 const docOf = (notes: string | undefined, word: string | undefined): Cited | undefined => {
 	if (notes !== undefined) return 'skysa-notes';
@@ -160,48 +160,30 @@ const citations = (file: string, text: string): readonly Citation[] => {
 };
 
 /**
- * Whether a citation of skysa-notes' ARCHITECTURE is of design that moved to
- * the shared kit, which this repo cites at the kit now (skysa-notes' record
- * 0018, step 5). Its §4, §5 and §6, the adapters and the server, moved whole.
- * Every other section holds some of the kit's design and some of skysa-notes'
- * own app, so one is cited by the part it means. The engine's parts of its §7,
- * as that document stood when the engine moved, are named here in full, with
- * the section's own name, since that is the whole of it; a citation names one
- * as `hasName` reads a name here.
+ * Whether a citation of skysa-notes' ARCHITECTURE may be of design that moved
+ * to the shared kit, which this repo cites at the kit now (skysa-notes' record
+ * 0018, step 5). Most of its sections hold some of each, and its names for the
+ * kit's parts have changed since this repo was ported from it, so a list of
+ * those would miss the older ones. What is listed instead is the parts that
+ * stayed skysa-notes' own and that this repo cites, by section. One is added
+ * here once skysa-notes' document is checked for it; any other citation of it
+ * by section fails.
  */
-const KIT_SECTIONS = new Set(['4', '5', '6']);
-const KIT_PARTS = [
-	'local store and sync engine (client)',
-	'sync loop (per connection)',
-	'folder renames/moves',
-	'conflict rule (concrete)',
-	'merge before the copy',
-	'pushing files, and pulling them',
-	'what the loop above left open, and how the engine answers it',
-	"the version a move hands back is not the note's until its bytes are known",
-	'a file that is not utf-8 is left alone',
-	'a path can be reused',
-	'a rename need not re-list what is inside it',
-	'a round is one batch',
-	"a push conflict over a file another note already holds is not that note's conflict",
-	"a directory the user's notebook left is removed by an op of its own, and only when five things agree",
-	'a folder is removed only where a listing can prove it empty',
-	'a dead `rmdir` is given up on rather than surfaced',
-	'a notebook the remote no longer has does not take the notes whose files were never in it',
-	'a rate limit is not an attempt',
-];
-const movedToKit = ({ doc, number, name, exact }: Citation): boolean =>
+const NOTES_OWN: Readonly<Record<string, readonly string[]>> = {
+	'7': ['indexeddb schema (dexie)'],
+};
+const unlisted = ({ doc, number, name, exact }: Citation): boolean =>
 	doc === 'skysa-notes' &&
 	exact &&
-	(KIT_SECTIONS.has(topOf(number)) ||
-		name === undefined ||
-		KIT_PARTS.some((part) => begins(part, name) || begins(name.toLowerCase(), part)));
+	(name === undefined || !(NOTES_OWN[topOf(number)] ?? []).some((part) => begins(part, name)));
 
 /**
- * skysa-notes' ARCHITECTURE, and a section's mark, as the examples here write
- * them, so that an example is not a citation in this file of its own.
+ * skysa-notes' name and its ARCHITECTURE, and a section's mark, as the
+ * examples here write them, so that an example is not a citation in this file
+ * of its own.
  */
-const NOTES = "skysa-notes' docs/ARCHITECTURE.md";
+const NAME = "skysa-notes'";
+const NOTES = `${NAME} docs/ARCHITECTURE.md`;
 const AT = '§';
 
 /** Each anchor of this repo's ARCHITECTURE a text links to: not the shared kit's, which is its own. */
@@ -258,6 +240,7 @@ describe('the docs', () => {
 		expect(ours.filter(({ doc }) => doc === 'ARCHITECTURE').length).toBeGreaterThan(150);
 		expect(ours.filter(({ doc }) => doc === 'research').length).toBeGreaterThan(20);
 		expect(ours.filter(({ name }) => name !== undefined).length).toBeGreaterThan(50);
+		expect(cited.filter(({ doc, exact }) => doc === 'skysa-notes' && exact)).not.toEqual([]);
 		expect(layoutPaths(architecture)).toContain('packages/core/src/sync');
 	});
 
@@ -271,12 +254,12 @@ describe('the docs', () => {
 		expect(citations('a.ts', `${NOTES} ${AT}7, "Pushing files"`)).toEqual([
 			{ doc: 'skysa-notes', number: '7', name: 'Pushing files', exact: true },
 		]);
-		expect(citations('a.ts', `as ${NOTES.slice(0, 12)} ${AT}6`)).toEqual([
+		expect(citations('a.ts', `as ${NAME} ${AT}6`)).toEqual([
 			{ doc: 'skysa-notes', number: '6', exact: true },
 		]);
-		expect(
-			citations('a.ts', `rows as ${NOTES.slice(0, 12)} (\`Row\`)\n * (${AT}10, "Files")`)
-		).toEqual([{ doc: 'ARCHITECTURE', number: '10', name: 'Files', exact: false }]);
+		expect(citations('a.ts', `rows as ${NAME} (\`Row\`)\n * (${AT}10, "Files")`)).toEqual([
+			{ doc: 'ARCHITECTURE', number: '10', name: 'Files', exact: false },
+		]);
 		expect(citations('a.ts', '`docs/ARCHITECTURE.md` (§3)')).toEqual([
 			{ doc: 'ARCHITECTURE', number: '3', exact: true },
 		]);
@@ -289,6 +272,10 @@ describe('the docs', () => {
 		).toEqual([]);
 		expect(citations('a.ts', `the kit's docs/ARCHITECTURE.md §7, "Sync engine"`)).toEqual([]);
 		expect(citations('a.ts', 'the kit’s docs/ARCHITECTURE.md §7')).toEqual([]);
+		expect(
+			citations('a.ts', `the shared kit's docs/ARCHITECTURE.md §7, "Sync engine"`)
+		).toEqual([]);
+		expect(citations('a.ts', "skysa-kit's docs/ARCHITECTURE.md §7")).toEqual([]);
 		expect(citations('a.ts', `the kit's server; see §10, "Push timing"`)).toEqual([
 			{ doc: 'ARCHITECTURE', number: '10', name: 'Push timing', exact: false },
 		]);
@@ -326,28 +313,29 @@ describe('the docs', () => {
 	});
 
 	it('cites the kit, not skysa-notes, for the design that moved to it', () => {
-		const moved = (text: string) => citations('a.ts', text).filter(movedToKit);
-		expect(moved(`${NOTES} ${AT}6, "Backend"`)).toHaveLength(1);
-		expect(moved(` * (${NOTES}\n * ${AT}7): the copy`)).toHaveLength(1);
-		expect(moved(`(${NOTES} ${AT}5.1)`)).toHaveLength(1);
-		expect(moved(`${NOTES} (${AT}7)`)).toHaveLength(1);
-		expect(moved(`as each provider in ${NOTES.slice(0, 13)} ${AT}5.`)).toHaveLength(1);
-		expect(moved(`${NOTES} ${AT}7, "Pushing files, and pulling them"`)).toHaveLength(1);
-		expect(moved(`${NOTES} ${AT}7, "A round is one batch"`)).toHaveLength(1);
-		expect(moved(`${NOTES} ${AT}7, "Conflict"`)).toHaveLength(1);
-		expect(moved(`${NOTES} ${AT}7, "Local store and sync engine (client)"`)).toHaveLength(1);
-		expect(moved(`${NOTES} ${AT}7, "Sync loop (per connection), step 3"`)).toHaveLength(1);
-		expect(moved(`${NOTES} ${AT}8`)).toHaveLength(1);
-		expect(moved(`${NOTES} ${AT}8, "Share target"`)).toEqual([]);
-		expect(moved(`${NOTES} ${AT}7, "IndexedDB schema (Dexie)"`)).toEqual([]);
-		expect(moved(`${NOTES} ${AT}7, "A path"`)).toHaveLength(1);
-		expect(moved(`${NOTES} ${AT}7, "A pathway"`)).toEqual([]);
-		expect(moved(`${NOTES.slice(0, 13)} sync/account.ts, as ${AT}10, "Connecting"`)).toEqual(
-			[]
-		);
+		const flagged = (text: string) => citations('a.ts', text).filter(unlisted).length;
+		expect(flagged(`${NOTES} ${AT}6, "Backend"`)).toBe(1);
+		expect(flagged(` * (${NOTES}\n * ${AT}7): the copy`)).toBe(1);
+		expect(flagged(`(${NOTES} ${AT}5.1)`)).toBe(1);
+		expect(flagged(`${NOTES} (${AT}7)`)).toBe(1);
+		expect(flagged(`${NOTES}: ${AT}7`)).toBe(1);
+		expect(flagged(`as each provider in ${NAME} ${AT}5.`)).toBe(1);
+		expect(flagged(`${NOTES} ${AT}7, "Pulling files"`)).toBe(1);
+		expect(flagged(`${NOTES} ${AT}7, "When a push goes"`)).toBe(1);
+		expect(flagged(`${NOTES} ${AT}15`)).toBe(1);
+		expect(flagged(`skysa-notes \`docs/ARCHITECTURE.md\` ${AT}6`)).toBe(1);
+		expect(flagged(`skysa-notes's docs/ARCHITECTURE.md ${AT}6`)).toBe(1);
+		expect(flagged(`${NAME} own docs/ARCHITECTURE.md ${AT}6`)).toBe(1);
+		expect(flagged(`${NAME} ARCHITECTURE ${AT}7`)).toBe(1);
+		expect(flagged(`${NOTES} ${AT}7, "IndexedDB schema (Dexie)"`)).toBe(0);
+		expect(flagged(`${NOTES} ${AT}7, "IndexedDB schema"`)).toBe(0);
+		expect(flagged(`${NOTES} ${AT}7, "IndexedDB schemata"`)).toBe(1);
+		expect(flagged(`${NOTES} ${AT}8, "IndexedDB schema (Dexie)"`)).toBe(1);
+		expect(flagged(`${NAME} sync/account.ts, as ${AT}10, "Connecting"`)).toBe(0);
+		expect(flagged(`${NOTES} has more.\n * Then ${AT}10`)).toBe(0);
 
 		const stale = cited
-			.filter(movedToKit)
+			.filter(unlisted)
 			.map(({ file, number, name }) => `${file}: §${number}${name ? `, "${name}"` : ''}`);
 		expect(stale).toEqual([]);
 	});

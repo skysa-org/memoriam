@@ -6,11 +6,14 @@ import {
 import { serializePassageFile } from '../markdown/passage.js';
 
 /**
- * What happens when both sides changed the same passage and `mergeFile` gives
- * up (docs/ARCHITECTURE.md §10, "Merge before a conflict copy"; the kit's
- * docs/ARCHITECTURE.md §7, "Conflict rule (concrete)"): the copy is written
- * beside it, under the name the engine makes from `PASSAGE_FORMAT`'s extension,
- * holding the contents this builds.
+ * A conflict copy's contents. The engine asks for them through
+ * `PASSAGE_FORMAT` for any file both sides changed that `mergeFile` gives up
+ * on, a passage or a year's activity (docs/ARCHITECTURE.md §10, "Merge before
+ * a conflict copy"; the kit's docs/ARCHITECTURE.md §7, "Conflict rule
+ * (concrete)"), and writes the copy beside it, under a name it makes from the
+ * format's extension. The conflict screen asks too, to give a copy the
+ * original's id, and so does an undone delete, to bring the text back as a
+ * passage of its own.
  */
 
 /**
