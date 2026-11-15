@@ -10,7 +10,7 @@ import {
 	type SyncScheduler,
 	useInstanceConfig,
 } from '@skysa/client';
-import type { ConnectGate, EntitlementCode, ProviderKind } from '@skysa/protocol';
+import type { EntitlementCode, ProviderKind } from '@skysa/protocol';
 import type { SyncProgress } from '@skysa/sync';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
@@ -256,13 +256,14 @@ type Held = 'refused' | 'unreachable';
  */
 const Refused = ({
 	reason,
-	gate,
+	config,
 	client,
 	connect,
 	busy,
 }: Readonly<{
 	reason: string | undefined;
-	gate: ConnectGate | undefined;
+	/** Asked before Connect again is offered, so a gate that requires a code is not stepped round. */
+	config: Asked<InstanceConfig>;
 	client: Client;
 	connect: () => void;
 	busy: boolean;
@@ -277,9 +278,11 @@ const Refused = ({
 	return (
 		<>
 			{reason !== undefined && <p className="field-hint">{reason}</p>}
-			<SyncGate gate={gate} client={client}>
-				{again}
-			</SyncGate>
+			{config.kind !== 'asking' && (
+				<SyncGate gate={answer(config)?.connectGate} client={client}>
+					{again}
+				</SyncGate>
+			)}
 		</>
 	);
 };
@@ -288,7 +291,7 @@ const Connected = ({
 	bound,
 	kind,
 	client,
-	gate,
+	config,
 	scheduler,
 	connect,
 	busy,
@@ -298,7 +301,7 @@ const Connected = ({
 	bound: SyncStateRecord;
 	kind: ProviderKind;
 	client: Client;
-	gate: ConnectGate | undefined;
+	config: Asked<InstanceConfig>;
 	scheduler: NonNullable<Props['scheduler']>;
 	connect: (provider: ProviderKind) => void;
 	busy: boolean;
@@ -346,7 +349,7 @@ const Connected = ({
 			{refused !== undefined && (
 				<Refused
 					reason={refused.reason}
-					gate={gate}
+					config={config}
 					client={client}
 					connect={() => {
 						connect(kind);
@@ -557,7 +560,7 @@ export const SyncSettings = ({
 					bound={bound}
 					kind={bound.provider}
 					client={client}
-					gate={gate}
+					config={config}
 					scheduler={scheduler}
 					connect={connect}
 					busy={busy !== undefined}

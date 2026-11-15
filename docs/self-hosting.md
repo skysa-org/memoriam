@@ -453,7 +453,7 @@ them, not just the first. The ones that catch people:
 | `APP_ORIGIN: Invalid input: expected string, received undefined` | There is no default; set it. (`Invalid URL` instead means it is set but malformed: usually the scheme is missing.) |
 | `SECRETS_KEY: SECRETS_KEY must be base64 of exactly 32 bytes` | Generate one: `openssl rand -base64 32` |
 | `DROPBOX_CLIENT_SECRET: required because ENABLED_PROVIDERS includes "dropbox"` | Register that provider's app, or take it out of `ENABLED_PROVIDERS` |
-| `RELAY: true, but the RELAY_HUB Durable Object binding is missing from wrangler.toml` | Put back the `[[durable_objects.bindings]]` block, or set `RELAY = "false"` |
+| `RELAY: true, but the RELAY_HUB Durable Object binding is missing from wrangler.toml` | Put back the `[[durable_objects.bindings]]` block, or set `RELAY = "false"`. If you deleted the class ([Turning it off](#instant-updates-between-devices-optional)), add a migration that creates it again too: `tag = "v3"`, `new_sqlite_classes = ["ConnectionRelay"]` |
 
 A setting that boots but does nothing is logged once, as `Environment:` and a line saying why, and
 the Worker starts: `webdav` in `ENABLED_PROVIDERS` is one, since this app offers no WebDAV. `RELAY`

@@ -180,7 +180,11 @@ export const SyncGate = ({
 	const change = useRef<HTMLButtonElement>(null);
 	useEffect(() => {
 		if (focus?.to === 'buttons') {
-			buttons.current?.querySelector<HTMLElement>('button:not(:disabled), a')?.focus();
+			// The container, where there is nothing in it to press: not the top of the page.
+			(
+				buttons.current?.querySelector<HTMLElement>('button:not(:disabled), a') ??
+				buttons.current
+			)?.focus();
 		}
 		if (focus?.to === 'change') change.current?.focus();
 	}, [focus]);
@@ -263,7 +267,9 @@ export const SyncGate = ({
 			</p>
 			{step()}
 			{showing ? (
-				<div ref={buttons}>{children}</div>
+				<div ref={buttons} tabIndex={-1}>
+					{children}
+				</div>
 			) : (
 				!required &&
 				!changing && (

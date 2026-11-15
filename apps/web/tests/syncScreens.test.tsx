@@ -394,6 +394,24 @@ describe('the operator’s gate', () => {
 		expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy();
 	});
 
+	it('leaves the focus on the buttons’ place where there is nothing in it to press', async () => {
+		const { client, config } = gated();
+		config.mockResolvedValue({
+			providers: [],
+			connectGate: {
+				message: 'Sync is for members of the reading group.',
+				action: { label: 'Join the group', url: 'https://operator.example/join' },
+			},
+		});
+		const user = userEvent.setup();
+		showSettings({ client, scheduler: schedulerShowing(), connectReturn: holding() });
+
+		await user.click(await screen.findByRole('button', { name: 'Already have access?' }));
+
+		expect(document.activeElement).not.toBe(document.body);
+		expect(document.activeElement?.getAttribute('tabindex')).toBe('-1');
+	});
+
 	it('takes neither an edit nor Cancel while the policy is asked about a code', async () => {
 		holdConnectCode('INVITE-7', 600);
 		const { client, checkConnectCode } = gated({
@@ -744,6 +762,21 @@ describe('connected', () => {
 		});
 		expect(await screen.findByText('This account cannot sync on this server.')).toBeTruthy();
 		expect(screen.queryByRole('link')).toBeNull();
+	});
+
+	it('offers to connect again only once the server has said whether it has a gate', async () => {
+		await bound();
+		const { client, config } = fakes();
+		config.mockReturnValue(new Promise<never>(() => undefined));
+		showSettings({
+			client,
+			scheduler: schedulerShowing({ phase: 'attention', refusal: 'not_entitled' }),
+			connectReturn: holding(),
+		});
+
+		expect(await screen.findByText('This account cannot sync on this server.')).toBeTruthy();
+		// A gate that requires a code is not stepped round while /config is asked.
+		expect(screen.queryByRole('button', { name: 'Connect again' })).toBeNull();
 	});
 
 	it('keeps a code half typed under a refusal through the runs that go on while refused', async () => {

@@ -1,3 +1,7 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -29,6 +33,12 @@ describe('the package entry', () => {
 	it('exports the change relay for an entry that runs it, from a module of its own', () => {
 		expect(typeof ConnectionRelay).toBe('function');
 		expect(typeof durableObjectRelay).toBe('function');
+		// The names docs/self-hosting.md gives an entry outside `src`: these modules.
+		const api = join(dirname(fileURLToPath(import.meta.url)), '..');
+		const manifest: unknown = JSON.parse(readFileSync(join(api, 'package.json'), 'utf8'));
+		expect(manifest).toMatchObject({
+			exports: { '.': './src/index.ts', './relay': './src/relay.ts' },
+		});
 	});
 
 	it('exports the rate limiter seam, as it did before the kit', async () => {
