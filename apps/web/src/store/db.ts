@@ -1,4 +1,6 @@
-import type { ProviderKind, SyncOperation } from '@memoriam/core';
+import type { CredentialRecord } from '@skysa/client';
+import type { ProviderKind } from '@skysa/protocol';
+import type { SyncOperation } from '@skysa/sync';
 import Dexie, { type Table } from 'dexie';
 
 import { letGoWhenFrozen } from './frozenTab.js';
@@ -158,21 +160,9 @@ export interface FileBytesRecord {
 	lastUsedAt: number;
 }
 
-/**
- * The credential that proves this device's right to a connection
- * (`store/credentials.ts`), keyed by the connection it reaches, or by
- * `PENDING_CREDENTIAL_ID` while a connect is on its way to the provider.
- */
-export interface CredentialRecord {
-	id: string;
-	/** `sk1_…`. Never logged, put in a URL, or shown. */
-	credential: string;
-	provider: ProviderKind;
-	createdAt: number;
-}
-
-/** The id a credential is kept under until the server says which connection it reaches. */
-export const PENDING_CREDENTIAL_ID = 'pending';
+// A credential this device holds is a row of `credentials`, defined beside the
+// functions over it, which are the kit's (`@skysa/client`).
+export type { CredentialRecord } from '@skysa/client';
 
 interface PreferenceRecord {
 	key: string;

@@ -1,6 +1,6 @@
+import { type Caps, cut, foldName } from '@skysa/storage';
+
 import { PASSAGE_EXTENSION } from '../config.js';
-import { type Caps, cut } from './bytes.js';
-import { foldName } from './fold.js';
 
 /**
  * Filenames are a slug of the title; `id` in frontmatter is the stable identity,
@@ -61,9 +61,9 @@ const UNTITLED_SLUG = 'untitled';
  *
  * 255 - 39 = 216. It promises nothing past that: a copy of a copy carries two
  * suffixes, and a name another tool chose was never capped at all. The 255 is
- * kept where those names are made — `conflictName` in names/conflicts.ts cuts
- * the stem to fit, with `fitBytes` from bytes.ts — and this cap is only why it
- * seldom has to.
+ * kept where those names are made — the kit's `names/conflicts.ts`
+ * (`@skysa/storage`) cuts the stem to fit, with its `fitBytes` — and this cap
+ * is only why it seldom has to.
  */
 const MAX_SLUG_CODE_POINTS = 120;
 const MAX_SLUG_BYTES = 216;

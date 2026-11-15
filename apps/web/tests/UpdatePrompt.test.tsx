@@ -2,11 +2,11 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { UpdatePrompt } from '../src/components/shell/UpdatePrompt.js';
-import { deferred } from './support/scheduler.js';
+import { deferred } from './support/deferred.js';
 
 /**
  * The prompt a new build waiting to take over puts up. Reload stops the app's
- * requests before it asks (`sync/beforeUpdate.ts`): asked while a sync was
+ * requests before it asks (the kit's `makeWay`): asked while a sync was
  * going, the new build waited minutes, and the button looked dead.
  */
 

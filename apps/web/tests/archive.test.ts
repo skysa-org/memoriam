@@ -2,7 +2,8 @@ import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { activityPath, ROOT } from '@memoriam/core';
+import { activityPath } from '@memoriam/core';
+import { ROOT } from '@skysa/storage';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { archiveName, libraryArchive } from '../src/archive/exportLibrary.js';

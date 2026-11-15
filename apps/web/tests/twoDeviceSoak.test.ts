@@ -1,20 +1,22 @@
 import {
 	chunkPassage,
-	createSyncEngine,
+	mergeFile,
+	parsePassageFile,
+	PASSAGE_FORMAT,
+	randoms,
+	readProgress,
+	syncsHidden,
+} from '@memoriam/core';
+import {
 	foldName,
 	isHidden,
 	isWithin,
-	mergeFile,
 	parentPath,
-	parsePassageFile,
-	randoms,
-	readProgress,
 	ROOT,
 	type StorageProvider,
-	type SyncEngine,
-	type SyncOutcome,
-} from '@memoriam/core';
-import { createFakeProvider, type FakeProvider } from '@memoriam/core/testing';
+} from '@skysa/storage';
+import { createFakeProvider, type FakeProvider } from '@skysa/storage/testing';
+import { createSyncEngine, type SyncEngine, type SyncOutcome } from '@skysa/sync';
 import { describe, expect, it } from 'vitest';
 
 import { createCollection, deleteCollection, renameCollection } from '../src/store/collections.js';
@@ -569,6 +571,8 @@ const device = async (
 		createSyncEngine({
 			provider,
 			store,
+			document: PASSAGE_FORMAT,
+			syncsHidden,
 			now: () => new Date(now()),
 			newId: () => `${name.toLowerCase()}-copy-${String(bump(counters, `copy-${name}`))}`,
 			merge: mergeFile,

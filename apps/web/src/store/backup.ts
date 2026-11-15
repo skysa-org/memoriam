@@ -1,4 +1,5 @@
-import { daysBetween, isHidden, localDay } from '@memoriam/core';
+import { daysBetween, localDay } from '@memoriam/core';
+import { isHidden } from '@skysa/storage';
 import { useLiveQuery } from 'dexie-react-hooks';
 
 import { boundConnection } from './connection.js';

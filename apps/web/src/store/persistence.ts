@@ -1,4 +1,4 @@
-import { isHidden } from '@memoriam/core';
+import { isHidden } from '@skysa/storage';
 
 import { LOCAL_CONNECTION_ID, type MemoriamDatabase } from './db.js';
 import { getPreference, setPreference } from './prefs.js';

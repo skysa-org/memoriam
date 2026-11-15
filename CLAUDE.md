@@ -13,8 +13,9 @@ change.
 ## Stack (do not substitute)
 - pnpm workspace:
   - `apps/web`: Vite + React + TS, TanStack Router, Dexie, vite-plugin-pwa through the shared
-    kit's `@skysa/pwa`;
-  - `packages/core`: framework-free TS;
+    kit's `@skysa/pwa`, and the kit's sync client, `@skysa/client`;
+  - `packages/core`: framework-free TS, beside the kit's `@skysa/protocol`, `@skysa/storage`
+    (the provider adapters) and `@skysa/sync` (the engine);
   - `apps/api`: the Worker entry over the shared kit's `@skysa/server` (Hono on Cloudflare
     Workers, D1 through Drizzle).
 - Validation: zod. Tests: Vitest. Scheduling: ts-fsrs.

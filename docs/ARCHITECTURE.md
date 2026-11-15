@@ -419,15 +419,16 @@ A command is registered again only when what the palette shows of it changes (it
   `MEMORIAM_PWA` in `pwaApp.ts` hands that route to the build, and `tests/pwa.app.test.ts` checks every route the router has against it.
   It is no share target.
 - **Updates.** `registerType: 'prompt'`: a new build waits for the user to reload, and never swaps in under a pass being typed.
-- **Reload stops the app's requests first** (`sync/beforeUpdate.ts`, from skysa-notes #360).
+- **Reload stops the app's requests first** (the kit's `makeWay` and `makeWayWhenAsked`, from skysa-notes #360).
   Reload asks the waiting worker to take over, and Chromium lets it only once the worker it replaces has no fetch event in flight.
   A request that starts while the take-over waits holds it for Chromium's five-minute limit, through Reload pressed again and a reload by hand.
   A sync keeps requests going, so Reload looked dead.
-  So Reload pauses this tab's sync, as Pause syncing does (§10, "The sync client"), and asks every other tab to pause over a `BroadcastChannel` (`memoriam-update`).
+  So Reload pauses this tab's sync, as Pause syncing does (§10, "The sync client"), and asks every other tab to pause over a `BroadcastChannel` (the kit's `skysa-update`).
   It gives them 250 ms, then asks.
   A pause lasts only until the app is opened again, so syncing starts again by itself after the reload.
   The prompt says it is updating meanwhile, and after ten seconds what else will do it.
   A tab still on a build from before this does not listen, and can still hold the take-over to the five minutes.
+  Builds before the kit's called the channel `memoriam-update`, so a tab still on one of those does not hear a newer one either.
 - **Brand.** The name, colours, icons and fonts come from a `brand.json`: `apps/web/brand/` by default ("Memoriam", in indigo, on the system fonts), or the file `MEMORIAM_BRAND` names.
   The default is the app's, handed to the build (`DEFAULT_BRAND` in `pwaApp.ts`), and `tests/brand.app.test.ts` holds it to what is said here.
   The kit reads and checks the file, stopping a build with a brand that would install without its icon, and its JSON Schema is the kit's (`@skysa/pwa/brand.schema.json`).
@@ -465,108 +466,46 @@ The Content-Security-Policy in `apps/web/public/_headers`, checked by `tests/csp
 <a id="sync"></a><a id="s10"></a>
 ## 10. Sync (Phase 2)
 
-Sync is skysa-notes' engine, ported:
-- the provider adapters, with their contract tests;
-- `sync/`: the engine, split by concern (below), its store contract, and a conflict copy's contents;
-- the Hono Worker for OAuth, with the same per-connection credentials and no identity layer.
+Sync is the shared kit's, [skysa-org/skysa-kit](https://github.com/skysa-org/skysa-kit) ([skysa-notes' record 0018](https://github.com/skysa-org/skysa-notes/blob/main/docs/decisions/0018-the-shared-kit.md), step 5).
+It was skysa-notes', ported here first, and moved to the kit with skysa-notes':
+- the provider adapters, the marker and the naming rules, with their contract suite (`@skysa/storage`, [kit §4 and §5](https://github.com/skysa-org/skysa-kit/blob/main/docs/ARCHITECTURE.md#provider-adapter-interface));
+- the engine and its store contract (`@skysa/sync`, [kit §7](https://github.com/skysa-org/skysa-kit/blob/main/docs/ARCHITECTURE.md#local-store-and-sync-engine-client));
+- the sync client: the API client, the credentials, the tokens, the provider requests' deadlines and the scheduler (`@skysa/client`);
+- the Worker for OAuth, with the same per-connection credentials and no identity layer (`@skysa/server`, "The server", below).
 
-**Ported as it is.** Skysa-notes' design record for this code is its `docs/ARCHITECTURE.md`, as of commit `fa92ad6`: §4 for the provider interface and its contract, §5 for each provider, and §7 for the store and the engine.
-The ported code cites it as "skysa-notes' `docs/ARCHITECTURE.md`", so a reference is never read against this file's sections.
-What follows records only where Memoriam differs.
+A fix to any of them is a kit PR, and this app takes it by moving its pin, one exact version for every kit package (`apps/web/tests/kitVersion.test.ts`).
+What follows records what this app hands the kit, and where Memoriam differs from skysa-notes.
 
-**The provider layer** (`packages/core/src/providers/`, `marker.ts`, `names/conflicts.ts`):
-- The adapters for Dropbox, OneDrive and Google Drive, and the in-memory fake.
-  Drive's is a folder, `providers/gdrive/`, one file per concern: `wire.ts` (endpoints, answers, failures and the requests everything else makes), `root.ts` (the app folder and path walks), `upload.ts`, `cursor.ts` (the scan and the change feed), `duplicates.ts` (two items at one path) and `index.ts` (the provider).
-- What the HTTP adapters share.
-  On the wire, `http.ts`: the injected `fetch` type, the transport each request goes through with its token (`createTransport`), error bodies, and the reading of `Retry-After`.
-  On the contract's side, `adapter.ts`: the options each is made with, the marker written once, `read` as `readBytes` decoded, the root's guard and entry, and `isSelf`.
-- The marker file, and conflict names.
-- The contract suite every adapter passes (`tests/providers/contract.ts`), with each provider's wire stub.
-  `contract.test.ts` registers the adapters from one table, each over its stub and, given a token, a live account.
-  The stubs share how they answer and record a request (`tests/providers/harness.ts`).
-  Beyond skysa-notes' record, the suite asks every adapter about the root: a passage or file written at it, a move onto it, and a delete, move or leave (`leaveFolder`) of it, named by its path or by its id, is a `NotFoundError`, and `createFolder('')` answers it as a folder already there.
-- The fake, the stubs and the store contract reach the apps' tests as `@memoriam/core/testing` (`tests/testing.ts`), and never anything the apps ship.
+**What the app hands the kit:**
+- **The folder**, `MEMORIAM_FOLDER` (`packages/core/src/config.ts`), which the provider factory hands the adapters: the folder `memoriam`, its marker `.memoriam-app.json` (app `memoriam`, version 1), and the tag Google Drive finds it by, `appProperties: { memoriam: 'root' }`, with `memoriamLeft` on a folder the app has left.
+  Each is a name a 0.1.0 library already has: `tests/folderSpec.test.ts` pins them, with a 0.1.0 marker byte for byte.
+- **The format**, `PASSAGE_FORMAT` (`markdown/format.ts`): a passage is a `.md` file that claims its id in frontmatter, and a conflict copy is its text with a fresh id (`conflictContent`, `sync/conflicts.ts`).
+  A year's activity is one too.
+- **The app's own folder**, `syncsHidden` (`appFolder.ts`).
+  The engine passes over hidden paths, except `.memoriam/` and its `activity-YYYY.md` files.
+  Every other hidden path, `.memoriam/` or not, is left alone, as skysa-notes leaves it, and `isHidden` itself is unchanged, so the library still hides them (`tests/appFolder.sync.test.ts`).
+- **The merge**, `mergeFile` ("Merge before a conflict copy", below).
+- **The lock**, `memoriam:sync:<connectionId>` (`apps/web/src/sync/lock.ts`): the Web Lock one tab syncs the library under, named as every earlier build named it.
+- **The device**: the Dexie `SyncStore` ("The web store", below), and the scheduler's side of the device over the same database, `clientStoreOf` (`sync/dexiePorts.ts`).
 
-Only the names differ:
-- `APP_FOLDER_NAME` is `memoriam`, and the marker is `.memoriam-app.json`.
-- Google Drive tags the app's folder `appProperties: { memoriam: 'root' }`, and marks a folder the app has left `memoriamLeft` (below, "Since the port").
-- `PROVIDER_KINDS` has no `webdav`, which skysa-notes deferred indefinitely.
+The kit's `PROVIDER_KINDS` has `webdav`, which skysa-notes deferred indefinitely; this app offers the other three (`CONNECTABLE` in `sync/account.ts`).
+The adapters keep `readBytes` and `createFile`, and the engine skysa-notes' attachments (`SyncFile`, and the `upload`, `move-file` and `delete-file` ops), though nothing here yet writes a file that is not a passage: audio (Phase 3) would need them.
 
-The interface keeps `readBytes` and `createFile`, though nothing here yet writes a file that is not a passage.
-Every adapter's `read` is its `readBytes` decoded, and audio (Phase 3) would need both.
-
-**The engine** (`sync/engine.ts`, `sync/store.ts`, from S2) is ported with its tests: the store contract (`tests/sync/storeContract.ts`), run against the in-memory store the engine tests use, the engine over every adapter's stub, and the randomized remote.
-The Google Drive tests that drive the engine through the adapter, held back in S1, are restored.
-The engine's own tests are split by area into `tests/sync/engine/` (pull, push, conflicts, files, folders, deletions, paths and the rest), each file over one world made per test (`syncWorld`, `tests/sync/kit/`), as skysa-notes split them (#572 to #579).
-Where it differs:
-- **No clipboard.** skysa-notes' engine pulls a clipboard folder for its share target.
-  Memoriam has neither, so that path is gone, from the pull and from its progress reports.
-- **The app's own folder.** The engine passes over hidden paths, except `.memoriam/` and its `activity-YYYY.md` files (`sync/unsynced.ts`, asked wherever skysa-notes asks `isHidden`).
-  Every other hidden path, `.memoriam/` or not, is left alone, as skysa-notes leaves it.
-  `isHidden` itself is unchanged, so the library still hides them.
-- **Files, kept dormant.** The engine still carries skysa-notes' attachments: `SyncFile`, and the `upload`, `move-file` and `delete-file` ops.
-  Nothing in the web app makes one yet.
-  They stay so that audio (Phase 3) does not reopen the engine.
-  `files.ts` holds the extension → content type map they need.
-- **Split by concern.** The engine's parts left `engine.ts` for modules of their own, as skysa-notes moved them (its #446), with nothing they do changed and the differences above kept.
-  `engine.ts` keeps `createSyncEngine`, which builds the parts and wires them together.
-  - `sync/pull/`, the pull's: `attachments.ts` (files that are not passages, as a pull decides them: placed, adopted, gone, clashing), `batch.ts` (what a batch's decisions are reached against, and its readings that no decision changes), `cascade.ts` (what a folder's deletion takes with it, and the folders above a kept passage it must not), `decide.ts` (a batch decided entry by entry, each sent to the part for its kind), `decided.ts` (what a batch's decisions have spoken for: written back, a `merge-note` among them, or said anything about), `deletions.ts` (a deletion believed or not by the rest of the batch, and what it takes with it), `files.ts` (where each file that is not a passage is, replayed through a batch's decisions), `folders.ts` (folders, as a pull decides them: made, moved, moved over, deleted once rescued), `notes.ts` (passages, as a pull decides them: matched, read, merged or reconciled, moved aside, let go of), `occupancy.ts` (which passages end up in or under a folder, and the names a copy there must not take), `reconcile.ts` (a scan's last word on what it never mentioned), `replay.ts` (where a passage, a folder or an unreadable file is once the decisions so far are applied, a `merge-note` among them), and `run.ts` (a pull run: a round from the cursor or a scan from the top, a cursor reset, one retry after a refresh).
-  - `sync/push/`, the push's: `conflicts.ts` (a write the remote would not take: set aside under a conflict name, merged, or reconciled by the conflict rule), `drain.ts` (the queue drained in order, op by op, writes sent together, a failed op answered; `createPush` wires the parts), `files.ts` (files that are not passages: uploaded, moved, deleted, or set beside what they meet), `folders.ts` (the folders made before a write, and removed or left once empty), and `notes.ts` (passages: written after a rename, renamed or moved aside, deleted).
-  - `sync/context.ts`, what every part of the engine is handed (`EngineContext`): the provider, the store, the clock and ids, its bounds, a way to renew the token, the meter, and the merge hook as `mergedOf`.
-  - `sync/names.ts`, finding a free conflict name: tried in turn, bounded, the last refusal thrown (`findFreeName`).
-  - `sync/outcome.ts`, what a run comes to (`SyncOutcome`) and the pieces every outcome is built from, without skysa-notes' clipboard and key-file flags.
-  - `sync/progress.ts`, how far the run under way has got, for `onProgress`: a scan's, a round's and a push's count (`createProgress`).
-  - `sync/providerOps.ts`, asking the provider where "nothing there" is an answer: `orIfNotFound`, and `withParent`, which makes the folder above and tries once more.
-  - `sync/unsynced.ts`, the hidden paths the engine still syncs (above).
-
-**Since the port.** Fixes skysa-notes made to its engine and adapters after `fa92ad6`, taken here:
-- **A round says it is reading its pages** (skysa-notes #350).
-  Another device's moved folders are one round naming every passage moved, and its pages were read with nothing said.
-  A round now reports `receiving` with `listing` before its first page, and after each page that names more passages how many it has named so far.
-  Once through, it reports `listing: false` with the whole count, even when that is none, so the words never outlive the reading.
-  A scan reports before its first page as well.
-- **Drive lists a round's new folders four at a time** (skysa-notes #354).
-  A folder that arrives in a feed round has its contents listed into the same page, since the feed will not name them, and after collections moved on another device, every folder of them arrives.
-  One request at a time was a wait per folder before the round could say anything.
-  They are now asked a level at a time, four at once (`LISTS_AT_ONCE` in `gdrive/cursor.ts`, as many as writes), and the answers go into the page in the order one at a time put them.
-- **Drive leaves the folders a collection leaves behind** (skysa-notes #356).
-  A collection moved, renamed or deleted on one device stayed on every other device as an empty collection, and came back after a re-scan: under `drive.file` a listing cannot prove a folder empty, so the engine's `rmdir` removed nothing, since trashing the folder could trash what the user put there.
-  Where `listsEverything` is false, `rmdir` now calls the provider's optional `leaveFolder`, past the same gates as a delete.
-  Drive sets a private `appProperties` key (`memoriamLeft`) and touches nothing in the folder.
-  The adapter keeps a left folder in its id tree, but does not report it while nothing the app can see is beneath it (`hideLeftFolders` in `idTree.ts`).
-  A feed page compares the tree before and after it: a folder that becomes hidden is reported deleted, and one that stops being hidden is reported as a folder again.
-  A scan holds left folders back until its last page.
-  `createFolder` at its path takes the mark off.
-  The mark rides in the cursor as an optional fifth element of a tree row, so stored cursors still read, and OneDrive's are unchanged. skysa-notes has not yet measured whether Drive's change feed reports a change to `appProperties` alone.
-- **Drive scans when the change feed runs longer than a scan would** (skysa-notes #362).
-  `drive.file` hides other apps' changes, but Drive still pages through them: after a day away, a phone read 60 empty pages before it found anything, where a scan took a few.
-  A feed round that has read twice the pages a scan would take, plus two (`feedLimit` in `gdrive/cursor.ts`, from the tree's size), resets to a scan.
-  A feed round is read whole before any of it is applied, so nothing read is half kept.
-  The app folder is confirmed once a round, at its first page, rather than before every page (`foundId`).
-- **A deleted passage is never claimed by path** (skysa-notes #362).
-  Scans made common by the above found a mistake only a scan could make.
-  Another device deleted a passage's file and gave its name to another file.
-  A scan never says what was removed, so the passage deleted here was still at the path, was claimed by the newcomer, and its queued delete then removed that file.
-  `noteForEntry` now passes over a passage the user has deleted wherever it stands.
-- **A passage out of conflict names fails its op** (skysa-notes #518).
-  `freeNotePath` took its hundredth name without asking whether it was free, which could stand a passage on another's path.
-  It throws now, as `freeFolderPath` did, so the op fails and is retried.
-- **A refresh goes back to a dead cursor's scan** (skysa-notes #536).
-  A token that expired during the scan that replaces a dead cursor, or a cursor found dead on the retry after a refresh, ended the run as a retry.
-  The cursor's recovery now sits inside the attempt that is retried, so the refresh returns to the scan, keeping what the provider said about sending passages back up.
+**Before the move.** The adapters and the engine were ported from skysa-notes at `fa92ad6`, with their tests, then took the fixes skysa-notes made after it: a round saying it is reading its pages (#350), Drive listing a round's new folders four at a time (#354), Drive leaving the folders a collection leaves behind (#356), Drive scanning when the change feed runs longer than a scan would, and a deleted passage never claimed by path (#362), a passage out of conflict names failing its op (#518), and a refresh going back to a dead cursor's scan (#536).
+The kit was compared against them before this app moved onto it (skysa-notes #700), and has every one.
 
 **Merge before a conflict copy.** skysa-notes never merges: on a conflict the remote keeps the path, and the local version is written beside it as a conflict copy.
-Memoriam adds one merge before that rule, through a `merge` option on the engine:
+Memoriam adds one merge before that rule, through the kit engine's `merge` option:
 - **The option.** `merge({ path, local, remote })` returns the merged text, or `undefined` for no merge.
   A merge that throws counts as no merge.
   Without the option, the engine behaves as skysa-notes'.
-- **`mergeFile`** (`sync/merge.ts`) is the merge the app passes:
+- **`mergeFile`** (`packages/core/src/sync/merge.ts`) is the merge the app passes:
   - an activity file goes to `mergeActivity`, if the remote one can be read;
   - a passage (`.md`, not hidden) goes to `mergePassage`;
   - anything else gets no merge.
-- **On a pull.** Where a note changed here and on the remote since they last agreed, the engine merges before it decides on a conflict copy (`decideKnown` in `pull/notes.ts`).
+- **On a pull.** Where a note changed here and on the remote since they last agreed, the engine merges before it decides on a conflict copy (`decideKnown` in the kit's `pull/notes.ts`).
   This includes a note never sent that meets a remote one at its path, such as two devices' `activity-2026.md`.
-- **On a push.** Where a write meets a `ConflictError` (`resolvePushConflict` and `pushMerged` in `push/conflicts.ts`), the engine reads the remote, merges, and writes the merge against the version it read.
+- **On a push.** Where a write meets a `ConflictError` (`resolvePushConflict` and `pushMerged` in the kit's `push/conflicts.ts`), the engine reads the remote, merges, and writes the merge against the version it read.
 - **The `merge-note` pull change** carries the merge.
   The store applies it only if the note still holds the content the merge was made from (`base`), and otherwise refuses the whole pull, so the next one decides again.
   - A merge that equals the remote leaves the note clean, and drops its queued writes.
@@ -587,7 +526,7 @@ The same merges already handle a backup imported over an existing library (§7, 
 `mergeActivity` sits with the rest of the activity codec in `rewards/activity.ts`, and writes nothing when the incoming file adds nothing.
 
 **The web store** (S3: `apps/web/src/store/{queue,connection}.ts`, `apps/web/src/sync/store.ts`) is skysa-notes' push queue and Dexie `SyncStore`, ported.
-The store passes the core contract suite (`apps/web/tests/syncStore.test.ts`).
+The store passes the kit's contract suite (`describeSyncStoreContract` from `@skysa/sync/testing`), in `apps/web/tests/syncStore.test.ts`.
 Where it differs:
 - **One library, one connection.**
   - skysa-notes keeps each connected source as a silo of its own.
@@ -626,45 +565,34 @@ Where it differs:
   Marked dirty, it stayed dirty for good.
   The other device's next edit then made a conflict copy of the old words, and a delete there left it here, cut loose from the remote (found by the soak, S6).
 - **A queued row is read by its kind** (`toSyncOp`, from skysa-notes #545).
-  Core's `SyncOp` is a union by `op`, each kind with the fields it cannot be sent without, and the store reads each row through a zod schema of those kinds.
+  The kit's `SyncOp` is a union by `op`, each kind with the fields it cannot be sent without, and the store reads each row through a zod schema of those kinds.
   The rows are stored as they always were.
   - A row that fits none, such as a move that lost its target or a kind a later version queued, is read as `malformed`.
     It is never thrown on, so the rest of the queue still reads, and never dropped.
   - The engine fails it, as it fails any op it cannot send, and at the attempt limit it holds the queue like any other.
     Settings names its path, and the scheduler names it `malformed` rather than by a kind this version has no words for.
 
-**The sync client** (S4: `apps/web/src/api/client.ts`, `store/credentials.ts`, `sync/{tokens,providers,scheduler,account,runtime}.ts`) is skysa-notes' client, ported.
+**The sync client** is the kit's (`@skysa/client`), skysa-notes' client as it moved, over this app's ports (above).
+The kit's client suites run over this app's device (`apps/web/tests/support/dexieDevice.ts`, in the `*.dexie.test.ts` files).
+Those of their tests that need what one library does not have are skipped by name, each with why (`apps/web/tests/support/notHere.ts`): several sources, one kept detached, a first import, another tab's transactions followed.
+They will run here once the kit can be told what a device has (skysa-org/skysa-kit#21).
+`sync/runtime.ts` makes the one scheduler, which `main.tsx` starts and which does nothing while the library is bound to nothing.
 Where it differs:
 - **No change relay, and no connect gate.** skysa-notes' server can run a relay, which tells a device as soon as another has pushed, and an operator's gate in front of connecting: a message, a code its policy checks, and the reasons beside a refusal.
   Memoriam's server runs neither ("The server").
-  So the client has no relay tickets, no connect code and no gate, and does not read `not_entitled`.
+  So the client asks for no relay tickets and holds no connect code, and Settings shows no gate.
+  The kit's client takes a `not_entitled` answer as a refusal.
+  This app's Worker sets no policy that gives one, though an operator's own entry over the kit's `createApp` could, and Settings has no words of its own for one yet.
   A device hears of another's changes at its next sync: on opening, on focus, on coming into view, and every minute while in view.
 - **Credentials** are skysa-notes':
   - `sk1_` and 32 random bytes, made by the device, written down before the browser leaves for the provider (`beginConnect`), and filed under the connection once the server names it;
   - the server only ever sees the credential's SHA-256;
   - kept in IndexedDB, never localStorage.
     `script-src 'self'` (§9) is what protects them.
-- **Tokens** are minted by `apps/api` against the credential, held in memory and on the `syncState` row, and replaced a minute before they expire (`sync/tokens.ts`).
-- **Every provider request has a deadline** (`sync/providers.ts`): a minute, and longer for a large body.
-- **The scheduler** (`sync/scheduler.ts`) follows the binding, with one session per bound connection.
-  From skysa-notes, unchanged:
-  - one run at a time per connection, across tabs (Web Locks, `memoriam:sync:<id>`);
-  - a backoff from 5 seconds, doubling to 5 minutes, and a provider's `Retry-After` honoured up to 15 minutes;
-  - an op out of attempts holds the queue (`blocked`), and is tried again after 15 minutes or when the user asks;
-  - a run that ends after the library was bound or let go (`bindingCount`) is ignored, and asked for again;
-  - a run held up behind another tab's sync says so (`waitForLock`).
-    The lock is a Web Lock, which nothing else here can see.
-    After 5 seconds without it (`SYNC_WAIT_MS`) the status says `waiting`, and Settings says the sync is waiting for another tab or window, until the lock comes.
-    A lock this tab's own work holds, such as a paused run putting its batch away or a re-scan clearing the cursor, is not another tab's: the tab knows which it holds (`underSyncLock`), and asks again 5 seconds later;
-  - the user can pause syncing (`pause`), as skysa-notes' can.
-    That ends the session, which aborts every request the run has out, and makes the next one paused: it publishes `paused` and runs nothing, since every trigger goes through `run`, which refuses while paused.
-    A batch the run was already writing is written whole with its cursor.
-    An op whose request was aborted gets back the attempt counted against it.
-    Sync now or a re-scan resumes it, and so do letting the library go and binding it again, and a reload: the pause is in memory only, so a reload never leaves a device not syncing with nobody there to see it.
-
+- **The scheduler** follows the binding: the one source it is shown is the library's connection, which is never kept detached, has no first import to finish and no resume to verify.
+  From skysa-notes, unchanged: one run at a time per connection, across tabs, under the lock above; the backoff, `Retry-After` and `blocked`; a run that ends after the library was bound or let go (`bindingCount`) ignored; a run held up behind another tab's sync saying so after 5 seconds; and the user's pause, until Sync now, a re-scan, binding again or a reload.
   skysa-notes also says when a run waits on another tab's reads of the database (`heldUp`).
   Memoriam does not follow its transactions, so only the wait for the lock is said.
-  The scheduler is started in `main.tsx`, and does nothing while the library is bound to nothing.
 - **The account** (`sync/account.ts`).
   There is one library, so connecting is choosing where it syncs.
   - **A connect that comes back** binds the library (`claimConnection`).
@@ -680,7 +608,7 @@ Pushed alone, every pass would be two requests, and at the provider two new file
 So:
 - **A pass's writes are lazy** (`queuePracticeWrite`): the passage's, and the activity file's.
 - **The scheduler sends lazy writes with the next sync**: the minute's poll while the page is in view, or as the page is hidden.
-  Either way they go within a minute of the first (`lazyMs`).
+  Either way they go within a minute of the first (`lazyMs`, which `sync/libraryScheduler.ts` hands the kit's scheduler).
   A later pass joins that wait rather than putting it off.
 - **An edit's write is never lazy.**
   An edit that finds a lazy write queued replaces it, at the back of the queue, so it goes after the 2-second debounce and takes the pass with it.
@@ -725,7 +653,7 @@ What is this app's:
   - up to date, and when it last synced;
   - syncing, and what the run is doing.
     While it reads the provider's pages, it is checking for changes or, on a first sync or a re-scan, looking for passages.
-    From twenty passages (`PROGRESS_FROM` in `sync/progress.ts`) it says how many it has found, received or sent.
+    From twenty passages (`PROGRESS_FROM`, the kit's client's) it says how many it has found, received or sent.
     A run of a few is not counted, so an edit's sync does not flash a number;
   - paused, or offline, or retrying;
   - what needs attention, with the change that is stuck, or "Connect again" when connecting the account again is the answer (`needsReconnect` in `sync/status.ts`, as skysa-notes': the server or the provider wants the account asked again, or the credential reaches nothing).
@@ -798,8 +726,8 @@ pnpm-workspace.yaml
 package.json           root scripts: dev, build, test, lint, knip, verify (the gate before a push),
                        size, db:migrate, changeset
 eslint.config.js       the kit's lint (@skysa/eslint-config) with this app's own blocks: its words,
-                       core's boundaries, the Worker entry's rules, the web layers held by
-                       no-restricted-imports, and where core's test doubles may be reached from
+                       core's boundaries, the Worker entry's rules, and the web layers held by
+                       no-restricted-imports
 tsconfig.base.json     the kit's compiler settings, which every package's tsconfig extends
 tsconfig.json          the root vitest.config.ts, which the kit's lint reads with types
 .prettierrc.json       the kit's Prettier settings
@@ -820,40 +748,36 @@ apps/web/              the PWA
                        error, stale-tab and update screens), ui/ for the building blocks they share
     hooks/             React hooks the UI shares that hold no app state (from skysa-notes)
     practice/          the practice screen and keystroke capture
-    store/             Dexie: every local read and write, the push queue, credentials, the day's
-                       plan; database.tsx: the database a screen reads, the app's or a test's
-    api/               the typed client for apps/api (from S4)
-    sync/              the Dexie SyncStore, tokens, providers, the scheduler, the account
+    store/             Dexie: every local read and write, the push queue, the day's plan;
+                       database.tsx: the database a screen reads, the app's or a test's
+    sync/              the kit's scheduler over this app's Dexie SyncStore and ports, its lock,
+                       the account
     archive/           zip export and import
     commands/          command registry, chords, palette
     i18n/              t(), rich(), and the English catalog
     install/           the install banner
     styles/            the stylesheet, a file a part, imported in order by index.css
   tests/               support/ for what the tests share: a fresh database, a connection, the
-                       scheduler's harness, the stylesheet's rules, a fake environment
+                       stylesheet's rules, the device the kit's client suites run over
+                       (dexieDevice.ts) and the tests of theirs it skips (notHere.ts)
 packages/core/         framework-free TypeScript: browser, Node and Workers
   src/
     index.ts           what the apps may use, by name; tests/exports.test.ts lists it
-    cell.ts            cell(): the one way to hold a value that changes, where `let` is refused
-    config.ts          the names that stay put: the library's folder, the marker, .memoriam/
-    marker.ts paths.ts the marker file; paths as POSIX, relative to the library's root
-    hash.ts json.ts    content hashes and chunk keys; JSON from outside, read without throwing
+    config.ts          the names that stay put: MEMORIAM_FOLDER (the library's folder, the
+                       marker, Drive's tag), .memoriam/
+    appFolder.ts       syncsHidden: the hidden paths the kit's engine syncs all the same
+    hash.ts            chunk keys
     day.ts             days as the user counts them, YYYY-MM-DD in local time
-    api.ts             the refusals the app and the Worker both speak: API_ERROR_CODES
-    files.ts           files in the library that are not passages
     passage/           body grammar, tokenizer, chunker, remap
     progress/          frontmatter codec, passage merge
-    providers/         storage adapters and the in-memory fake (from skysa-notes): http.ts and
-                       adapter.ts for what the three share, gdrive/ by part, text.ts for a
-                       file's bytes as text or UnreadableError
-    names/             a file's name: folded, slugged, cut to fit; a conflict copy's name
-    sync/              the engine (pull/ and push/ by concern) and its store contract, a conflict
-                       copy's contents, the merge
+    names/             a passage's name, slugged; passages.ts for its extension and a copy's name
+    sync/              a conflict copy's contents, the merge
     practice/          hiding, typing reducer, grading, fading
     schedule/          FSRS, the session planner
     rewards/           activity and its merge, streaks, mastery, badges
-    markdown/          frontmatter/ in split, read and write (from skysa-notes), passage files
-  tests/               testing.ts is @memoriam/core/testing, the doubles the apps' tests use
+    markdown/          frontmatter/ in split, read and write (from skysa-notes), passage files;
+                       format.ts is PASSAGE_FORMAT
+  tests/               sync/remote.ts for what the engine tests do to a remote and a store
 apps/api/              the Worker over the kit's @skysa/server
   wrangler.toml        the D1 binding, whose migrations are the kit's; [assets] from ../web/dist
   src/
@@ -867,10 +791,12 @@ docs/
 
 Inside `apps/web/src` the layers point one way, and ESLint's `no-restricted-imports` holds them there.
 `store/` is the data layer: it imports none of `sync/`, `components/`, `routes/`, `practice/`, `archive/`, `install/` or `commands/`.
-`sync/` imports the store, `api/` and `i18n/`, and none of the UI or the features above it.
-Inside `packages/core`, nothing under `providers/` imports `sync/`: what both need, a conflict copy's name say, sits below them in `names/`, which imports none of `sync/`, `providers/` or `markdown/`.
+`sync/` imports the store and `i18n/`, and none of the UI or the features above it.
+To `store/`, the kit's client (`@skysa/client`, which holds most of the sync layer) gives only its emitter and store, and the credential row's type.
+Inside `packages/core`, `names/` imports neither `sync/` nor `markdown/`, and of the kit core uses only `@skysa/protocol`, `@skysa/storage` and `@skysa/sync`, never the client, the server or the PWA build.
 Neither `packages/core` nor the Worker may import a Node built-in, and the list is Node's own (`module.builtinModules`), not one kept by hand.
-The apps import `@memoriam/core`, which names what it offers rather than everything its modules export; their tests may also import `@memoriam/core/testing`, and their source may not, nor any path into a `tests` folder.
+The apps import `@memoriam/core`, which names what it offers rather than everything its modules export.
+The test doubles are the kit's (`@skysa/storage/testing`, `@skysa/sync/testing`, `@skysa/client/testing`), and nothing the app ships may import them, nor any path into a `tests` folder.
 Source files past 600 lines of code draw a warning, which marks the long files ported from skysa-notes until they are split.
 
 <a id="roadmap"></a><a id="s12"></a>

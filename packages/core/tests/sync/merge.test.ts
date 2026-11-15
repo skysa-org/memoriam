@@ -1,16 +1,16 @@
+import { createFakeProvider, type FakeProvider } from '@skysa/storage/testing';
+import { createSyncEngine, type MergeInput, type SyncStore } from '@skysa/sync';
+import { createMemoryStore, type MemoryStore } from '@skysa/sync/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { syncsHidden } from '../../src/appFolder.js';
+import { PASSAGE_FORMAT } from '../../src/markdown/format.js';
 import { parsePassageFile } from '../../src/markdown/passage.js';
 import { chunkPassage } from '../../src/passage/chunk.js';
 import { readProgress } from '../../src/progress/codec.js';
-import { createFakeProvider, type FakeProvider } from '../../src/providers/fake.js';
 import { readActivity } from '../../src/rewards/activity.js';
-import { createSyncEngine, type MergeInput } from '../../src/sync/engine.js';
 import { mergeFile } from '../../src/sync/merge.js';
-import type { SyncStore } from '../../src/sync/store.js';
-import { entryAt } from './kit/remote.js';
-import { editHere, renameHere } from './kit/userActions.js';
-import { createMemoryStore, type MemoryStore } from './memoryStore.js';
+import { editHere, entryAt, renameHere } from './remote.js';
 
 /**
  * Merging before a conflict copy (docs/ARCHITECTURE.md §10): a passage
@@ -105,6 +105,8 @@ describe('the engine, merging', () => {
 		createSyncEngine({
 			provider,
 			store: on,
+			document: PASSAGE_FORMAT,
+			syncsHidden,
 			now: () => new Date('2026-10-13T09:00:00Z'),
 			newId: () => {
 				ids += 1;
@@ -133,7 +135,7 @@ describe('the engine, merging', () => {
 		ids = 0;
 		provider = createFakeProvider({ startAt: new Date('2026-01-01T00:00:00Z') });
 		await provider.ensureRoot();
-		store = createMemoryStore();
+		store = createMemoryStore(PASSAGE_FORMAT);
 	});
 
 	it('merges on a pull, and sends the merge', async () => {

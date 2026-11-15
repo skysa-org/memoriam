@@ -4,7 +4,6 @@ import {
 	chunkPassage,
 	CURRENT_CHUNKER,
 	fillGaps,
-	isHidden,
 	localDay,
 	parsePassageFile,
 	planDay,
@@ -14,6 +13,7 @@ import {
 	readProgress,
 	type Step,
 } from '@memoriam/core';
+import { isHidden } from '@skysa/storage';
 import { useLiveQuery } from 'dexie-react-hooks';
 
 import { useDb } from './database.js';

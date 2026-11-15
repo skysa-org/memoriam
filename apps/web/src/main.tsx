@@ -5,13 +5,13 @@ import './styles/index.css';
 // the banner that shows it has mounted (see the module).
 import './install/installPrompt.js';
 
+import { makeWayWhenAsked, updateChannel } from '@skysa/client';
 import { RouterProvider } from '@tanstack/react-router';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { StaleTabGate } from './components/shell/StaleTabGate.js';
 import { createAppRouter } from './router.js';
-import { makeWayWhenAsked, updateChannel } from './sync/beforeUpdate.js';
 import { connectReturn } from './sync/connectReturn.js';
 import { syncScheduler } from './sync/runtime.js';
 
@@ -25,7 +25,7 @@ const router = createAppRouter();
 // binding on its own, and syncs nothing while there is none.
 syncScheduler.start();
 // Another tab's Reload pauses syncing here too, so the new build can take over
-// (`sync/beforeUpdate.ts`). Never stopped either.
+// (`makeWayWhenAsked`, the kit's client's). Never stopped either.
 makeWayWhenAsked(syncScheduler, updateChannel());
 
 const rootElement = document.getElementById('root');

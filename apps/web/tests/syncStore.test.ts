@@ -1,17 +1,15 @@
 import {
 	chunkPassage,
-	contentHash,
-	createSyncEngine,
 	mergeFile,
 	parsePassageFile,
+	PASSAGE_FORMAT,
 	readProgress,
-	type RemoteEntry,
+	syncsHidden,
 } from '@memoriam/core';
-import {
-	createFakeProvider,
-	describeSyncStoreContract,
-	type FakeProvider,
-} from '@memoriam/core/testing';
+import { contentHash, type RemoteEntry } from '@skysa/storage';
+import { createFakeProvider, type FakeProvider } from '@skysa/storage/testing';
+import { createSyncEngine } from '@skysa/sync';
+import { describeSyncStoreContract } from '@skysa/sync/testing';
 import { describe, expect, it } from 'vitest';
 
 import { LOCAL_CONNECTION_ID, type MemoriamDatabase, type OpQueueRecord } from '../src/store/db.js';
@@ -28,10 +26,9 @@ const boundStore = async (db: MemoriamDatabase) => {
 	return createDexieSyncStore(db, { connectionId: CONNECTION, now: () => 0 });
 };
 
-// The suite lives beside the port it checks, in `packages/core`, and is not a
-// `*.test.ts` there so that it runs only where a store registers it. `core`
-// cannot import `apps/*`, so this store registers here instead.
-describeSyncStoreContract('Dexie', async () => {
+// The suite is the kit's (`@skysa/sync/testing`), beside the port it checks,
+// and runs only where a store registers it: this one registers here.
+describeSyncStoreContract('Dexie', PASSAGE_FORMAT, async () => {
 	const db = freshDatabase();
 	const store = await boundStore(db);
 	return {
@@ -261,6 +258,8 @@ describe('the engine over the Dexie store', () => {
 		createSyncEngine({
 			provider,
 			store: createDexieSyncStore(db, { connectionId: CONNECTION }),
+			document: PASSAGE_FORMAT,
+			syncsHidden,
 			merge: mergeFile,
 		}).sync();
 

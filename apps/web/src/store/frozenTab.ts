@@ -1,4 +1,4 @@
-import { cell } from '@memoriam/core';
+import { cell } from '@skysa/storage';
 import type Dexie from 'dexie';
 
 import { tabState } from './staleTab.js';

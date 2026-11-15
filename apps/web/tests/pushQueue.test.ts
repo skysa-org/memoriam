@@ -1,14 +1,13 @@
 import {
 	chunkPassage,
-	createSyncEngine,
-	isHidden,
 	mergeFile,
 	parsePassageFile,
-	ROOT,
-	type StorageProvider,
-	type SyncStore,
+	PASSAGE_FORMAT,
+	syncsHidden,
 } from '@memoriam/core';
-import { createFakeProvider, type FakeProvider } from '@memoriam/core/testing';
+import { isHidden, ROOT, type StorageProvider } from '@skysa/storage';
+import { createFakeProvider, type FakeProvider } from '@skysa/storage/testing';
+import { createSyncEngine, type SyncStore } from '@skysa/sync';
 import { describe, expect, it } from 'vitest';
 
 import { createCollection, deleteCollection, renameCollection } from '../src/store/collections.js';
@@ -40,7 +39,14 @@ const details = (title: string, text = `${title}, the words.\n`, collection = RO
 	({ title, reference: '', collection, text }) satisfies PassageDetails;
 
 const engineFor = (store: SyncStore, provider: StorageProvider) =>
-	createSyncEngine({ provider, store, now: NOW, merge: mergeFile });
+	createSyncEngine({
+		provider,
+		store,
+		document: PASSAGE_FORMAT,
+		syncsHidden,
+		now: NOW,
+		merge: mergeFile,
+	});
 
 const connected = async () => {
 	const db = freshDatabase();

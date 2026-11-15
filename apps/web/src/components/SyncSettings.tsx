@@ -1,8 +1,15 @@
-import type { ProviderKind, SyncProgress } from '@memoriam/core';
+import {
+	api as appApi,
+	type ApiClient,
+	isLongRun,
+	type SchedulerStatus,
+	type SyncScheduler,
+} from '@skysa/client';
+import type { ProviderKind } from '@skysa/protocol';
+import type { SyncProgress } from '@skysa/sync';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
 
-import { api as appApi, type ApiClient } from '../api/client.js';
 import { formatMoment } from '../i18n/dates.js';
 import { t } from '../i18n/t.js';
 import { boundConnection } from '../store/connection.js';
@@ -16,9 +23,7 @@ import {
 	stopSyncingHere,
 } from '../sync/account.js';
 import { type ConnectOutcome, connectReturn as appConnectReturn } from '../sync/connectReturn.js';
-import { isLongRun } from '../sync/progress.js';
 import { syncScheduler, useSyncStatus } from '../sync/runtime.js';
-import type { SchedulerStatus, SyncScheduler } from '../sync/scheduler.js';
 import { needsReconnect } from '../sync/status.js';
 import { ConflictsBanner } from './ConflictsBanner.js';
 import { Icon } from './Icon.js';
@@ -123,8 +128,17 @@ const syncingLine = (progress: SyncProgress | undefined, provider: string): stri
 	return count ?? listingLine(progress, provider) ?? t('sync.status.syncing');
 };
 
-/** How syncing stands, in a sentence. */
-const statusLine = (status: SchedulerStatus, provider: string, now: number): string => {
+/**
+ * How syncing stands, in a sentence. A library bound to a provider this app
+ * has no adapter for (`syncable` false, `CONNECTABLE`) is one the kit's
+ * scheduler gives its attention without an error of its own: this app says why.
+ */
+const statusLine = (
+	status: SchedulerStatus,
+	provider: string,
+	syncable: boolean,
+	now: number
+): string => {
 	const error = status.error ?? t('sync.failed');
 	switch (status.phase) {
 		case 'local':
@@ -144,6 +158,7 @@ const statusLine = (status: SchedulerStatus, provider: string, now: number): str
 			return t('sync.status.retrying', { error });
 		case 'attention':
 			if (needsReconnect(status)) return t('sync.status.reconnect', { provider });
+			if (!syncable) return t('sync.unsupported');
 			return status.stuck === undefined
 				? t('sync.status.attention', { error })
 				: t('sync.status.stuck', {
@@ -218,7 +233,7 @@ const Connected = ({
 			{/* Sync has stopped until the account is connected again: said in the
 			    colour of an error. */}
 			<p className={reconnect ? 'field-hint sync-problem' : 'field-hint'} role="status">
-				{statusLine(status, provider, now)}
+				{statusLine(status, provider, CONNECTABLE.includes(kind), now)}
 			</p>
 			{/* A run long enough to count: its bar, and the file it is on. A
 			    few passages' sync is over before a bar could be read. */}

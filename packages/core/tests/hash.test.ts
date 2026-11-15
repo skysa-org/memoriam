@@ -1,14 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { contentHash, cyrb53, SHORT_KEY_LENGTH, shortKey } from '../src/hash.js';
-
-describe('contentHash', () => {
-	it('is the SHA-256 of the text, in hex', async () => {
-		expect(await contentHash('abc')).toBe(
-			'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'
-		);
-	});
-});
+import { cyrb53, SHORT_KEY_LENGTH, shortKey } from '../src/hash.js';
 
 describe('cyrb53', () => {
 	it('gives the values its author publishes', () => {

@@ -1,4 +1,4 @@
-import { foldName, isHidden, parentPath, ROOT, SEPARATOR } from '@memoriam/core';
+import { foldName, isHidden, parentPath, ROOT, SEPARATOR } from '@skysa/storage';
 
 import { LOCALE } from '../i18n/t.js';
 import type { FolderRecord, NoteRecord } from './db.js';

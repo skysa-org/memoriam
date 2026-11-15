@@ -1,3 +1,4 @@
+import { sanitizeFolderName } from '@memoriam/core';
 import {
 	ancestorPaths,
 	foldName,
@@ -6,8 +7,7 @@ import {
 	parentPath,
 	rebasePath,
 	ROOT,
-	sanitizeFolderName,
-} from '@memoriam/core';
+} from '@skysa/storage';
 
 import { t } from '../i18n/t.js';
 import {

@@ -1,4 +1,4 @@
-import type { ProviderKind } from '@memoriam/core';
+import type { ProviderKind } from '@skysa/protocol';
 import type { PromiseExtended } from 'dexie';
 
 import {
@@ -54,8 +54,9 @@ export const boundConnection = async (
  * How many times the library has been bound or let go, here. A sync or a
  * question to the server that began before the count moved is about a binding
  * that has gone, whatever connection is bound now — the same one again
- * included — and its answer is not acted on (`sync/scheduler.ts`,
- * `sync/account.ts`). As skysa-notes counts them.
+ * included — and its answer is not acted on (the kit's scheduler, through
+ * `bindings` in `sync/dexiePorts.ts`, and `sync/account.ts`). As skysa-notes
+ * counts them.
  */
 const BINDINGS_KEY = 'sync.bindings';
 

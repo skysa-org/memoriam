@@ -1,13 +1,9 @@
 import {
-	basename,
 	conflictContent,
 	CURRENT_CHUNKER,
 	editedProgress,
-	foldName,
 	frontmatterIsEditable,
-	joinPath,
 	mergePassage,
-	parentPath,
 	type ParsedPassageFile,
 	parsePassageFile,
 	sameApartFromProgress,
@@ -16,8 +12,8 @@ import {
 	toLf,
 	uniqueFilename,
 	UNTITLED_TITLE,
-	withoutNul,
 } from '@memoriam/core';
+import { basename, foldName, joinPath, parentPath, withoutNul } from '@skysa/storage';
 
 import { ensureCollections } from './collections.js';
 import {

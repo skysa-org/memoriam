@@ -1,4 +1,4 @@
-import { cell } from '@memoriam/core';
+import { cell } from '@skysa/storage';
 
 /**
  * The way back from connecting a storage account (docs/ARCHITECTURE.md §10,

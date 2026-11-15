@@ -14,6 +14,10 @@
 	},
 	"dependencies": {
 		"@memoriam/core": "workspace:*",
+		"@skysa/client": "1.1.0",
+		"@skysa/protocol": "1.1.0",
+		"@skysa/storage": "1.1.0",
+		"@skysa/sync": "1.1.0",
 		"@tanstack/react-router": "^1.170.36",
 		"dexie": "^4.4.6",
 		"dexie-react-hooks": "^4.4.0",

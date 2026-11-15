@@ -1,8 +1,8 @@
+import { makeWay, updateChannel } from '@skysa/client';
 import { useEffect, useState } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 
 import { t } from '../../i18n/t.js';
-import { makeWay, updateChannel } from '../../sync/beforeUpdate.js';
 import { syncScheduler } from '../../sync/runtime.js';
 
 /** How long Reload may go unanswered before the prompt says what else to do. */
@@ -12,7 +12,7 @@ const SLOW_MS = 10_000;
  * `registerType: 'prompt'` means a new build never swaps itself in underneath a
  * pass being typed. The user decides when to reload.
  *
- * Reload stops the app's requests first (`sync/beforeUpdate.ts`): asked while
+ * Reload stops the app's requests first (the kit's `makeWay`): asked while
  * a sync was going, the new build waited minutes to take over, and the button
  * looked dead. It says it is updating meanwhile, and if the page has still not
  * reloaded after `SLOW_MS`, what else will do it.

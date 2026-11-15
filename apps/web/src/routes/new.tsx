@@ -1,4 +1,4 @@
-import { ROOT } from '@memoriam/core';
+import { ROOT } from '@skysa/storage';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 
 import { PassageEditor } from '../components/PassageEditor.js';

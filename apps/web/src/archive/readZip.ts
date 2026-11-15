@@ -1,4 +1,4 @@
-import { cell } from '@memoriam/core';
+import { cell } from '@skysa/storage';
 
 import { type Bytes, crc32 } from './zip.js';
 

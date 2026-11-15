@@ -11,46 +11,21 @@ import globals from 'globals';
 /**
  * The lint every Skysa repository shares is the shared kit's
  * (`@skysa/eslint-config`, skysa-notes' record 0018); what follows is this
- * app's own: its words, core's boundaries and layers, the Worker entry's rules,
- * the web app's layers, and where core's test doubles may be reached from.
+ * app's own: its words, core's boundaries and layers, the Worker entry's rules
+ * and the web app's layers.
  */
 
 /**
- * Syntax this app refuses beside the kit's, handed to it as `syntax`, and
- * spread with the kit's wherever a block below sets the rule again. A static
- * import of core's test doubles is what the block on them, below, sees; this
- * keeps a lazy one from slipping a double into a chunk. The kit refuses its
- * own packages' (`@skysa/…/testing`) the same way.
+ * What the store, below the sync layer, may take from the kit's client, which
+ * holds most of the sync layer now (the scheduler, the API client, the token
+ * source): its emitter and store, and the credential row's type.
  */
-const SYNTAX = [
-	{
-		selector: "ImportExpression[source.value='@memoriam/core/testing']",
-		message: 'import the test doubles statically, from a test.',
-	},
-];
-
-/**
- * The kit's cell rule, with this app's word for where a cell comes from: core's
- * own `cell()`, until it is the kit's (`@skysa/storage`) with the rest of
- * core's shared layers. Set in every block below that sets the rule, and in one
- * over all of src, since a block replaces the kit's list rather than adding to
- * it.
- */
-const CELL = CELL_SYNTAX.map((rule) => ({
-	...rule,
+const CLIENT_BELOW_SYNC = {
+	name: '@skysa/client',
+	allowImportNames: ['createEmitter', 'createStore', 'CredentialRecord'],
 	message:
-		'a value that changes is a cell: cell() and Cell<T>, from @memoriam/core, or from src/cell.js inside core.',
-}));
-
-/** Every package's source, as the kit names it for its own blocks over src. */
-const SOURCE = ['**/src/**/*.ts', '**/src/**/*.tsx'];
-
-/**
- * The syntax refused in source: the kit's, this app's, and the cell rule in this
- * app's words. A block below that sets the rule again starts from this, so none
- * of the three is left out of the files it covers.
- */
-const SOURCE_SYNTAX = [...RESTRICTED_SYNTAX, ...SYNTAX, ...CELL];
+		'the kit’s client holds the sync layer: below it, take only createEmitter, createStore and CredentialRecord.',
+};
 
 /** What nothing in packages/core/src may import. */
 const CORE_IMPORTS = [
@@ -61,6 +36,14 @@ const CORE_IMPORTS = [
 	{
 		group: ['@memoriam/web', '@memoriam/api', '**/apps/**'],
 		message: 'packages/core must not import from apps/*.',
+	},
+	{
+		// The kit's engine and what is above it are handed this app's folder,
+		// format and merge (skysa-notes' record 0018); core, which is this
+		// app's, sits beside storage and names only the engine's types.
+		group: ['client', 'server', 'pwa'].flatMap((kit) => [`@skysa/${kit}`, `@skysa/${kit}/*`]),
+		message:
+			'packages/core uses of the kit only @skysa/protocol, @skysa/storage and @skysa/sync.',
 	},
 ];
 
@@ -108,22 +91,19 @@ export default skysa({
 	],
 	// Handed in rather than detected; keep in sync with apps/web's react dependency.
 	react: { files: ['apps/web/**/*.{ts,tsx}'], version: '19.3.0' },
-	syntax: SYNTAX,
 	blocks: [
-		{
-			// A value that changes is a cell, in every package's src, by this
-			// app's word for where it comes from (`CELL`, above).
-			files: SOURCE,
-			rules: { 'no-restricted-syntax': ['error', ...SOURCE_SYNTAX] },
-		},
-
 		// ---- The app's words ------------------------------------------------
 
 		{
 			// The cell rule too, since this sets the rule again for every .tsx.
 			files: ['apps/web/src/**/*.tsx'],
 			rules: {
-				'no-restricted-syntax': ['error', ...SOURCE_SYNTAX, ...INLINE_WORDS],
+				'no-restricted-syntax': [
+					'error',
+					...RESTRICTED_SYNTAX,
+					...INLINE_WORDS,
+					...CELL_SYNTAX,
+				],
 			},
 		},
 
@@ -148,26 +128,9 @@ export default skysa({
 			},
 		},
 		{
-			// A provider moves bytes and names for the sync engine; it knows nothing
-			// of the engine. What both need — a conflict copy's name, say — lives
-			// below them both, in names/. Repeats core's patterns, since a rule set
-			// here replaces the one above rather than adding to it.
-			files: ['packages/core/src/providers/**/*.ts'],
-			rules: {
-				'no-restricted-imports': [
-					'error',
-					{
-						patterns: [
-							...CORE_IMPORTS,
-							NOT_ABOVE(['sync'], 'a provider does not import the sync engine.'),
-						],
-					},
-				],
-			},
-		},
-		{
-			// names/ sits below providers, sync and markdown, which all name files
-			// by it; reaching up into any of them would bring the cycle back.
+			// names/ sits below sync and markdown, which name files by it;
+			// reaching up into either would bring the cycle back. The names the
+			// sync engine and the adapters use are the kit's (`@skysa/storage`).
 			files: ['packages/core/src/names/**/*.ts'],
 			rules: {
 				'no-restricted-imports': [
@@ -175,10 +138,7 @@ export default skysa({
 					{
 						patterns: [
 							...CORE_IMPORTS,
-							NOT_ABOVE(
-								['sync', 'providers', 'markdown'],
-								'names/ sits below sync, providers and markdown.'
-							),
+							NOT_ABOVE(['sync', 'markdown'], 'names/ sits below sync and markdown.'),
 						],
 					},
 				],
@@ -260,7 +220,8 @@ export default skysa({
 				],
 				'no-restricted-syntax': [
 					'error',
-					...SOURCE_SYNTAX,
+					...RESTRICTED_SYNTAX,
+					...CELL_SYNTAX,
 					{
 						selector:
 							"MemberExpression[object.name='globalThis'][property.name='process']",
@@ -289,6 +250,7 @@ export default skysa({
 				'no-restricted-imports': [
 					'error',
 					{
+						paths: [CLIENT_BELOW_SYNC],
 						patterns: [
 							NOT_ABOVE(
 								[
@@ -325,40 +287,6 @@ export default skysa({
 								],
 								'the sync layer drives the store; it does not import the UI.'
 							),
-						],
-					},
-				],
-			},
-		},
-
-		// ---- Test doubles ---------------------------------------------------
-
-		{
-			// Core's test doubles are `@memoriam/core/testing`, for tests alone:
-			// nothing the app ships may reach them, by the entry or by a path into
-			// any tests folder. The kit's own block refuses its packages' doubles
-			// and those paths; this one, set again over the same files, names them
-			// too, since it replaces the kit's list rather than adding to it.
-			files: SOURCE,
-			rules: {
-				'@typescript-eslint/no-restricted-imports': [
-					'error',
-					{
-						paths: [
-							{
-								name: '@memoriam/core/testing',
-								message: 'test doubles are for tests.',
-							},
-						],
-						patterns: [
-							{
-								regex: '^@skysa/[^/]+/testing$',
-								message: 'test doubles are for tests.',
-							},
-							{
-								group: ['**/tests/**', '**/providers/fake', '**/providers/fake.js'],
-								message: 'test doubles are for tests.',
-							},
 						],
 					},
 				],

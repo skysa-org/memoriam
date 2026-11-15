@@ -5,8 +5,8 @@ import {
 	parsePassageFile,
 	readActivity,
 	readProgress,
-	ROOT,
 } from '@memoriam/core';
+import { ROOT } from '@skysa/storage';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';

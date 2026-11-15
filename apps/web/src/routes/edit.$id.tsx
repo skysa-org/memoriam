@@ -1,4 +1,4 @@
-import { parentPath } from '@memoriam/core';
+import { parentPath } from '@skysa/storage';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 
