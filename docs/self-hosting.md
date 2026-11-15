@@ -7,8 +7,11 @@ Cloudflare account: one Worker serves the app and `/api`, and a D1 database hold
 The Worker connects an account through OAuth, keeps its refresh token encrypted, and mints access
 tokens for the devices connected to it. It never sees a passage: those go straight from the browser
 to the storage provider. It is the shared kit's server behind this app's own entry
-(`docs/ARCHITECTURE.md` §10, "The server"), which runs none of the kit's change relay, connect gate
-or entitlement policy, and no WebDAV: every device connected to an account may sync.
+(`docs/ARCHITECTURE.md` §10, "The server"). It runs no WebDAV. By default every account that
+connects may sync, and a device finds another's changes the next time it syncs:
+[Restricting who can sync](#restricting-who-can-sync) and
+[Instant updates between devices](#instant-updates-between-devices-optional) say how to change
+either.
 
 Budget about fifteen minutes, plus however long the provider app registration takes. Dropbox is
 minutes; Google is the longest.
@@ -206,6 +209,170 @@ the request may go ahead, with a `retryAfter` in seconds when it may not. That g
 entry of your own: copy `apps/api/src/worker.ts`, pass `rateLimiter` to its `createApp`, and
 point `main` in `wrangler.toml` at your copy.
 
+## Restricting who can sync
+
+By default every account that connects may sync. To choose which ones, give `createApp` an
+`EntitlementProvider` of your own. It is asked when an account connects and each time a device mints
+a token. It can say no with a `reason` in your words and a `code` from a fixed list: `not_allowed`,
+`lapsed` or `limit_reached`.
+
+The app words a refusal by its code in both places it can come. Your `reason` reaches only one of
+them: Settings, for a library already syncing with an account that is refused a token later. An
+account refused as it first connects sees only the code's wording, because that refusal comes back
+in a URL, and a URL does not carry free text. The kit's
+[ARCHITECTURE §6](https://github.com/skysa-org/skysa-kit/blob/main/docs/ARCHITECTURE.md#backend),
+"Entitlement seam", has the details.
+
+Give it a `gate` too, and Settings shows your message and one link where the connect buttons are,
+before a provider's consent screen ends in a refusal, with an "Already have access?" button that
+shows the buttons. Showing them grants nothing, because your policy still decides. A library already
+syncing that your policy later refuses shows your link beside the refusal.
+
+```ts
+import type { EntitlementProvider } from '@memoriam/api';
+
+const invited = new Set(['dbid:AAH4f99T0taONIb-OurWxbNQ6ywGRopQngc']);
+
+export const entitlements: EntitlementProvider = {
+	check: ({ accountId }) =>
+		Promise.resolve(
+			invited.has(accountId)
+				? { allowed: true }
+				: { allowed: false, code: 'not_allowed', reason: 'This server syncs invited accounts.' }
+		),
+	gate: {
+		message: 'This server syncs invited accounts only.',
+		action: { label: 'Ask for an invite', url: 'https://example.com/invite' },
+	},
+};
+```
+
+A gate can ask for a code as well, when your policy lets accounts in by something other than the
+account itself: an invite, or a code your own page sends to someone who has paid. Give it
+`connectCode: { label: 'Invite code' }` and Settings shows a field under that label where the gate
+is. Add `required: true` and the connect buttons wait for a code your policy has accepted, with no
+"Already have access?". A gate that asks for a code needs `checkCode` beside it, which the app asks
+as the code is used, so a wrong one is said at once rather than after the provider's consent screen;
+it answers how many seconds the app should keep the code (at most a year), or why not. That is
+advice: whatever the app kept reaches your policy again at the callback, as
+`check(subject, { connectCode })`, trimmed, at most 256 characters, and never blank, and that is
+where it decides. `/token` does not pass it, so a policy that accepts a code has to remember the
+account it let in:
+
+```ts
+export const entitlements: EntitlementProvider = {
+	check: async ({ provider, accountId }, context) => {
+		if (await admitted(provider, accountId)) return { allowed: true };
+		if (context?.connectCode !== undefined && (await redeem(context.connectCode))) {
+			await admit(provider, accountId);
+			return { allowed: true };
+		}
+		return { allowed: false, code: 'not_allowed' };
+	},
+	checkCode: async (code) =>
+		(await isOpen(code))
+			? { accepted: true, expiresIn: 15 * 60 }
+			: { accepted: false, reason: 'That invite code is not valid.' },
+	gate: {
+		message: 'This server syncs invited accounts only.',
+		action: { label: 'Ask for an invite', url: 'https://example.com/invite' },
+		connectCode: { label: 'Invite code' },
+	},
+};
+```
+
+`admitted`, `redeem`, `admit` and `isOpen` are yours: somewhere your Worker keeps what it has let
+in. `checkCode` only reads; the callback is where an invite is spent. The app words a plain refusal
+to a connect that carried a code as "Nothing was connected: the code you entered was not accepted."
+
+An accepted answer may also carry `hold`: something the app keeps and sends in place of what was
+typed, with connects and to `checkCode`, for `expiresIn`. An invite that becomes a pass for the
+device it was typed on is one use: the invite is good once, briefly, and the pass, which your Worker
+issues and can check without keeping, lets that device connect again later without another invite.
+The app never shows a held value, and asks about it again as it loads, at most once an hour, keeping
+what you answer (a fresh `hold` keeps a pass alive while the device is used) and letting it go if
+you refuse it. Don't have a fresh `hold` end the one it replaces: two tabs loading together can
+leave the earlier one held. A held value is a bearer: anyone who copies it out of the browser can
+use it as that device would, until your policy stops taking it.
+
+This goes in a Worker entry of your own. Copy `apps/api/src/worker.ts`, change its
+`createApp({ … })` call to pass `entitlements` as well, and point `main` in `wrangler.toml` at your
+copy. Beside the original in `apps/api/src`, its relative imports work as they are. Anywhere else,
+import `createApp`, `parseEnv`, `envWarnings` and `misconfigured` from `@memoriam/api` instead,
+`ConnectionRelay` and `durableObjectRelay` from `@memoriam/api/relay`, and `cell` from the kit's
+`@skysa/storage`. Keep the copy's `export { ConnectionRelay }` whether or not you run the relay:
+`wrangler.toml` binds that class, and a deploy whose entry does not export it is refused. The stock
+entry never sets a gate.
+
+Keep the copy's `try`/`catch`. `createApp` checks the gate and throws on any of these:
+
+- a message that is blank or over 500 characters;
+- a label that is blank or over 40 characters;
+- a link that is not an `https:` URL, or is over 2048 characters;
+- a code field whose label is blank or over 40 characters;
+- a code field without `checkCode`.
+
+The entry then logs the problem and answers `server_misconfigured`, rather than showing a broken
+link to your users. The link is served in its normalised form, so `https:example.com` goes out as
+`https://example.com/`.
+
+## Instant updates between devices (optional)
+
+Off by default. With it off, a device finds another device's practice and edits the next time it
+syncs: within a minute while the app is open, and at once when it is brought back to the front. With
+it on, it finds them within a second or two of their being sent. A device that has just sent its
+changes says so over a WebSocket to the Worker, and the Worker tells the account's other devices,
+which then sync. Practice is sent within a minute of a pass (`docs/ARCHITECTURE.md` §10, "Push
+timing"), so the relay makes that minute the wait, rather than that minute and the other device's
+next sync.
+
+**What it costs you in privacy terms.** No passage and no file name passes through it: the message
+is "something changed", nothing else. But the Worker does learn *when* each connected account is
+practised or edited, and from which device, which it otherwise would not: without it, it sees a
+token refresh about once an hour. Nothing per message is logged by the app; Cloudflare's own request
+logs record each socket being opened. Tell your users if that matters to them.
+
+**What it costs in requests.** Each device opens a socket each time the app comes to the front: a
+ticket request, the upgrade, and a Durable Object request. Roughly 80 Worker requests per active
+user per day, plus a few hundred WebSocket messages billed at 20:1 as Durable Object requests. A
+browser whose security policy refuses the socket (`apps/web/public/_headers` says which) asks for
+a ticket again each time the app comes to the front, and up to once a minute while it is in view:
+up to 60 Worker requests an hour for each open window
+([skysa-org/skysa-kit#22](https://github.com/skysa-org/skysa-kit/issues/22)).
+
+- On **Workers Paid** that is about $0.0007 per active user per month (Cloudflare's published
+  prices, 2026-10).
+- On **Workers Free** the cost is the daily cap instead. 80 requests per user per day against
+  100,000, shared with token refresh, puts an instance with a thousand daily users most of the way
+  to the cap, and at the cap, sync stops for everyone until 00:00 UTC. For more than a handful of
+  people, turn this on only on Paid. Durable Objects themselves are available on Free.
+
+**Turning it on.** The Durable Object it needs (`ConnectionRelay`, bound as `RELAY_HUB`) is already
+declared in `wrangler.toml`, so there is nothing to create. Set `RELAY = "true"` in `[vars]` in
+`wrangler.toml`, deploy, and check:
+
+```sh
+curl -s https://memoriam.example.com/api/config
+# … "relay":true …
+```
+
+Apps open at the time pick it up the next time they load. Polling carries on as before: the relay
+hears nothing about edits made in the folder by other tools, such as the provider's own app, and a
+device whose socket has dropped still syncs. Locally, put `RELAY="true"` in `apps/api/.dev.vars`.
+
+**Turning it off** is `RELAY = "false"` and a deploy. The class can stay declared; an object nothing
+addresses costs nothing. To remove it entirely, delete the `[[durable_objects.bindings]]` block and
+add a migration that deletes the class, then deploy:
+
+```toml
+[[migrations]]
+tag = "v2"
+deleted_classes = ["ConnectionRelay"]
+```
+
+The `[[migrations]]` block with `tag = "v1"` stays: Cloudflare applies migrations in order and
+remembers which it has.
+
 ## Updating
 
 ```bash
@@ -279,15 +446,15 @@ place of `--remote`, or by deleting `apps/api/.wrangler/state`.
 
 The Worker refuses to start rather than starting up wrong. It answers every request with
 `server_misconfigured`, and logs `Invalid environment:` followed by one line per problem: all of
-them, not just the first. The three that catch people:
+them, not just the first. The ones that catch people:
 
 | The line | What to do |
 |---|---|
 | `APP_ORIGIN: Invalid input: expected string, received undefined` | There is no default; set it. (`Invalid URL` instead means it is set but malformed: usually the scheme is missing.) |
 | `SECRETS_KEY: SECRETS_KEY must be base64 of exactly 32 bytes` | Generate one: `openssl rand -base64 32` |
 | `DROPBOX_CLIENT_SECRET: required because ENABLED_PROVIDERS includes "dropbox"` | Register that provider's app, or take it out of `ENABLED_PROVIDERS` |
+| `RELAY: true, but the RELAY_HUB Durable Object binding is missing from wrangler.toml` | Put back the `[[durable_objects.bindings]]` block, or set `RELAY = "false"`. If you deleted the class ([Turning it off](#instant-updates-between-devices-optional)), add a migration that creates it again too: `tag = "v3"`, `new_sqlite_classes = ["ConnectionRelay"]` |
 
-A setting that boots but does nothing is logged once, as `Environment:` and a line saying why,
-and the Worker starts. `RELAY` is one: the kit's server reads it, but this app runs no change
-relay, so take it out. The setting is read even so, and a value other than `true`, `false`, `1` or
-`0` is refused.
+A setting that boots but does nothing is logged once, as `Environment:` and a line saying why, and
+the Worker starts: `webdav` in `ENABLED_PROVIDERS` is one, since this app offers no WebDAV. `RELAY`
+other than `true`, `false`, `1` or `0` is refused.

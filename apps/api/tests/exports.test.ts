@@ -1,3 +1,7 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -9,6 +13,7 @@ import {
 	type RateLimitDecision,
 	type RateLimiter,
 } from '../src/index.js';
+import { ConnectionRelay, durableObjectRelay } from '../src/relay.js';
 
 /**
  * `@memoriam/api` resolves to `src/index.ts`, so what a second Worker entry
@@ -23,6 +28,17 @@ describe('the package entry', () => {
 		expect(typeof parseEnv).toBe('function');
 		expect(typeof envWarnings).toBe('function');
 		expect(typeof misconfigured).toBe('function');
+	});
+
+	it('exports the change relay for an entry that runs it, from a module of its own', () => {
+		expect(typeof ConnectionRelay).toBe('function');
+		expect(typeof durableObjectRelay).toBe('function');
+		// The names docs/self-hosting.md gives an entry outside `src`: these modules.
+		const api = join(dirname(fileURLToPath(import.meta.url)), '..');
+		const manifest: unknown = JSON.parse(readFileSync(join(api, 'package.json'), 'utf8'));
+		expect(manifest).toMatchObject({
+			exports: { '.': './src/index.ts', './relay': './src/relay.ts' },
+		});
 	});
 
 	it('exports the rate limiter seam, as it did before the kit', async () => {

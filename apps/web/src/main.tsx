@@ -5,19 +5,23 @@ import './styles/index.css';
 // the banner that shows it has mounted (see the module).
 import './install/installPrompt.js';
 
-import { makeWayWhenAsked, updateChannel } from '@skysa/client';
+import { api, makeWayWhenAsked, updateChannel } from '@skysa/client';
 import { RouterProvider } from '@tanstack/react-router';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { StaleTabGate } from './components/shell/StaleTabGate.js';
 import { createAppRouter } from './router.js';
+import { askAgain } from './sync/connectCode.js';
 import { connectReturn } from './sync/connectReturn.js';
 import { syncScheduler } from './sync/runtime.js';
 
 // Before the router reads the address: the way back from connecting storage
 // carries its outcome in the query, which is taken out here (see the module).
 connectReturn.take(window.location, window.history);
+// What an operator's gate gave this device to hold, asked about again where it
+// is due: hourly, and at once after a refused connect (see the module).
+void askAgain(api, { refused: connectReturn.peek()?.outcome === 'refused' });
 
 const router = createAppRouter();
 

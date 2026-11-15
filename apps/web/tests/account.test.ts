@@ -5,7 +5,9 @@ import {
 	beginConnect,
 	type Connection,
 	credentialFor,
+	dropConnectCode,
 	hashCredential,
+	holdConnectCode,
 	keepCredential,
 	PENDING_CREDENTIAL_ID,
 	pendingCredential,
@@ -13,7 +15,7 @@ import {
 	type Result,
 } from '@skysa/client';
 import { ROOT } from '@skysa/storage';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
 	bindingCount,
@@ -47,6 +49,11 @@ let db: MemoriamDatabase;
 
 beforeEach(() => {
 	db = freshDatabase();
+});
+
+// A code held where every tab reads it, which the next test must not find.
+afterEach(() => {
+	dropConnectCode();
 });
 
 const connectionNamed = (id: string, overrides: Partial<Connection> = {}): Connection => ({
@@ -99,8 +106,10 @@ const clientFor = (server: Server, credential?: string): ApiClient => {
 			);
 		},
 		token: unused,
-		startConnect: (provider, credentialHash, returnTo) => {
-			server.calls.push(`start ${provider} ${credentialHash} ${returnTo}`);
+		startConnect: (provider, credentialHash, returnTo, code) => {
+			server.calls.push(
+				`start ${provider} ${credentialHash} ${returnTo}${code === undefined ? '' : ` with ${code}`}`
+			);
 			return Promise.resolve({ ok: true, value: `https://provider.example/consent` });
 		},
 		relayTicket: unused,
@@ -216,6 +225,20 @@ describe('connecting', () => {
 		expect(result).toEqual({ ok: true, value: 'https://provider.example/consent' });
 		expect(server.calls).toEqual([
 			`start dropbox ${await hashCredential(pending?.credential ?? '')} /settings`,
+		]);
+	});
+
+	it('sends the code an operator’s gate took, while this device holds it', async () => {
+		const server = newServer();
+		holdConnectCode('INVITE-7', 15 * 60);
+
+		await startConnecting(db, clientFor(server), 'dropbox', '/settings');
+		dropConnectCode();
+		await startConnecting(db, clientFor(server), 'dropbox', '/settings');
+
+		expect(server.calls.map((call) => call.replace(/ \S+ \/settings/, ''))).toEqual([
+			'start dropbox with INVITE-7',
+			'start dropbox',
 		]);
 	});
 

@@ -1,22 +1,32 @@
 import { cell } from '@skysa/storage';
 
 import { createApp, envWarnings, misconfigured, parseEnv } from './index.js';
+import { durableObjectRelay } from './relay.js';
+
+/** The change relay's Durable Object, which the runtime finds by this export. */
+export { ConnectionRelay } from './relay.js';
 
 /**
  * The default Worker entry: the only module in `apps/api` that reads the
  * environment. An operator who needs different behavior writes their own entry
- * that imports `createApp` and passes its own rate limiter, instead of forking.
+ * that imports `createApp` and passes its own seams, instead of forking.
  */
 
 type AppOrError = ReturnType<typeof createApp> | Error;
 
 /**
- * Built once per isolate. A cell so the cache is an explicit, single-purpose
- * piece of state rather than ambient module mutation.
+ * Built once per isolate. A cell so the cache is an explicit,
+ * single-purpose piece of state rather than ambient module mutation.
  */
 const cache = cell<AppOrError | undefined>(undefined);
 
-const build = (env: Env): AppOrError => {
+/**
+ * The relay's binding is declared in wrangler.toml whether or not it is used,
+ * but a deployment can drop it; the generated `Env` cannot know that.
+ */
+type WorkerEnv = Omit<Env, 'RELAY_HUB'> & { RELAY_HUB?: Env['RELAY_HUB'] };
+
+const build = (env: WorkerEnv): AppOrError => {
 	try {
 		// Once per isolate, as the app is built: settings that boot but do nothing.
 		// Before the parse, so an environment refused for another reason says
@@ -25,24 +35,25 @@ const build = (env: Env): AppOrError => {
 			console.warn(`Environment: ${warning}`);
 		});
 		const config = parseEnv(env);
-		// The kit's server reads `RELAY`, but this entry hands it no relay
-		// (docs/ARCHITECTURE.md §10, "The server"), so the setting does nothing,
-		// and the operator is told as the kit tells of its own. After the parse,
-		// which reads the setting, so an environment refused for another reason
-		// says this once it boots.
-		if (config.relay) {
-			console.warn(
-				'Environment: RELAY: this app runs no change relay, so the setting does nothing ' +
-					'(docs/self-hosting.md)'
+		const hub = config.relay ? env.RELAY_HUB : undefined;
+		if (config.relay && hub === undefined) {
+			// The same shape as `parseEnv`'s refusals, so the operator reads one kind
+			// of message for every way the environment is wrong.
+			throw new Error(
+				'Invalid environment:\n  RELAY: true, but the RELAY_HUB Durable Object binding ' +
+					'is missing from wrangler.toml (docs/self-hosting.md)'
 			);
 		}
-		return createApp({ config });
+		return createApp({
+			config,
+			...(hub === undefined ? {} : { relay: durableObjectRelay(hub) }),
+		});
 	} catch (err) {
 		return err instanceof Error ? err : new Error(String(err));
 	}
 };
 
-const appFor = (env: Env): AppOrError => {
+const appFor = (env: WorkerEnv): AppOrError => {
 	const cached = cache.current;
 	if (cached !== undefined) return cached;
 
@@ -52,10 +63,14 @@ const appFor = (env: Env): AppOrError => {
 };
 
 export default {
-	fetch: (request: Request, env: Env, ctx: ExecutionContext): Response | Promise<Response> => {
+	fetch: (
+		request: Request,
+		env: WorkerEnv,
+		ctx: ExecutionContext
+	): Response | Promise<Response> => {
 		const app = appFor(env);
 
 		if (app instanceof Error) return misconfigured(app);
 		return app.fetch(request, env, ctx);
 	},
-} satisfies ExportedHandler<Env>;
+} satisfies ExportedHandler<WorkerEnv>;

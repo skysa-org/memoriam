@@ -58,6 +58,40 @@ export const sync = {
 		attention: 'Sync needs attention: {error}',
 		reconnect: '{provider} needs to be connected again before your library can sync.',
 		stuck: 'A change to {path} could not be sent ({error}).',
+		/**
+		 * The server's policy would not mint a token for the account, by the kind
+		 * of no it gave (`denial.code`); its own reason, where it gave one, is
+		 * said under it.
+		 */
+		refused: {
+			notAllowed: 'This account is not allowed to sync on this server.',
+			lapsed: 'This account’s access to sync on this server has lapsed.',
+			limitReached: 'This server is at its limit for syncing accounts.',
+			unspecified: 'This account cannot sync on this server.',
+		},
+	},
+	/**
+	 * What an operator's gate puts where the connect buttons are: its message and
+	 * link are the operator's own words, and these are the app's around them.
+	 */
+	gate: {
+		/** Shows the connect buttons, where the gate does not require a code. */
+		alreadyHave: 'Already have access?',
+		code: {
+			use: 'Use code',
+			/** The same button while the server is asked about the code. */
+			checking: 'Checking…',
+			/** The policy turned it down without a reason of its own. */
+			notAccepted: 'That code was not accepted.',
+			notChecked: 'The code could not be checked. Check that you are online, and try again.',
+			tooMany: 'Too many codes have been tried from here. Wait a while, and try again.',
+			/** `{label}` is the operator's name for the code, such as "Invite code". */
+			accepted: '{label} accepted on this device until {time}.',
+			/** Opens the field again, where the buttons were shown without a code. */
+			enter: 'Have a code? Enter it',
+			change: 'Use another',
+			changeLabel: 'Use another {label}',
+		},
 	},
 	returned: {
 		ok: 'Connected. Your library will now sync.',
@@ -66,6 +100,17 @@ export const sync = {
 		partial:
 			'Connected, but the storage provider could not be asked for everything. If syncing fails, connect again.',
 		expired: 'That attempt to connect had expired. Try again.',
+		/** The server's policy said no, by the kind of no it gave. */
+		refused: {
+			notAllowed:
+				'Nothing was connected: this account is not allowed to sync on this server.',
+			lapsed: 'Nothing was connected: this account’s access to sync on this server has lapsed.',
+			limitReached:
+				'Nothing was connected: this server is at its limit for syncing accounts.',
+			unspecified: 'Nothing was connected: this account cannot sync on this server.',
+			/** A plain no to a connect made with a code typed into the gate. */
+			code: 'Nothing was connected: the code you entered was not accepted.',
+		},
 	},
 	disconnect: {
 		title: 'Stop syncing with {provider}?',

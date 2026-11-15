@@ -11,21 +11,37 @@ import { createConnectReturn, readConnectReturn } from '../src/sync/connectRetur
 describe('reading the way back', () => {
 	it('takes the outcome out of the query and opens Settings', () => {
 		expect(readConnectReturn('https://app.example/?connect=ok')).toEqual({
-			outcome: 'ok',
+			returned: { outcome: 'ok' },
 			href: 'https://app.example/#/settings',
 		});
 	});
 
 	it('keeps the rest of the query, and the path', () => {
 		expect(readConnectReturn('https://app.example/memoriam/?a=1&connect=denied&b=2')).toEqual({
-			outcome: 'denied',
+			returned: { outcome: 'denied' },
 			href: 'https://app.example/memoriam/?a=1&b=2#/settings',
+		});
+	});
+
+	it('takes a refusal with the kind of no the policy gave, and the kind out of the query', () => {
+		expect(
+			readConnectReturn('https://app.example/?connect=refused&code=limit_reached&a=1')
+		).toEqual({
+			returned: { outcome: 'refused', code: 'limit_reached' },
+			href: 'https://app.example/?a=1#/settings',
+		});
+	});
+
+	it('takes a refusal with a kind the policy has none of as one without a kind', () => {
+		expect(readConnectReturn('https://app.example/?connect=refused&code=banned')).toEqual({
+			returned: { outcome: 'refused' },
+			href: 'https://app.example/#/settings',
 		});
 	});
 
 	it('takes out an outcome the server never sends, and says nothing of it', () => {
 		expect(readConnectReturn('https://app.example/?connect=signin#/library')).toEqual({
-			outcome: undefined,
+			returned: undefined,
 			href: 'https://app.example/#/settings',
 		});
 	});
@@ -43,8 +59,8 @@ describe('holding the outcome until it is shown', () => {
 		held.take({ href: 'https://app.example/?connect=partial' }, { replaceState });
 
 		expect(replaceState).toHaveBeenCalledWith(null, '', 'https://app.example/#/settings');
-		expect(held.peek()).toBe('partial');
-		expect(held.peek()).toBe('partial');
+		expect(held.peek()).toEqual({ outcome: 'partial' });
+		expect(held.peek()).toEqual({ outcome: 'partial' });
 		held.forget();
 		expect(held.peek()).toBeUndefined();
 	});

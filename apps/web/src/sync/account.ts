@@ -4,6 +4,7 @@ import {
 	type Connection,
 	credentialFor,
 	forgetCredential,
+	heldConnectCode,
 	keepCredential,
 	pendingCredential,
 	type Refusal,
@@ -65,7 +66,8 @@ type Client = Pick<ApiClient, 'withCredential'>;
  * Start connecting `provider`: a credential written down, and the address of
  * the provider's consent screen to send the browser to. The credential **must**
  * be written before the browser leaves (`beginConnect`), which is why this is
- * the one way to ask.
+ * the one way to ask. The code an operator's gate took, while this device holds
+ * it, goes too: the policy decides with it at the callback (`connectCode.ts`).
  */
 export const startConnecting = async (
 	db: MemoriamDatabase,
@@ -74,7 +76,7 @@ export const startConnecting = async (
 	returnTo: string
 ): Promise<Result<string>> => {
 	const { credentialHash } = await beginConnect(db, provider);
-	return client.startConnect(provider, credentialHash, returnTo);
+	return client.startConnect(provider, credentialHash, returnTo, heldConnectCode());
 };
 
 /**

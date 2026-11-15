@@ -11,6 +11,7 @@ import worker from '../src/worker.js';
 const env = {
 	APP_ORIGIN: 'not an origin',
 	SECRETS_KEY: 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=',
+	RELAY: 'false',
 } as unknown as Parameters<typeof worker.fetch>[1];
 
 afterEach(() => {

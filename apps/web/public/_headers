@@ -10,8 +10,16 @@
 #   and script the policy lets run could read it.
 # - style-src 'unsafe-inline': React sets element styles (the practice card's
 #   position over the keyboard). Neither can run script.
-# - connect-src: this origin (the API) and the hosts of the storage providers
-#   the browser syncs with directly (docs/ARCHITECTURE.md §10). From skysa-notes:
+# - connect-src: this origin (the API, and the change relay's WebSocket where
+#   the instance runs one, at wss: on this host) and the hosts of the storage
+#   providers the browser syncs with directly (docs/ARCHITECTURE.md §10).
+#   'self' covers the relay's socket in browsers that follow CSP Level 3; one
+#   that does not refuses it, and that browser finds other devices' changes by
+#   polling, as without a relay, while the kit's relay link asks for a ticket
+#   again each time the app comes to the front, and at most once a minute while
+#   it is in view. wss: is not added: it would let script reach any WebSocket
+#   host. https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/connect-src
+#   The providers' hosts, from skysa-notes:
 #   Dropbox: *.dropboxapi.com (api. for metadata, content. for bytes).
 #   OneDrive: graph.microsoft.com for everything but file bytes, which come
 #   from the item's pre-authenticated download URL on another host —
