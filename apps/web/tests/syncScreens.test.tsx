@@ -687,6 +687,123 @@ describe('connected', () => {
 		expect(screen.queryByRole('button', { name: 'Connect again' })).toBeNull();
 	});
 
+	it('offers the operator’s code beside Connect again, never in front of it, and connects with one it took', async () => {
+		await bound();
+		// Required where a library is connected first; beside Connect again, only offered.
+		const { client, checkConnectCode, startConnect } = gated({
+			connectCode: { label: 'Invite code', required: true },
+		});
+		checkConnectCode.mockResolvedValue({ ok: true, value: { accepted: true, expiresIn: 600 } });
+		const leave = vi.fn();
+		const user = userEvent.setup();
+		showSettings({
+			client,
+			scheduler: schedulerShowing({ phase: 'attention', refusal: 'reauthorize_required' }),
+			connectReturn: holding(),
+			leave,
+		});
+
+		await user.click(await screen.findByRole('button', { name: 'Have a code? Enter it' }));
+		// The account was let in once: no message and no link.
+		expect(screen.queryByText('Sync is for members of the reading group.')).toBeNull();
+		expect(screen.queryByRole('link')).toBeNull();
+		// A connect sends the code held, never what is in the field.
+		expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Invite code' }));
+		expect(screen.queryByRole('button', { name: 'Connect again' })).toBeNull();
+		await user.click(screen.getByRole('button', { name: 'Cancel' }));
+		expect(screen.queryByRole('textbox')).toBeNull();
+		expect(screen.getByRole('button', { name: 'Connect again' })).toBeTruthy();
+		expect(document.activeElement).toBe(
+			screen.getByRole('button', { name: 'Have a code? Enter it' })
+		);
+
+		await user.click(screen.getByRole('button', { name: 'Have a code? Enter it' }));
+		await user.type(screen.getByRole('textbox', { name: 'Invite code' }), 'INVITE-7');
+		await user.click(screen.getByRole('button', { name: 'Use code' }));
+		expect(await screen.findByText(/^Invite code accepted on this device until /)).toBeTruthy();
+		expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Connect again' }));
+
+		// Another, or Cancel back to the one held.
+		await user.click(screen.getByRole('button', { name: 'Use another Invite code' }));
+		expect(screen.queryByRole('button', { name: 'Connect again' })).toBeNull();
+		await user.click(screen.getByRole('button', { name: 'Cancel' }));
+		expect(document.activeElement).toBe(
+			screen.getByRole('button', { name: 'Use another Invite code' })
+		);
+		await user.click(screen.getByRole('button', { name: 'Connect again' }));
+		await waitFor(() => {
+			expect(leave).toHaveBeenCalled();
+		});
+		expect(startConnect).toHaveBeenCalledWith('dropbox', expect.any(String), '/', 'INVITE-7');
+	});
+
+	it('offers Connect again alone where the operator’s gate asks for no code', async () => {
+		await bound();
+		const { client, config } = gated();
+		showSettings({
+			client,
+			scheduler: schedulerShowing({ phase: 'attention', refusal: 'credential_revoked' }),
+			connectReturn: holding(),
+		});
+
+		expect(await screen.findByRole('button', { name: 'Connect again' })).toBeTruthy();
+		// Once /config has answered.
+		await act(async () => {
+			await config.mock.results[0]?.value;
+		});
+		expect(screen.queryByRole('button', { name: 'Have a code? Enter it' })).toBeNull();
+		expect(screen.queryByText('Sync is for members of the reading group.')).toBeNull();
+	});
+
+	it('keeps a code half typed beside Connect again through the runs that go on meanwhile', async () => {
+		await bound();
+		const { client } = gated({ connectCode: { label: 'Invite code' } });
+		const reauthorize: Partial<SchedulerStatus> = {
+			phase: 'attention',
+			refusal: 'reauthorize_required',
+		};
+		const scheduler = schedulerSaying(reauthorize);
+		const user = userEvent.setup();
+		showSettings({ client, scheduler, connectReturn: holding() });
+
+		await user.click(await screen.findByRole('button', { name: 'Have a code? Enter it' }));
+		await user.type(screen.getByRole('textbox', { name: 'Invite code' }), 'INVITE');
+		// The window's focus starts a run, which the provider refuses again.
+		act(() => {
+			scheduler.say({ phase: 'syncing' });
+		});
+		// Said as it is, and not in the colour of an error.
+		expect(screen.getByText('Syncing…').classList.contains('sync-problem')).toBe(false);
+		expect(screen.getByRole('textbox', { name: 'Invite code' })).toHaveProperty(
+			'value',
+			'INVITE'
+		);
+		act(() => {
+			scheduler.say(reauthorize);
+		});
+		expect(screen.getByRole('textbox', { name: 'Invite code' })).toHaveProperty(
+			'value',
+			'INVITE'
+		);
+		// Connect again stays through a run as well.
+		await user.click(screen.getByRole('button', { name: 'Cancel' }));
+		act(() => {
+			scheduler.say({ phase: 'syncing' });
+		});
+		expect(screen.getByRole('button', { name: 'Connect again' })).toBeTruthy();
+
+		// A run that ended any other way: nothing to connect again.
+		act(() => {
+			scheduler.say({ phase: 'idle' });
+		});
+		expect(screen.queryByRole('button', { name: 'Connect again' })).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Have a code? Enter it' })).toBeNull();
+		act(() => {
+			scheduler.say({ phase: 'syncing' });
+		});
+		expect(screen.queryByRole('button', { name: 'Connect again' })).toBeNull();
+	});
+
 	it('says why a library bound to a provider this app cannot sync with does not', async () => {
 		// The kit's scheduler has no adapter to make for it, and asks for
 		// attention without a reason of its own.

@@ -653,6 +653,7 @@ What is this app's:
     Showing them grants nothing: the policy decides at the callback.
   - The field and the buttons are never open together, as in skysa-notes: a connect sends the code held, never what is in the field.
     Each step moves the focus to what it opened.
+  - Beside Connect again, where a bound library must be connected again, the field is offered and never in front of it ("Bound", below).
   - A value the policy gave to hold in place of a typed code is never shown.
     It is asked about again as the app loads, hourly and at once after a refused connect, and let go of where the policy no longer takes it (`askAgain` in `sync/connectCode.ts`, as skysa-notes').
 - **The way back.** The server's callback sends the browser to the path the app started from, with the outcome in the query (`?connect=ok`).
@@ -677,7 +678,12 @@ What is this app's:
     A run of a few is not counted, so an edit's sync does not flash a number;
   - paused, or offline, or retrying;
   - what needs attention, with the change that is stuck, or "Connect again" when connecting the account again is the answer (`needsReconnect` in `sync/status.ts`, as skysa-notes': the server or the provider wants the account asked again, or the credential reaches nothing).
-    That sentence is drawn in the colour of an error, since sync has stopped until it is done;
+    That sentence is drawn in the colour of an error, since sync has stopped until it is done.
+    This Connect again is not behind the operator's gate, as the one under a policy's refusal is: the account was let in, and connecting it again is how it comes back.
+    Where the gate asks for a code, required or not, "Have a code? Enter it" is beside it (`CodeBeside`), so a policy that let the account in by one code can be given another without disconnecting first (memoriam#45, decided 2026-11-15).
+    skysa-notes and skysa-draw reach a new code where a source is added, which this app, with one library, cannot do without letting it go.
+    The field and Connect again are never open together, as in the gate.
+    Both stay through the runs that go on meanwhile, since focus and edits still start one, as a refusal does below;
   - a policy's refusal, by the kind of no it gave, with its reason under it where it gave one, and **Connect again**, behind the operator's gate where there is one ("The gate"), since a policy that let the account in by a code may need another to let it in again.
     It stays through the runs that go on while refused, so a code half typed into the gate is kept.
 

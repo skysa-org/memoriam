@@ -33,7 +33,7 @@ import { syncScheduler, useSyncStatus } from '../sync/runtime.js';
 import { needsReconnect } from '../sync/status.js';
 import { ConflictsBanner } from './ConflictsBanner.js';
 import { Icon } from './Icon.js';
-import { SyncGate } from './SyncGate.js';
+import { CodeBeside, SyncGate } from './SyncGate.js';
 import { ConfirmDialog } from './ui/ConfirmDialog.js';
 import { RunProgress } from './ui/RunProgress.js';
 
@@ -233,6 +233,20 @@ const useRefused = (
 	return now ? { reason } : refused;
 };
 
+/**
+ * Whether the account must be connected again (`needsReconnect`), kept as
+ * `useRefused` keeps a refusal: focus and edits still start runs, each of which
+ * starts as `syncing`, and a code half typed beside Connect again would go
+ * with it.
+ */
+const useReconnect = (status: SchedulerStatus): boolean => {
+	const now = needsReconnect(status);
+	const [kept, setKept] = useState(false);
+	if (now && !kept) setKept(true);
+	if (!now && status.phase !== 'syncing' && kept) setKept(false);
+	return now || (kept && status.phase === 'syncing');
+};
+
 interface Props {
 	client?: Client;
 	scheduler?: Pick<SyncScheduler, 'status' | 'subscribe' | 'syncNow' | 'pause'>;
@@ -311,12 +325,25 @@ const Connected = ({
 }>) => {
 	const db = useDb();
 	const status = useSyncStatus(scheduler);
-	const reconnect = needsReconnect(status);
+	const reconnect = useReconnect(status);
 	const syncable = CONNECTABLE.includes(kind);
 	const refused = useRefused(status, syncable);
 	const [asking, setAsking] = useState(false);
 	const [held, setHeld] = useState<Held | undefined>(undefined);
 	const provider = PROVIDER_LABELS[kind];
+	const asked = reconnect ? answer(config)?.connectGate?.connectCode : undefined;
+	const again = (
+		<button
+			type="button"
+			className="button primary"
+			disabled={busy}
+			onClick={() => {
+				connect(kind);
+			}}
+		>
+			{t('sync.settings.connectAgain')}
+		</button>
+	);
 
 	const disconnect = async () => {
 		setAsking(false);
@@ -343,7 +370,10 @@ const Connected = ({
 			</p>
 			{/* Sync has stopped until the account is connected again: said in the
 			    colour of an error. */}
-			<p className={reconnect ? 'field-hint sync-problem' : 'field-hint'} role="status">
+			<p
+				className={needsReconnect(status) ? 'field-hint sync-problem' : 'field-hint'}
+				role="status"
+			>
 				{statusLine(status, provider, syncable, now)}
 			</p>
 			{refused !== undefined && (
@@ -362,19 +392,15 @@ const Connected = ({
 			{status.phase === 'syncing' && isLongRun(status.progress) && (
 				<RunProgress status={status} label={t('sync.settings.progress')} />
 			)}
+			{/* Where the operator's gate asks for a code, the field beside Connect
+			    again, in a row of their own. */}
+			{asked !== undefined && (
+				<CodeBeside asked={asked} client={client}>
+					<div className="form-actions">{again}</div>
+				</CodeBeside>
+			)}
 			<div className="form-actions">
-				{reconnect && (
-					<button
-						type="button"
-						className="button primary"
-						disabled={busy}
-						onClick={() => {
-							connect(kind);
-						}}
-					>
-						{t('sync.settings.connectAgain')}
-					</button>
-				)}
+				{reconnect && asked === undefined && again}
 				{/* Paused, Sync now is what resumes it, and says so. */}
 				<button
 					type="button"
