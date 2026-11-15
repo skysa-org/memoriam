@@ -25,8 +25,8 @@ change.
   string comes from `t()`.
 - The shared layers are the kit's (the `@skysa/*` packages above): a fix to one is a kit
   PR, which this app takes by moving its pin. Code ported from skysa-notes that stays this app's
-  keeps its shape; rename `skysa` to `memoriam`, and check the original there before reinventing
-  something it already solves.
+  keeps its shape; rename `skysa` to `memoriam` (but not the kit's `@skysa/*`), and check the
+  original there before reinventing something it already solves.
 
 ## Hard rules
 - `packages/core` imports nothing from `apps/*`, and has no framework, DOM or Node-only

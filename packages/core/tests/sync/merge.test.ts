@@ -16,7 +16,7 @@ import { editHere, entryAt, renameHere } from './remote.js';
  * Merging before a conflict copy (docs/ARCHITECTURE.md §10): a passage
  * practised on two devices, and a year's activity both added to, come out as
  * one file with everything either side recorded. Anything else is kept twice,
- * as skysa-notes keeps it.
+ * as the kit's engine keeps it without a merge.
  */
 
 const BODY = 'Jesus wept.\n\nRejoice always.\n';
@@ -256,7 +256,7 @@ describe('the engine, merging', () => {
 				throw new Error('no');
 			},
 		],
-	])('keeps both, as skysa-notes does, %s', async (_, merge) => {
+	])('keeps both, as the engine does without a merge, %s', async (_, merge) => {
 		await practisedOnBoth(passage([at(FIRST, 2, 12)]), passage([at(FIRST, 3, 11)]));
 		const result = await engineWith(merge).sync();
 
