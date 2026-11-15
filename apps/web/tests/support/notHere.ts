@@ -21,16 +21,19 @@ const titlesIn = (suite: RunnerTestSuite): string[] =>
 
 /**
  * Skip the tests of a kit suite this file runs that `titles` names, each said
- * to be skipped with why. Every title named must be one of the file's, so that
- * a test the kit renames or drops is not left here, skipping nothing.
+ * to be skipped with why. Every title named must be the title of exactly one of
+ * the file's tests, so that a test the kit renames or drops is not left here
+ * skipping nothing, and one that shares its title is not skipped with it.
  */
 export const notHere = (titles: Readonly<Record<string, string>>): void => {
+	const why = new Map(Object.entries(titles));
 	beforeEach(({ task, skip }) => {
-		const why = titles[task.name];
-		if (why !== undefined) skip(why);
+		const reason = why.get(task.name);
+		if (reason !== undefined) skip(reason);
 	});
-	it('skips only tests the kit’s suite has', ({ task }) => {
-		const known = new Set(titlesIn(task.file));
-		expect(Object.keys(titles).filter((title) => !known.has(title))).toEqual([]);
+	it('skips only tests the kit’s suite has, one a title', ({ task }) => {
+		const all = titlesIn(task.file);
+		const times = (title: string) => all.filter((each) => each === title).length;
+		expect([...why.keys()].filter((title) => times(title) !== 1)).toEqual([]);
 	});
 };

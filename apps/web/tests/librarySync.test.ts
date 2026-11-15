@@ -181,8 +181,9 @@ describe("the app's scheduler", () => {
 
 	it('keeps a pass back past the debounce, to go with the next sync', async () => {
 		// Practice's rule (docs/ARCHITECTURE.md §10, "Push timing"), which the
-		// app's scheduler is made with whatever timings it is handed: a session
-		// records a pass every few seconds, and none is sent alone.
+		// app's scheduler is made with unless a caller hands it another wait, as
+		// the kit's suites do: a session records a pass every few seconds, and
+		// none is sent alone.
 		const db = await bound();
 		const note = await createPassage(db, {
 			title: 'Two verses',

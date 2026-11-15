@@ -581,7 +581,8 @@ Where it differs:
 - **No change relay, and no connect gate.** skysa-notes' server can run a relay, which tells a device as soon as another has pushed, and an operator's gate in front of connecting: a message, a code its policy checks, and the reasons beside a refusal.
   Memoriam's server runs neither ("The server").
   So the client asks for no relay tickets and holds no connect code, and Settings shows no gate.
-  The kit's client takes a `not_entitled` answer as a refusal, which this server never gives; Settings has no words of its own for one yet.
+  The kit's client takes a `not_entitled` answer as a refusal.
+  This app's Worker sets no policy that gives one, though an operator's own entry over the kit's `createApp` could, and Settings has no words of its own for one yet.
   A device hears of another's changes at its next sync: on opening, on focus, on coming into view, and every minute while in view.
 - **Credentials** are skysa-notes':
   - `sk1_` and 32 random bytes, made by the device, written down before the browser leaves for the provider (`beginConnect`), and filed under the connection once the server names it;
@@ -607,7 +608,7 @@ Pushed alone, every pass would be two requests, and at the provider two new file
 So:
 - **A pass's writes are lazy** (`queuePracticeWrite`): the passage's, and the activity file's.
 - **The scheduler sends lazy writes with the next sync**: the minute's poll while the page is in view, or as the page is hidden.
-  Either way they go within a minute of the first (`lazyMs`, handed the kit's scheduler by `sync/runtime.ts`).
+  Either way they go within a minute of the first (`lazyMs`, which `sync/libraryScheduler.ts` hands the kit's scheduler).
   A later pass joins that wait rather than putting it off.
 - **An edit's write is never lazy.**
   An edit that finds a lazy write queued replaces it, at the back of the queue, so it goes after the 2-second debounce and takes the pass with it.
@@ -757,7 +758,8 @@ apps/web/              the PWA
     install/           the install banner
     styles/            the stylesheet, a file a part, imported in order by index.css
   tests/               support/ for what the tests share: a fresh database, a connection, the
-                       stylesheet's rules
+                       stylesheet's rules, the device the kit's client suites run over
+                       (dexieDevice.ts) and the tests of theirs it skips (notHere.ts)
 packages/core/         framework-free TypeScript: browser, Node and Workers
   src/
     index.ts           what the apps may use, by name; tests/exports.test.ts lists it
@@ -790,7 +792,7 @@ docs/
 Inside `apps/web/src` the layers point one way, and ESLint's `no-restricted-imports` holds them there.
 `store/` is the data layer: it imports none of `sync/`, `components/`, `routes/`, `practice/`, `archive/`, `install/` or `commands/`.
 `sync/` imports the store and `i18n/`, and none of the UI or the features above it.
-To `store/`, the kit's client (`@skysa/client`, which holds most of the sync layer) gives only its emitter and store, and the credential row's type and pending id.
+To `store/`, the kit's client (`@skysa/client`, which holds most of the sync layer) gives only its emitter and store, and the credential row's type.
 Inside `packages/core`, `names/` imports neither `sync/` nor `markdown/`, and of the kit core uses only `@skysa/protocol`, `@skysa/storage` and `@skysa/sync`, never the client, the server or the PWA build.
 Neither `packages/core` nor the Worker may import a Node built-in, and the list is Node's own (`module.builtinModules`), not one kept by hand.
 The apps import `@memoriam/core`, which names what it offers rather than everything its modules export.

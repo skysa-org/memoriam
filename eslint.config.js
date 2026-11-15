@@ -16,17 +16,15 @@ import globals from 'globals';
  */
 
 /**
- * What a layer below the sync layer may take from the kit's client, which
+ * What the store, below the sync layer, may take from the kit's client, which
  * holds most of the sync layer now (the scheduler, the API client, the token
- * source): its emitter and store, and what `also` names.
+ * source): its emitter and store, and the credential row's type.
  */
-const CLIENT_BELOW_SYNC = (also = []) => {
-	const names = ['createEmitter', 'createStore', ...also];
-	return {
-		name: '@skysa/client',
-		allowImportNames: names,
-		message: `the kit’s client holds the sync layer: below it, take only ${names.join(', ')}.`,
-	};
+const CLIENT_BELOW_SYNC = {
+	name: '@skysa/client',
+	allowImportNames: ['createEmitter', 'createStore', 'CredentialRecord'],
+	message:
+		'the kit’s client holds the sync layer: below it, take only createEmitter, createStore and CredentialRecord.',
 };
 
 /** What nothing in packages/core/src may import. */
@@ -252,7 +250,7 @@ export default skysa({
 				'no-restricted-imports': [
 					'error',
 					{
-						paths: [CLIENT_BELOW_SYNC(['CredentialRecord'])],
+						paths: [CLIENT_BELOW_SYNC],
 						patterns: [
 							NOT_ABOVE(
 								[
