@@ -685,9 +685,10 @@ What is this app's:
     The field and Connect again are never open together, as in the gate;
   - a policy's refusal, by the kind of no it gave, with its reason under it where it gave one, and **Connect again**, behind the operator's gate where there is one ("The gate"), since a policy that let the account in by a code may need another to let it in again.
 
-  Either stands until a run ends idle or asks for attention for something else (`useStanding`).
-  The kit's scheduler still starts a run on focus and on edits, clearing the refusal as each starts, and its token source lets one go on a failed fetch, so the line keeps saying what stands through the runs, retrying, offline and paused, and a code half typed under it is kept, until the kit keeps a refusal itself (skysa-org/skysa-kit#22).
-  A new connection starts with nothing kept.
+  Either, with what is under it, stays through the runs that go on meanwhile (`useStanding`): the kit's scheduler still starts one on focus and on edits, clearing the refusal as it starts, and a code half typed under it would go with each.
+  The line says how syncing stands as it is.
+  It is let go once a run ends any other way, and a new connection starts with nothing kept.
+  Until the kit keeps a refusal itself (skysa-org/skysa-kit#22), a run that fails on the network lets it go, and one that gets through keeps it until it ends.
 
   Sync now runs a sync and tries again a stuck change.
   While a sync goes, a long run draws its bar and the file it is on under the line (`RunProgress`), and **Pause syncing** stops it.

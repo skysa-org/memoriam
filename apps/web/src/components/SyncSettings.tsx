@@ -209,33 +209,46 @@ const statusLine = (
 };
 
 /**
- * A status that stands until something is done about it: the account must be
- * connected again (`needsReconnect`), or the server's policy refused it.
+ * What stands until something is done about it: the account must be connected
+ * again (`needsReconnect`), or the server's policy refused it, with its reason.
  */
-const isStanding = (status: SchedulerStatus, syncable: boolean): boolean =>
-	needsReconnect(status) ||
-	(syncable && status.phase === 'attention' && status.refusal === 'not_entitled');
+type Standing =
+	Readonly<{ kind: 'reconnect' }> | Readonly<{ kind: 'refused'; reason: string | undefined }>;
+
+const standingOf = (status: SchedulerStatus, syncable: boolean): Standing | undefined => {
+	if (needsReconnect(status)) return { kind: 'reconnect' };
+	if (syncable && status.phase === 'attention' && status.refusal === 'not_entitled') {
+		return { kind: 'refused', reason: status.denial?.reason };
+	}
+	return undefined;
+};
+
+const reasonOf = (standing: Standing): string | undefined =>
+	standing.kind === 'refused' ? standing.reason : undefined;
 
 /**
- * The last standing status (`isStanding`), kept through what says nothing of
- * it: the runs that go on meanwhile, offline, retrying and paused. The kit's
- * scheduler still starts a run on focus and on edits, clearing the refusal as
- * each starts, and its token source lets one go on a failed fetch, so what is
- * shown under it would go with each, and a code half typed with it. Let go
- * once a run ends idle or asks for attention for something else. Followed in
- * render, as React has state follow a prop, until the kit keeps a refusal
- * itself (skysa-org/skysa-kit#22); `Connected` is keyed by its connection, so
- * another starts with nothing kept.
+ * What stands (`standingOf`), kept through the runs that go on meanwhile, each
+ * of which starts as `syncing` and says nothing of it: the kit's scheduler
+ * still starts one on focus and on edits, clearing the refusal as it starts,
+ * so what is shown under it would go with each, and a code half typed with it.
+ * Let go once a run ends any other way. The line says how syncing stands as it
+ * is. Until the kit keeps a refusal itself (skysa-org/skysa-kit#22), which will
+ * also do what this cannot: a run that fails on the network lets it go, and one
+ * that gets through keeps it until it ends. Followed in render, as React has
+ * state follow a prop; `Connected` is keyed by its connection, so another
+ * starts with nothing kept.
  */
-const useStanding = (status: SchedulerStatus, syncable: boolean): SchedulerStatus | undefined => {
-	const now = isStanding(status, syncable);
-	const [kept, setKept] = useState<SchedulerStatus | undefined>(undefined);
-	const says =
-		status.phase === 'idle' || status.phase === 'attention' || status.phase === 'local';
-	if (now && kept !== status) setKept(status);
-	if (!now && says && kept !== undefined) setKept(undefined);
-	if (now) return status;
-	return says ? undefined : kept;
+const useStanding = (status: SchedulerStatus, syncable: boolean): Standing | undefined => {
+	const now = standingOf(status, syncable);
+	const [kept, setKept] = useState<Standing | undefined>(undefined);
+	if (
+		now !== undefined &&
+		(kept === undefined || kept.kind !== now.kind || reasonOf(kept) !== reasonOf(now))
+	) {
+		setKept(now);
+	}
+	if (now === undefined && status.phase !== 'syncing' && kept !== undefined) setKept(undefined);
+	return now ?? kept;
 };
 
 /** Connect again, in a row of its own under what the line says. */
@@ -318,9 +331,7 @@ const Connected = ({
 	const status = useSyncStatus(scheduler);
 	const syncable = CONNECTABLE.includes(kind);
 	const standing = useStanding(status, syncable);
-	// What the line says: the standing status, where one is kept.
-	const shown = standing ?? status;
-	const reconnect = standing !== undefined && needsReconnect(standing);
+	const reconnect = standing?.kind === 'reconnect';
 	const [asking, setAsking] = useState(false);
 	const [held, setHeld] = useState<Held | undefined>(undefined);
 	const provider = PROVIDER_LABELS[kind];
@@ -350,12 +361,15 @@ const Connected = ({
 			</p>
 			{/* Sync has stopped until the account is connected again: said in the
 			    colour of an error. */}
-			<p className={reconnect ? 'field-hint sync-problem' : 'field-hint'} role="status">
-				{statusLine(shown, provider, syncable, now)}
+			<p
+				className={needsReconnect(status) ? 'field-hint sync-problem' : 'field-hint'}
+				role="status"
+			>
+				{statusLine(status, provider, syncable, now)}
 			</p>
-			{standing !== undefined && !reconnect && (
+			{standing?.kind === 'refused' && (
 				<Refused
-					reason={standing.denial?.reason}
+					reason={standing.reason}
 					config={config}
 					client={client}
 					connect={() => {

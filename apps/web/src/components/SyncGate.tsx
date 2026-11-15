@@ -179,44 +179,38 @@ const useStepFocus = (
 	}, [focus, buttons, opener]);
 };
 
-/** The code this device holds, under the operator's label and until when, and the button that asks for another. */
-const HeldCode = ({
+/**
+ * The code this device holds, under the operator's label and until when, and
+ * the button that asks for another; where none is held, "Have a code? Enter
+ * it". One button either way, so a hold that ends by the clock, or one another
+ * tab takes or drops, leaves the focus where it was.
+ */
+const CodeLine = ({
 	label,
 	until,
 	opener,
-	onChange,
-}: Readonly<{
-	label: string;
-	until: number;
-	opener: RefObject<HTMLButtonElement | null>;
-	onChange: () => void;
-}>) => (
-	<p className="field-hint">
-		{t('sync.gate.code.accepted', { label, time: formatMoment(until) })}{' '}
-		<button
-			ref={opener}
-			type="button"
-			className="button ghost"
-			aria-label={t('sync.gate.code.changeLabel', { label })}
-			onClick={onChange}
-		>
-			{t('sync.gate.code.change')}
-		</button>
-	</p>
-);
-
-/** "Have a code? Enter it", which opens the field. */
-const EnterCode = ({
-	opener,
 	onClick,
 }: Readonly<{
+	label: string;
+	until: number | undefined;
 	/** The button Cancel brings the focus back to, where there is one. */
 	opener?: RefObject<HTMLButtonElement | null>;
 	onClick: () => void;
 }>) => (
 	<p className="field-hint">
-		<button ref={opener} type="button" className="button ghost" onClick={onClick}>
-			{t('sync.gate.code.enter')}
+		{until !== undefined && (
+			<>{t('sync.gate.code.accepted', { label, time: formatMoment(until) })} </>
+		)}
+		<button
+			ref={opener}
+			type="button"
+			className="button ghost"
+			aria-label={
+				until === undefined ? undefined : t('sync.gate.code.changeLabel', { label })
+			}
+			onClick={onClick}
+		>
+			{until === undefined ? t('sync.gate.code.enter') : t('sync.gate.code.change')}
 		</button>
 	</p>
 );
@@ -256,11 +250,11 @@ export const SyncGate = ({
 		if (asked === undefined) return null;
 		if (held && !changing) {
 			return (
-				<HeldCode
+				<CodeLine
 					label={asked.label}
 					until={until}
 					opener={change}
-					onChange={() => {
+					onClick={() => {
 						setChanging(true);
 						setShown(false);
 						setFocus({ to: 'field' });
@@ -290,7 +284,9 @@ export const SyncGate = ({
 			);
 		}
 		return (
-			<EnterCode
+			<CodeLine
+				label={asked.label}
+				until={undefined}
 				onClick={() => {
 					setShown(false);
 					setFocus({ to: 'field' });
@@ -383,10 +379,7 @@ export const CodeBeside = ({
 				/>
 			);
 		}
-		if (until !== undefined) {
-			return <HeldCode label={code.label} until={until} opener={opener} onChange={ask} />;
-		}
-		return <EnterCode opener={opener} onClick={ask} />;
+		return <CodeLine label={code.label} until={until} opener={opener} onClick={ask} />;
 	};
 	return (
 		<>

@@ -5,7 +5,5 @@
 Where a library must be connected again and the operator's gate asks for a code, Settings offers
 "Have a code? Enter it" beside Connect again, so a policy that let the account in by one code can
 be given another without disconnecting first. Connect again stays out from behind the gate, and
-the field and Connect again are never open together. Connect again now has a row of its own. A
-library that must be connected again, or that the server's policy refused, now says so through the
-syncs that focus and edits start meanwhile, and through being offline or retrying, keeping a code
-half typed under it, until a sync ends some other way.
+the field and Connect again are never open together. Connect again now has a row of its own, and
+stays, with a code half typed beside it, through the syncs that focus and edits start meanwhile.
