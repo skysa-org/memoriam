@@ -1,7 +1,12 @@
 import { conflictContent, conflictPath } from '@memoriam/core';
-import type { ApiClient, Connection, Result } from '@skysa/client';
-import type { SchedulerStatus } from '@skysa/client';
-import { beginConnect, pendingCredential } from '@skysa/client';
+import {
+	type ApiClient,
+	beginConnect,
+	type Connection,
+	pendingCredential,
+	type Result,
+	type SchedulerStatus,
+} from '@skysa/client';
 import { ROOT } from '@skysa/storage';
 import {
 	createMemoryHistory,
@@ -376,6 +381,24 @@ describe('connected', () => {
 		});
 		const said = await screen.findByText('Sync needs attention: quota');
 		expect(said.classList.contains('sync-problem')).toBe(false);
+		expect(screen.queryByRole('button', { name: 'Connect again' })).toBeNull();
+	});
+
+	it('says why a library bound to a provider this app cannot sync with does not', async () => {
+		// The kit's scheduler has no adapter to make for it, and asks for
+		// attention without a reason of its own.
+		await holdCredential(database, 'c1', { provider: 'webdav' });
+		await bindLibrary(database, { connectionId: 'c1', provider: 'webdav' });
+		const { client } = fakes();
+		showSettings({
+			client,
+			scheduler: schedulerShowing({ phase: 'attention' }),
+			connectReturn: holding(),
+		});
+
+		expect(
+			await screen.findByText('This app cannot sync with this storage provider yet.')
+		).toBeTruthy();
 		expect(screen.queryByRole('button', { name: 'Connect again' })).toBeNull();
 	});
 

@@ -47,8 +47,8 @@ import { eachInSlices } from '../store/slices.js';
  * The sync engine's `SyncStore` port, over the app's own IndexedDB tables:
  * skysa-notes' `sync/store.ts`, ported (docs/ARCHITECTURE.md §10, "The web
  * store"). The engine's promises that the type cannot state are checked by the
- * contract suite in `packages/core/tests/sync/storeContract.ts`, registered
- * against this store in `apps/web/tests/syncStore.test.ts`.
+ * kit's contract suite (`describeSyncStoreContract`, `@skysa/sync/testing`),
+ * registered against this store in `apps/web/tests/syncStore.test.ts`.
  *
  * Where it differs from skysa-notes':
  * - **One library.** Its rows stay under `LOCAL_CONNECTION_ID` whatever it is

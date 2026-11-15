@@ -1,5 +1,4 @@
-import type { SyncScheduler } from '@skysa/client';
-import { api as appApi, type ApiClient } from '@skysa/client';
+import { api as appApi, type ApiClient, type SyncScheduler } from '@skysa/client';
 import { useEffect, useRef } from 'react';
 
 import { useDb } from '../store/database.js';

@@ -12,3 +12,8 @@ the merge that keeps practice made on two devices, the sync lock's name, and its
 Drive tags, the same files and conflict names, the same lock and the same database on the device,
 so nothing on a provider or a device changes. Core no longer offers what moved: the apps take it
 from the kit, and `@memoriam/core/testing` is gone, since the test doubles are the kit's.
+
+One thing a device does differently: Reload asks the app's other tabs to pause syncing over the
+kit's channel, `skysa-update`, where builds before this one used `memoriam-update`. A tab still
+on one of those is not asked, and can hold the new build back for up to five minutes, as a tab of
+an older build always could.

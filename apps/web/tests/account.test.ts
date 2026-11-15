@@ -1,12 +1,15 @@
 import { createHash } from 'node:crypto';
 
-import type { ApiClient, Connection, Refusal, Result } from '@skysa/client';
 import {
+	type ApiClient,
 	beginConnect,
+	type Connection,
 	credentialFor,
 	hashCredential,
 	keepCredential,
 	pendingCredential,
+	type Refusal,
+	type Result,
 } from '@skysa/client';
 import { ROOT } from '@skysa/storage';
 import { beforeEach, describe, expect, it } from 'vitest';

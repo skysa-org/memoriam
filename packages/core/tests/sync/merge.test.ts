@@ -1,6 +1,5 @@
 import { createFakeProvider, type FakeProvider } from '@skysa/storage/testing';
-import type { SyncStore } from '@skysa/sync';
-import { createSyncEngine, type MergeInput } from '@skysa/sync';
+import { createSyncEngine, type MergeInput, type SyncStore } from '@skysa/sync';
 import { createMemoryStore, type MemoryStore } from '@skysa/sync/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 

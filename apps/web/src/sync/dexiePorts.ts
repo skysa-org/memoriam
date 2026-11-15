@@ -134,8 +134,13 @@ export const clientStoreOf = (db: MemoriamDatabase): ClientStore => ({
 	watchQueue: (_connectionId, next) =>
 		watching(() => rowsOf(db.opQueue, LIBRARY).primaryKeys(), next),
 	queuedAfter: (_connectionId, seq) =>
-		rowsOf(db.opQueue, LIBRARY)
-			.filter((op) => (op.seq ?? 0) > seq)
+		// By the key, since it is asked after every op queued: a practice
+		// session queues one every few seconds, and the queue may hold the whole
+		// library just after it is bound.
+		db.opQueue
+			.where('seq')
+			.above(seq)
+			.filter((op) => op.connectionId === LIBRARY)
 			.toArray(),
 	syncStore: (connectionId) => createDexieSyncStore(db, { connectionId }),
 	credentials: db,

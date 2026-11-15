@@ -419,15 +419,16 @@ A command is registered again only when what the palette shows of it changes (it
   `MEMORIAM_PWA` in `pwaApp.ts` hands that route to the build, and `tests/pwa.app.test.ts` checks every route the router has against it.
   It is no share target.
 - **Updates.** `registerType: 'prompt'`: a new build waits for the user to reload, and never swaps in under a pass being typed.
-- **Reload stops the app's requests first** (`sync/beforeUpdate.ts`, from skysa-notes #360).
+- **Reload stops the app's requests first** (the kit's `makeWay` and `makeWayWhenAsked`, from skysa-notes #360).
   Reload asks the waiting worker to take over, and Chromium lets it only once the worker it replaces has no fetch event in flight.
   A request that starts while the take-over waits holds it for Chromium's five-minute limit, through Reload pressed again and a reload by hand.
   A sync keeps requests going, so Reload looked dead.
-  So Reload pauses this tab's sync, as Pause syncing does (§10, "The sync client"), and asks every other tab to pause over a `BroadcastChannel` (`memoriam-update`).
+  So Reload pauses this tab's sync, as Pause syncing does (§10, "The sync client"), and asks every other tab to pause over a `BroadcastChannel` (the kit's `skysa-update`).
   It gives them 250 ms, then asks.
   A pause lasts only until the app is opened again, so syncing starts again by itself after the reload.
   The prompt says it is updating meanwhile, and after ten seconds what else will do it.
   A tab still on a build from before this does not listen, and can still hold the take-over to the five minutes.
+  Builds before the kit's called the channel `memoriam-update`, so a tab still on one of those does not hear a newer one either.
 - **Brand.** The name, colours, icons and fonts come from a `brand.json`: `apps/web/brand/` by default ("Memoriam", in indigo, on the system fonts), or the file `MEMORIAM_BRAND` names.
   The default is the app's, handed to the build (`DEFAULT_BRAND` in `pwaApp.ts`), and `tests/brand.app.test.ts` holds it to what is said here.
   The kit reads and checks the file, stopping a build with a brand that would install without its icon, and its JSON Schema is the kit's (`@skysa/pwa/brand.schema.json`).
@@ -572,11 +573,15 @@ Where it differs:
     Settings names its path, and the scheduler names it `malformed` rather than by a kind this version has no words for.
 
 **The sync client** is the kit's (`@skysa/client`), skysa-notes' client as it moved, over this app's ports (above).
+The kit's client suites run over this app's device (`apps/web/tests/support/dexieDevice.ts`, in the `*.dexie.test.ts` files).
+Those of their tests that need what one library does not have are skipped by name, each with why (`apps/web/tests/support/notHere.ts`): several sources, one kept detached, a first import, another tab's transactions followed.
+They will run here once the kit can be told what a device has (skysa-org/skysa-kit#21).
 `sync/runtime.ts` makes the one scheduler, which `main.tsx` starts and which does nothing while the library is bound to nothing.
 Where it differs:
 - **No change relay, and no connect gate.** skysa-notes' server can run a relay, which tells a device as soon as another has pushed, and an operator's gate in front of connecting: a message, a code its policy checks, and the reasons beside a refusal.
   Memoriam's server runs neither ("The server").
-  So the client asks for no relay tickets, holds no connect code and shows no gate, and does not read `not_entitled`.
+  So the client asks for no relay tickets and holds no connect code, and Settings shows no gate.
+  The kit's client takes a `not_entitled` answer as a refusal, which this server never gives; Settings has no words of its own for one yet.
   A device hears of another's changes at its next sync: on opening, on focus, on coming into view, and every minute while in view.
 - **Credentials** are skysa-notes':
   - `sk1_` and 32 random bytes, made by the device, written down before the browser leaves for the provider (`beginConnect`), and filed under the connection once the server names it;
@@ -647,7 +652,7 @@ What is this app's:
   - up to date, and when it last synced;
   - syncing, and what the run is doing.
     While it reads the provider's pages, it is checking for changes or, on a first sync or a re-scan, looking for passages.
-    From twenty passages (`PROGRESS_FROM` in `sync/progress.ts`) it says how many it has found, received or sent.
+    From twenty passages (`PROGRESS_FROM`, the kit's client's) it says how many it has found, received or sent.
     A run of a few is not counted, so an edit's sync does not flash a number;
   - paused, or offline, or retrying;
   - what needs attention, with the change that is stuck, or "Connect again" when connecting the account again is the answer (`needsReconnect` in `sync/status.ts`, as skysa-notes': the server or the provider wants the account asked again, or the credential reaches nothing).

@@ -1,10 +1,13 @@
-import type { ApiClient, Connection, Refusal, Result } from '@skysa/client';
 import {
+	type ApiClient,
 	beginConnect,
+	type Connection,
 	credentialFor,
 	forgetCredential,
 	keepCredential,
 	pendingCredential,
+	type Refusal,
+	type Result,
 } from '@skysa/client';
 import type { ProviderKind } from '@skysa/protocol';
 

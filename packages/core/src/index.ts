@@ -4,8 +4,8 @@
  * errors and functions). One nothing outside core needs stays in its module,
  * so the surface is chosen rather than whatever a module happens to export.
  * `tests/exports.test.ts` lists the values and the types, so a change to this
- * list is a change a reviewer sees. The test doubles are
- * `@memoriam/core/testing`.
+ * list is a change a reviewer sees. The test doubles are the kit's
+ * (`@skysa/storage/testing`, `@skysa/sync/testing`).
  */
 
 export { CURRENT_CHUNKER, MARKER_FILE, MEMORIAM_FOLDER, PASSAGE_EXTENSION } from './config.js';

@@ -25,7 +25,7 @@ const router = createAppRouter();
 // binding on its own, and syncs nothing while there is none.
 syncScheduler.start();
 // Another tab's Reload pauses syncing here too, so the new build can take over
-// (`sync/beforeUpdate.ts`). Never stopped either.
+// (`makeWayWhenAsked`, the kit's client's). Never stopped either.
 makeWayWhenAsked(syncScheduler, updateChannel());
 
 const rootElement = document.getElementById('root');
