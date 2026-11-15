@@ -1,14 +1,15 @@
-import { and, eq, gt, notExists } from 'drizzle-orm';
-import { type Context, Hono } from 'hono';
+import { and, eq } from 'drizzle-orm';
+import { Hono } from 'hono';
 
-import type { AppEnv } from '../app.js';
-import { GRANT_IDLE_DAYS } from '../credentials.js';
-import { openOAuthSecret } from '../crypto.js';
+import type { AppEnv, RouteDeps } from '../context.js';
+import { isIdle } from '../credentials.js';
+import { openOAuthSecret, sealedOf } from '../crypto.js';
 import { schema } from '../db/client.js';
+import { revokeGrant } from '../db/connections.js';
 import type { Connection } from '../db/schema.js';
+import { fail, requireBearer } from '../http.js';
 import { logFailure } from '../log.js';
 import { oauthFor } from '../oauth/providers.js';
-import type { FetchLike } from '../oauth/types.js';
 
 /**
  * The connection the caller's credential reaches, and the devices that hold it.
@@ -24,9 +25,8 @@ import type { FetchLike } from '../oauth/types.js';
  * key id, and not another device's credential hash.
  */
 
-const IDLE_MS = GRANT_IDLE_DAYS * 24 * 60 * 60 * 1000;
-
-export const connectionRoutes = (doFetch: FetchLike) => {
+export const connectionRoutes = (deps: RouteDeps) => {
+	const { config, fetch: doFetch, keys } = deps;
 	const app = new Hono<AppEnv>();
 
 	/**
@@ -38,17 +38,15 @@ export const connectionRoutes = (doFetch: FetchLike) => {
 	 * row as the caller read it, so it works on a row that has already been
 	 * deleted.
 	 */
-	const withdraw = async (c: Context<AppEnv>, connection: Connection): Promise<boolean> => {
-		const resolved = oauthFor(c.get('config'), connection.provider);
+	const withdraw = async (connection: Connection): Promise<boolean> => {
+		const resolved = oauthFor(config, connection.provider);
 		if (!resolved.ok) return false;
 		const { client, credentials } = resolved;
 		if (client.revokeToken === undefined) return false;
 
-		const secret = await openOAuthSecret(c.get('secretKey'), {
-			ciphertext: connection.secretCiphertext,
-			iv: connection.secretIv,
-			keyId: connection.secretKeyId,
-		}).catch(() => undefined);
+		const secret = await openOAuthSecret((await keys()).secretKey, sealedOf(connection)).catch(
+			() => undefined
+		);
 		if (secret === undefined) return false;
 
 		// Logged: an expired client secret would otherwise make every
@@ -64,7 +62,7 @@ export const connectionRoutes = (doFetch: FetchLike) => {
 		return client.revokeToken(doFetch, tokens.accessToken);
 	};
 
-	app.get('/connection', (c) => {
+	app.get('/connection', requireBearer, (c) => {
 		const { connection, grant } = c.get('bearer');
 		return c.json({
 			id: connection.id,
@@ -90,7 +88,7 @@ export const connectionRoutes = (doFetch: FetchLike) => {
 	 * cause. The hashes are not returned — they are the lookup key, and a leaked
 	 * one lets its holder re-point that device at storage of their own.
 	 */
-	app.get('/connection/grants', async (c) => {
+	app.get('/connection/grants', requireBearer, async (c) => {
 		const { connection, grant } = c.get('bearer');
 		const rows = await c
 			.get('db')
@@ -101,14 +99,14 @@ export const connectionRoutes = (doFetch: FetchLike) => {
 		// still attached, the credential no longer works, and a device list that
 		// showed it as live would be telling the user something untrue about who
 		// can reach their passages.
-		const idleBefore = Date.now() - GRANT_IDLE_DAYS * 24 * 60 * 60 * 1000;
+		const now = Date.now();
 
 		return c.json({
 			grants: rows.map((row) => ({
 				id: row.id,
 				createdAt: row.createdAt.getTime(),
 				lastUsedAt: row.lastUsedAt.getTime(),
-				expired: row.lastUsedAt.getTime() <= idleBefore,
+				expired: isIdle(row.lastUsedAt, now),
 				current: row.id === grant.id,
 				// Absent for a grant made by a browser `deviceLabel` could not name.
 				...(row.device === null ? {} : { device: row.device }),
@@ -121,7 +119,7 @@ export const connectionRoutes = (doFetch: FetchLike) => {
 	 * — a grant id from somewhere else answers `not_found`, so the endpoint
 	 * cannot be used to discover which ids exist.
 	 */
-	app.delete('/connection/grants/:id', async (c) => {
+	app.delete('/connection/grants/:id', requireBearer, async (c) => {
 		const { connection } = c.get('bearer');
 		const db = c.get('db');
 		const id = c.req.param('id');
@@ -129,17 +127,7 @@ export const connectionRoutes = (doFetch: FetchLike) => {
 		const target = await db.query.grants.findFirst({
 			where: and(eq(schema.grants.id, id), eq(schema.grants.connectionId, connection.id)),
 		});
-		if (target === undefined) return c.json({ error: 'not_found' }, 404);
-
-		// Nulled, not deleted. Deleting would free the hash, and a freed hash is
-		// re-claimable: whoever holds the credential this row was for — which is
-		// exactly the thief the user is revoking — could start a fresh flow with
-		// it, consent with storage of their own, and be handed a working grant.
-		// The row stays so the hash stays spent (see apps/api/src/db/schema.ts).
-		await db
-			.update(schema.grants)
-			.set({ connectionId: null })
-			.where(eq(schema.grants.id, target.id));
+		if (target === undefined) return fail(c, 'not_found', 404);
 
 		// The last device that could reach the account has gone, and the account
 		// goes with it. Left behind, the row is a live refresh token, sealed,
@@ -152,40 +140,21 @@ export const connectionRoutes = (doFetch: FetchLike) => {
 		// row, and the device knows its library by the account's id, not the
 		// row's (docs/ARCHITECTURE.md §10, "The sync client").
 		//
-		// One statement, asking and deleting together. Asked first and deleted
-		// afterwards — with two provider calls in between, up to twenty seconds —
-		// another device's callback can commit its grant to this row in the gap
-		// and then watch the row deleted from under it: told `ok`, holding a
-		// credential that reaches nothing, its hash spent. The callback's batch
-		// is atomic too, so it lands wholly before this, and the row stays, or
-		// wholly after, and it makes a fresh one.
+		// With the revoke in one transaction, and asked and deleted in one
+		// statement, for the races `revokeGrant` describes.
 		//
-		// And the row before the provider. The grant is already nulled, so a
+		// And the row before the provider. The grant is nulled by then, so a
 		// request cut off during the provider's calls — a tab closed on signing
 		// out — would leave exactly the row this is here to remove, with no
 		// credential left to try again with.
-		const gone = await db
-			.delete(schema.connections)
-			.where(
-				and(
-					eq(schema.connections.id, connection.id),
-					notExists(
-						db
-							.select({ id: schema.grants.id })
-							.from(schema.grants)
-							.where(
-								and(
-									eq(schema.grants.connectionId, connection.id),
-									gt(schema.grants.lastUsedAt, new Date(Date.now() - IDLE_MS))
-								)
-							)
-					)
-				)
-			)
-			.returning({ id: schema.connections.id });
+		const gone = await revokeGrant(
+			db,
+			{ id: target.id, connectionId: connection.id },
+			Date.now()
+		);
 
-		if (gone.length === 0) return c.json({ ok: true, disconnected: false });
-		return c.json({ ok: true, disconnected: true, revoked: await withdraw(c, connection) });
+		if (!gone) return c.json({ ok: true, disconnected: false });
+		return c.json({ ok: true, disconnected: true, revoked: await withdraw(connection) });
 	});
 
 	/**
@@ -196,11 +165,11 @@ export const connectionRoutes = (doFetch: FetchLike) => {
 	 * (`DELETE /connection/grants/:id`, which takes the account with the last),
 	 * and a stolen credential is one device to Remove from the list.
 	 */
-	app.delete('/connection', async (c) => {
+	app.delete('/connection', requireBearer, async (c) => {
 		const { connection } = c.get('bearer');
 		// Best effort, and the row goes either way: a user who asked to
 		// disconnect must not be left connected by a network error.
-		const revoked = await withdraw(c, connection);
+		const revoked = await withdraw(connection);
 		await c
 			.get('db')
 			.delete(schema.connections)

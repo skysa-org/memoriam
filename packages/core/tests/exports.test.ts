@@ -9,6 +9,7 @@ import * as core from '../src/index.js';
  * list: the surface is chosen, not whatever a module exports.
  */
 const SURFACE = [
+	'API_ERROR_CODES',
 	'AuthError',
 	'BADGES',
 	'CURRENT_CHUNKER',
@@ -104,6 +105,7 @@ const SURFACE = [
 /** Every type the entry offers; see the last test. */
 type Types = [
 	Core.ActivityWrite,
+	Core.ApiErrorCode,
 	Core.Badge,
 	Core.Cell<unknown>,
 	Core.ChunkedPassage,

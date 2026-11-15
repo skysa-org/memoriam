@@ -190,12 +190,12 @@ describe('provider access tokens', () => {
 		const db = await bound();
 		const token = vi
 			.fn<ApiClient['token']>()
-			.mockResolvedValueOnce({ ok: false, refusal: 'not_entitled' })
+			.mockResolvedValueOnce({ ok: false, refusal: 'credential_revoked' })
 			.mockResolvedValue({ ok: false, refusal: 'reauthorize_required' });
 		const tokens = createTokenSource({ db, client: presenting(token), connectionId: 'c1' });
 
 		await tokens.get().catch(() => undefined);
-		expect(tokens.refusal()).toBe('not_entitled');
+		expect(tokens.refusal()).toBe('credential_revoked');
 
 		await tokens.refresh().catch(() => undefined);
 		expect(tokens.refusal()).toBe('reauthorize_required');

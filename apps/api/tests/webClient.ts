@@ -63,7 +63,6 @@ export const REFUSALS: readonly string[] = [
 	'credential_required',
 	'credential_revoked',
 	'reauthorize_required',
-	'not_entitled',
 	'not_found',
 	'forbidden_origin',
 ];

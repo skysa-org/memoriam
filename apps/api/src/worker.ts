@@ -1,3 +1,4 @@
+import type { ApiErrorCode } from '@memoriam/core';
 import { cell } from '@memoriam/core';
 
 import { createApp } from './app.js';
@@ -42,10 +43,13 @@ export default {
 			// Misconfiguration is an operator problem, not a user one: log the detail
 			// and return something generic.
 			console.error(app.message);
-			return new Response(JSON.stringify({ error: 'server_misconfigured' }), {
-				status: 500,
-				headers: { 'content-type': 'application/json' },
-			});
+			return new Response(
+				JSON.stringify({ error: 'server_misconfigured' satisfies ApiErrorCode }),
+				{
+					status: 500,
+					headers: { 'content-type': 'application/json' },
+				}
+			);
 		}
 
 		return app.fetch(request, env, ctx);
