@@ -77,6 +77,17 @@ describe('gather', () => {
 		expect(gathered).toMatchObject({ skipped: 0, unreadable: [] });
 	});
 
+	it('drops a NUL from a file’s text, alone or in an archive', async () => {
+		const gathered = await gather([
+			file('wept.md', 'Jesus\u0000 wept.\n'),
+			file('verses.zip', zipOf({ 'always.md': 'Rejoice\u0000 always.\n' })),
+		]);
+		expect(gathered.files).toEqual([
+			{ path: 'wept.md', text: 'Jesus wept.\n' },
+			{ path: 'always.md', text: 'Rejoice always.\n' },
+		]);
+	});
+
 	it('tells apart what is no passage from what cannot be read', async () => {
 		const gathered = await gather([
 			file('photo.jpg', 'not words'),

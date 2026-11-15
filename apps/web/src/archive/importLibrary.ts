@@ -19,6 +19,7 @@ import {
 	splitFrontmatter,
 	uniqueFilename,
 	UNTITLED_TITLE,
+	withoutNul,
 } from '@memoriam/core';
 
 import { t } from '../i18n/t.js';
@@ -73,10 +74,14 @@ const LEFTOVERS = /(?:^|\/)(?:__MACOSX\/|\.DS_Store$|Thumbs\.db$|desktop\.ini$)/
 /** The app's own folder, wherever in an archive the library's root is. */
 const APP_FOLDER = /^(.*\/)?\.memoriam\/activity-\d{4}\.md$/;
 
-/** UTF-8 text, its byte order mark dropped; none for bytes that are not. */
+/**
+ * UTF-8 text, its byte order mark dropped; none for bytes that are not. A NUL
+ * is dropped too: nothing has refused one here (`decodeText`), and a passage
+ * holding one would be unreadable to every device that pulled it.
+ */
 const decoded = (bytes: Uint8Array): string | undefined => {
 	try {
-		return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+		return withoutNul(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
 	} catch {
 		return undefined;
 	}

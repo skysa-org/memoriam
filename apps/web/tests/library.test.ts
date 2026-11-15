@@ -88,6 +88,18 @@ describe('adding a passage', () => {
 		expect(passageText(row.source)).toBe('  I met a traveller\nfrom an antique land\n');
 	});
 
+	it('drops a NUL a paste carried, which no device could read back', async () => {
+		const row = await createPassage(db, {
+			title: 'Psalm\u0000 23',
+			reference: 'ESV\u0000',
+			collection: ROOT,
+			text: 'The Lord\u0000 is my shepherd.\n',
+		});
+		expect(row.source).not.toContain('\u0000');
+		expect(row.title).toBe('Psalm 23');
+		expect(passageText(row.source)).toBe('The Lord is my shepherd.\n');
+	});
+
 	it('gives a second passage of the same title a name of its own', async () => {
 		const first = await createPassage(db, PSALM);
 		const second = await createPassage(db, PSALM);
@@ -129,6 +141,24 @@ describe('editing a passage', () => {
 		expect(now?.source).toContain('updated: 2026-10-14T09:30:00.000Z\n');
 		expect(now?.source).toContain('created: 2026-10-13T14:00:00.000Z\n');
 		expect(now?.updatedAt).toBe(OCT_14);
+	});
+
+	it('drops a NUL from new words and details', async () => {
+		const row = await createPassage(db, PSALM, {}, OCT_13);
+		await updatePassage(db, row.id, {
+			...PSALM,
+			reference: 'Psalm 23\u0000',
+			text: 'The Lord\u0000 is my shepherd.\n',
+		});
+		const now = await db.notes.get(['local', row.id]);
+		expect(now?.source).not.toContain('\u0000');
+		expect(passageText(now?.source ?? '')).toBe('The Lord is my shepherd.\n');
+	});
+
+	it('writes nothing when only a NUL was added', async () => {
+		const row = await createPassage(db, PSALM, {}, OCT_13);
+		await updatePassage(db, row.id, { ...PSALM, text: `${PSALM.text}\u0000` }, {}, OCT_14);
+		expect(await db.notes.get(['local', row.id])).toEqual(row);
 	});
 
 	it('writes nothing when nothing changed', async () => {
