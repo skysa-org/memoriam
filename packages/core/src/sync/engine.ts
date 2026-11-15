@@ -29,12 +29,13 @@ export type { SyncProgress } from './progress.js';
  *
  * What it does hold, it holds in memory, for the run under way: how far the
  * scan, round or push has got (`meter`, from `progress.ts`), what the store
- * said and where the files stand for one batch (`storeReads`, `fileViews`),
- * and the folders a turn of the push is making (`making`, from
- * `push/folders.ts`). One thing outlives a failed pull: what it read and did
- * not commit (`held`), kept so that redoing the work does not mean
- * downloading it again. It decides nothing: it answers only for a file at
- * the exact version it was read at, whose bytes cannot have changed since.
+ * said and where the files stand for one batch (`storeReads`, from
+ * `pull/occupancy.ts`, and `fileViews`, from `pull/attachments.ts`), and the
+ * folders a turn of the push is making (`making`, from `push/folders.ts`).
+ * One thing outlives a failed pull: what it read and did not commit
+ * (`held`), kept so that redoing the work does not mean downloading it
+ * again. It decides nothing: it answers only for a file at the exact
+ * version it was read at, whose bytes cannot have changed since.
  */
 
 /** Times an op may fail before the engine stops asking and surfaces it. */

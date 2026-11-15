@@ -9,7 +9,7 @@ import { createSyncEngine, type MergeInput } from '../../src/sync/engine.js';
 import { mergeFile } from '../../src/sync/merge.js';
 import type { SyncStore } from '../../src/sync/store.js';
 import { entryAt } from './kit/remote.js';
-import { editHere } from './kit/userActions.js';
+import { editHere, renameHere } from './kit/userActions.js';
 import { createMemoryStore, type MemoryStore } from './memoryStore.js';
 
 /**
@@ -173,6 +173,37 @@ describe('the engine, merging', () => {
 		expect(await engine.sync()).toMatchObject({ status: 'ok', conflicts: [] });
 		expect(noteAt('two.md')).toMatchObject({ content: remote, dirty: false });
 		expect(writes()).toBe(before);
+	});
+
+	it('leaves the merge at the name a rename queued here gave it', async () => {
+		// Renamed here and not yet pushed: the merge is made where the note
+		// is now, not moved back to the name the remote still has it under.
+		const engine = await practisedOnBoth(
+			passage([at(FIRST, 1, 9), at(SECOND, 2, 12)]),
+			passage([at(FIRST, 3, 11)])
+		);
+		const note = noteAt('two.md');
+		if (note === undefined) throw new Error('not pulled');
+		renameHere(store, note, 'renamed.md');
+
+		expect(await engine.pull()).toMatchObject({ status: 'ok', conflicts: [] });
+		expect(noteAt('two.md')).toBeUndefined();
+		expect(levels(noteAt('renamed.md')?.content)).toEqual({ [FIRST]: 3, [SECOND]: 2 });
+		expect(await engine.push()).toMatchObject({ status: 'ok', conflicts: [] });
+		expect(provider.contentAt('two.md')).toBeUndefined();
+		expect(levels(provider.contentAt('renamed.md'))).toEqual({ [FIRST]: 3, [SECOND]: 2 });
+	});
+
+	it('sends nothing on a push where the merge is the remote, and drops the write', async () => {
+		const remote = passage([at(FIRST, 3, 11)]);
+		const engine = await practisedOnBoth(passage([at(FIRST, 2, 10)]), remote);
+		const version = entryAt(provider, 'two.md').version;
+
+		// The write the remote refuses is the only one sent.
+		expect(await engine.push()).toMatchObject({ status: 'ok', pushed: 0, conflicts: [] });
+		expect(entryAt(provider, 'two.md').version).toBe(version);
+		expect(noteAt('two.md')).toMatchObject({ content: remote, dirty: false });
+		expect(await store.pendingOps()).toEqual([]);
 	});
 
 	it('merges again from a pass recorded while the first merge was on its way', async () => {

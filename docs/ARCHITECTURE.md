@@ -387,8 +387,8 @@ The split cut the single `styles.css` into slices in its own order, and the CSS 
   A test refuses a `font-size` between the steps.
   A field's size is a step held to `--text-field-floor`, 16px, below which Safari on a phone zooms in when it is focused; a size in `em` follows the words around it.
 - **Spacing is steps where a step is near.**
-  Padding, margins and gaps within two pixels of a `--space-*` step were moved onto it.
-  The few further from one are kept as they are: the 1.25rem inside a dialog and the error screen, and the palette's 4rem from the top.
+  Padding, margins and gaps within two pixels of a `--space-*` step were snapped onto it, except where the exact size is the point.
+  Kept as they are: the practice caret's 1px margin, which sets it a hair off the letters either side; and, further from any step, the 1.25rem inside a dialog and the error screen, and the palette's 4rem from the top.
 - **Brand defaults.** `--brand` and `--on-brand` have defaults there, the default brand's colours, under `:where(:root)`.
   It weighs nothing, so the brand's stylesheet wins whichever loads first, and a page without it still has its colours.
   A test keeps them equal to `brand/brand.json`.

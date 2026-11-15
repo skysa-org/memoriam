@@ -1,5 +1,4 @@
-import type { ApiErrorCode } from '@memoriam/core';
-import { cell } from '@memoriam/core';
+import { type ApiErrorCode, cell } from '@memoriam/core';
 
 import { createApp } from './app.js';
 import { parseEnv } from './env.js';

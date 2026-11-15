@@ -97,6 +97,20 @@ describe('Progress', () => {
 		expect(screen.getByText('First passage learnt')).toBeTruthy();
 		expect(screen.getAllByText('Not yet earned').length).toBeGreaterThan(0);
 	});
+
+	it('marks a day the streak kept without practice', async () => {
+		// A week in a row earns a freeze, which the day missed after it spends.
+		const user = userEvent.setup();
+		await practised(9, 8, 7, 6, 5, 4, 3, 1);
+		open('/');
+		await user.click(await screen.findByRole('link', { name: 'Progress' }));
+		const heatmap = await screen.findByRole('img', {
+			name: /^Practice over the last 26 weeks/,
+		});
+		const kept = [...heatmap.querySelectorAll<HTMLElement>('.heatmap-cell[data-kept]')];
+		expect(kept.map((cell) => cell.dataset.kept)).toEqual(['freeze']);
+		expect(kept[0]?.dataset.level).toBe('0');
+	});
 });
 
 describe('badges', () => {
