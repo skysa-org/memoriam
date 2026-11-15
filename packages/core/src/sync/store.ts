@@ -111,50 +111,101 @@ export interface SyncFolder {
 	remoteId?: string;
 }
 
-export type SyncOperation =
-	| 'write'
-	| 'move'
-	| 'delete'
-	| 'mkdir'
-	| 'rmdir'
-	/** A pending file's bytes, sent to `path`. */
-	| 'upload'
-	/** A bound file, from `path` to `targetPath`. */
-	| 'move-file'
-	/** A file this device no longer holds a row for, by `remoteId`. */
-	| 'delete-file';
-
-/** One queued push. `seq` orders the queue and identifies the row. */
-export interface SyncOp {
+/** What every queued push has, whatever it does. `seq` orders the queue and identifies the row. */
+interface Queued {
 	seq: number;
-	op: SyncOperation;
-	/** Absent for `mkdir` and `rmdir`, which are about a folder, and for a file's ops. */
-	noteId?: string;
-	/** The file an `upload` or a `move-file` is about. */
-	fileId?: string;
+	/** Where it is about: the note's or the file's path, or the folder's. */
 	path: string;
-	/** Where a `move` is going. */
-	targetPath?: string;
-	/**
-	 * For `rmdir`, the folder's `remoteId` as the queue recorded it. The op
-	 * removes a folder this device no longer holds, so there is no row left to
-	 * read it from — and without it the engine cannot tell the folder it is
-	 * about from whatever has the name now, so it does nothing at all.
-	 *
-	 * For `delete-file`, the same, for the same reason: the row goes when the
-	 * user deletes the file, and the op is what is left of it.
-	 */
-	remoteId?: string;
-	/**
-	 * For an `upload` whose bytes this device does not hold: the `remoteId` of
-	 * a file that has them, to read them from. A note moved out of a folder
-	 * where another note links the same file takes a copy of it, and the copy
-	 * can be owed before the original was ever downloaded here.
-	 */
-	copyOf?: string;
 	/** How many times this op has already failed. */
 	attempts: number;
 }
+
+/**
+ * One queued push, by what it does: each kind carries the fields it needs, so
+ * the engine never asks at run time for one it cannot be without (#447).
+ */
+export type SyncOp = Queued &
+	(
+		| { op: 'write'; noteId: string }
+		| {
+				op: 'move';
+				noteId: string;
+				/** Where it is going; `path` is where the file is now. */
+				targetPath: string;
+		  }
+		| { op: 'delete'; noteId: string }
+		| { op: 'mkdir' }
+		| {
+				op: 'rmdir';
+				/**
+				 * The folder's `remoteId` as the queue recorded it. The op
+				 * removes a folder this device no longer holds, so there is no
+				 * row left to read it from — and without it the engine cannot
+				 * tell the folder it is about from whatever has the name now, so
+				 * it does nothing at all.
+				 */
+				remoteId?: string;
+		  }
+		| {
+				/** A pending file's bytes, sent to `path`. */
+				op: 'upload';
+				fileId: string;
+				/**
+				 * Where this device does not hold the bytes: the `remoteId` of a
+				 * file that has them, to read them from. A note moved out of a
+				 * folder where another note links the same file takes a copy of
+				 * it, and the copy can be owed before the original was ever
+				 * downloaded here.
+				 */
+				copyOf?: string;
+		  }
+		| {
+				/** A bound file, from `path` to `targetPath`. */
+				op: 'move-file';
+				fileId: string;
+				targetPath: string;
+		  }
+		| {
+				/**
+				 * A file this device no longer holds a row for, by `remoteId`,
+				 * for `rmdir`'s reason: the row goes when the user deletes the
+				 * file, and the op is what is left of it.
+				 */
+				op: 'delete-file';
+				remoteId: string;
+		  }
+		| {
+				/**
+				 * A queued row that is none of the above: one that lacks what its
+				 * kind needs, or of a kind this version does not know, written by
+				 * a later one. Read as it is rather than thrown on, so the rest of
+				 * the queue still reads, and kept: the engine fails it as any op
+				 * that cannot be sent, until it stops the push and says so.
+				 * `problem` says what was wrong with it.
+				 */
+				op: 'malformed';
+				problem: string;
+		  }
+	);
+
+/** The kinds of op a device queues. `malformed` is only ever read. */
+export type SyncOperation = Exclude<SyncOp['op'], 'malformed'>;
+
+/** One kind of queued push. */
+export type SyncOpOf<Operation extends SyncOp['op']> = Extract<SyncOp, { op: Operation }>;
+
+type QueuedAs<Op> = Op extends unknown ? Omit<Op, 'seq' | 'attempts'> : never;
+
+/** A push as it is queued, before the queue gives it a `seq`, with no attempts yet. */
+export type NewSyncOp = QueuedAs<Exclude<SyncOp, { op: 'malformed' }>>;
+
+/** Where an op leaves what it is about: a move's target, or else its own path. */
+export const destinationOf = (op: SyncOp): string =>
+	op.op === 'move' || op.op === 'move-file' ? op.targetPath : op.path;
+
+/** The file an upload reads its bytes from instead, where it has one: none, or that one. */
+export const copiedBy = (op: SyncOp): readonly string[] =>
+	op.op === 'upload' && op.copyOf !== undefined ? [op.copyOf] : [];
 
 /**
  * One decision the engine reached about one remote change. The engine works out
@@ -519,8 +570,8 @@ export type PullChange =
 	  }>
 	| Readonly<{ kind: 'conflict'; resolution: ConflictResolution }>
 	/*
-	 * A file's changes are keyed by `fileId`, never `id`: the engine asks which
-	 * changes are about a note by whether they carry an `id`.
+	 * A file's changes are keyed by `fileId`, never `id`, and say so in
+	 * `CHANGE_KINDS`: what a change is about is read off its kind.
 	 */
 	| Readonly<{
 			/**
@@ -605,6 +656,83 @@ export type PullChange =
 	  }>;
 
 /**
+ * What each kind of change is about, and what it says of it: whether it puts
+ * it at a `path`, and whether it binds it to a `remote` file. Named for every
+ * kind, so a new one does not compile until it says, and read by the helpers
+ * below, so nothing asks a change which fields it happens to have (#447). A
+ * kind said to carry a field it does not have fails to compile where the
+ * helper reads it. A conflict is about two notes, by its resolution's ids,
+ * and every caller that asks says what it wants of those.
+ */
+const CHANGE_KINDS = {
+	'upsert-note': { about: 'note', placed: true, bound: true },
+	'adopt-version': { about: 'note', placed: false, bound: true },
+	'merge-note': { about: 'note', placed: true, bound: true },
+	'move-note': { about: 'note', placed: true, bound: true },
+	'delete-note': { about: 'note', placed: false, bound: false },
+	'detach-note': { about: 'note', placed: false, bound: false },
+	'displace-note': { about: 'note', placed: true, bound: false },
+	'reupload-note': { about: 'note', placed: false, bound: false },
+	'ensure-folder': { about: 'folder', placed: true, bound: false },
+	'move-folder': { about: 'folder', placed: false, bound: false },
+	'delete-folder': { about: 'folder', placed: true, bound: false },
+	'reupload-folder': { about: 'folder', placed: true, bound: false },
+	unreadable: { about: 'unreadable', placed: false, bound: false },
+	'forget-unreadable': { about: 'unreadable', placed: false, bound: false },
+	conflict: { about: 'conflict', placed: false, bound: false },
+	'upsert-file': { about: 'file', placed: true, bound: true },
+	'displace-file': { about: 'file', placed: true, bound: false },
+	'delete-file': { about: 'file', placed: false, bound: false },
+	'reupload-file': { about: 'file', placed: false, bound: false },
+} as const satisfies Record<
+	PullChange['kind'],
+	{
+		about: 'note' | 'folder' | 'file' | 'unreadable' | 'conflict';
+		placed: boolean;
+		bound: boolean;
+	}
+>;
+
+type Kinds = typeof CHANGE_KINDS;
+
+type KindsWhere<Key extends keyof Kinds[PullChange['kind']], Value> = {
+	[Kind in PullChange['kind']]: Kinds[Kind][Key] extends Value ? Kind : never;
+}[PullChange['kind']];
+
+/** A change about one note, named by its `id`. */
+export type NoteChange = Extract<PullChange, { kind: KindsWhere<'about', 'note'> }>;
+/** A change about a file that is not a note, named by its `fileId`. */
+export type FileChange = Extract<PullChange, { kind: KindsWhere<'about', 'file'> }>;
+type PlacingChange = Extract<PullChange, { kind: KindsWhere<'placed', true> }>;
+type BindingChange = Extract<PullChange, { kind: KindsWhere<'bound', true> }>;
+
+export const isNoteChange = (change: PullChange): change is NoteChange =>
+	CHANGE_KINDS[change.kind].about === 'note';
+
+export const isFileChange = (change: PullChange): change is FileChange =>
+	CHANGE_KINDS[change.kind].about === 'file';
+
+const isPlacing = (change: PullChange): change is PlacingChange => CHANGE_KINDS[change.kind].placed;
+
+const isBinding = (change: PullChange): change is BindingChange => CHANGE_KINDS[change.kind].bound;
+
+/** The note a change is about, where it is one note's: not a conflict's two. */
+export const noteIdOf = (change: PullChange): string | undefined =>
+	isNoteChange(change) ? change.id : undefined;
+
+/**
+ * Where a change puts what it is about, for the kinds that say: a note
+ * written or moved, a folder made, deleted or sent back up, a file written or
+ * moved aside. Not a folder's move, which says `from` and `to`.
+ */
+export const pathOf = (change: PullChange): string | undefined =>
+	isPlacing(change) ? change.path : undefined;
+
+/** The remote file a change binds what it is about to, for the kinds that do. */
+export const remoteOf = (change: PullChange): RemoteEntry | undefined =>
+	isBinding(change) ? change.remote : undefined;
+
+/**
  * Both sides changed the same note. The remote keeps the path; the local copy
  * is written beside it as a new note and queued for push.
  *
@@ -613,7 +741,7 @@ export type PullChange =
  * edit overwritten with no copy of it anywhere.
  *
  * Applying one discards `noteId`'s queued `write` ops, wherever it is applied
- * from — `applyPull` as well as `resolveConflict`. Those ops carry the edit
+ * from — `applyChanges` as well as `resolveConflict`. Those ops carry the edit
  * that lost, which is exactly what the copy now holds, and the note itself now
  * holds the remote's bytes and is clean. Sending them anyway writes the
  * remote's own content back to it under a new version, which every other device
@@ -809,7 +937,7 @@ export interface SyncStore {
 	readonly foldersWithRemote: () => Promise<SyncFolder[]>;
 	/**
 	 * The files this connection holds that could not be read, one per
-	 * `remoteId`, in no promised order. Written only by `applyPull`. For the
+	 * `remoteId`, in no promised order. Written only by `applyChanges`. For the
 	 * engine to tell a change from a repeat, and for the app to list: see
 	 * `UnreadableFile` for what it must never be used for.
 	 */
@@ -817,8 +945,6 @@ export interface SyncStore {
 
 	/** A file row by its id, within this store's connection, as for notes. */
 	readonly fileById: (id: string) => Promise<SyncFile | undefined>;
-	/** Between batches, as `noteByPath`: one row at each path then. */
-	readonly fileByPath: (path: string) => Promise<SyncFile | undefined>;
 	readonly fileByRemoteId: (remoteId: string) => Promise<SyncFile | undefined>;
 	/** Every file row, bound and pending, for reconciling a full scan. */
 	readonly allFiles: () => Promise<SyncFile[]>;
@@ -835,7 +961,9 @@ export interface SyncStore {
 	readonly fileBytes: (id: string) => Promise<Uint8Array<ArrayBuffer> | undefined>;
 
 	/**
-	 * Apply a pull batch and its cursor atomically, **in the order given**.
+	 * Apply a batch of changes and its cursor atomically, **in the order
+	 * given**: a pull's decisions, or the push's own where it settles a
+	 * conflict (`push/conflicts.ts`), which carries no cursor.
 	 *
 	 * Both halves of that are load-bearing. Atomically, because §7 requires the
 	 * cursor to be persisted only after the batch it describes has committed: a
@@ -850,7 +978,7 @@ export interface SyncStore {
 	 * then all the puts) would turn each of those into a lost note, and would
 	 * look perfectly reasonable doing it.
 	 */
-	readonly applyPull: (batch: PullBatch) => Promise<void>;
+	readonly applyChanges: (batch: PullBatch) => Promise<void>;
 
 	/** Queued pushes in order. */
 	readonly pendingOps: () => Promise<SyncOp[]>;

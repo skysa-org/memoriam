@@ -1,4 +1,4 @@
-import type { ProviderKind } from '@memoriam/core';
+import type { ProviderKind, SyncOperation } from '@memoriam/core';
 import Dexie, { type Table } from 'dexie';
 
 import { letGoWhenFrozen } from './frozenTab.js';
@@ -110,8 +110,8 @@ export interface SyncStateRecord {
 	unreadable?: { remoteId: string; path: string; movedAside?: string[] }[];
 }
 
-export type QueuedOperation =
-	'write' | 'move' | 'delete' | 'mkdir' | 'rmdir' | 'upload' | 'move-file' | 'delete-file';
+/** The kinds of op the queue holds: core's, so a new one is a row the app can store. */
+export type QueuedOperation = SyncOperation;
 
 /** What the remote is owed, in order (`store/queue.ts`). */
 export interface OpQueueRecord {

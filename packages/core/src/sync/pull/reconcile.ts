@@ -1,6 +1,6 @@
 import { isWithin, normalizePath, ROOT } from '../../paths.js';
 import type { EngineContext } from '../context.js';
-import type { PullChange, SyncFolder, UnreadableFile } from '../store.js';
+import { pathOf, type PullChange, type SyncFolder, type UnreadableFile } from '../store.js';
 import type { PullAttachments } from './attachments.js';
 import type { Cascade } from './cascade.js';
 import { decidedApartFromMoves, decidedNotes, reestablished } from './decided.js';
@@ -18,13 +18,12 @@ export const createPullReconcile = (
 	{ store }: EngineContext,
 	{
 		cascadeOver,
-		fileBaseOf,
 		filesNow,
 		forgetNote,
 		keepNote,
 		roofsFor,
 	}: Pick<Cascade, 'cascadeOver' | 'roofsFor'> &
-		Pick<PullAttachments, 'fileBaseOf' | 'filesNow'> &
+		Pick<PullAttachments, 'filesNow'> &
 		Pick<PullNotes, 'forgetNote' | 'keepNote'>
 ) => {
 	const reconcile = async (
@@ -36,13 +35,12 @@ export const createPullReconcile = (
 		 * them gone. Nothing is deleted: every note and notebook it did not
 		 * return is sent back up instead (§7, "A rescan that uploads").
 		 */
-		upload = false,
+		upload: boolean,
 		/** The unreadable files listed when this page of the scan began. */
-		unread: ReadonlyMap<string, UnreadableFile> = new Map(),
+		unread: ReadonlyMap<string, UnreadableFile>,
 		/** The files that are not notes, as this page of the scan found them. */
-		files?: FileBase
+		known: FileBase
 	): Promise<PullChange[]> => {
-		const known = files ?? (await fileBaseOf(await store.pendingOps()));
 		// A file the scan did not return is gone from the remote, as a note is,
 		// or sent back up where the provider says its own copy may have lost
 		// it. Only a bound row: a pending one was never there to be returned.
@@ -81,7 +79,7 @@ export const createPullReconcile = (
 		// directory was replaced at the name, an `ensure-folder` for that path
 		// is in `kept.folders`. If one is ever found, this is where it starts.
 		const holding = changes.flatMap((change) =>
-			'path' in change && change.kind !== 'delete-folder' ? [change.path] : []
+			change.kind === 'delete-folder' ? [] : (pathOf(change) ?? [])
 		);
 		const notes = await store.allNotes();
 		const folders = await store.foldersWithRemote();

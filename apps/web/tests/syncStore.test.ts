@@ -14,7 +14,7 @@ import {
 } from '@memoriam/core/testing';
 import { describe, expect, it } from 'vitest';
 
-import { LOCAL_CONNECTION_ID, type MemoriamDatabase } from '../src/store/db.js';
+import { LOCAL_CONNECTION_ID, type MemoriamDatabase, type OpQueueRecord } from '../src/store/db.js';
 import { createPassage, deletePassage, pulledRow } from '../src/store/passages.js';
 import { recordPass } from '../src/store/practice.js';
 import { createDexieSyncStore, UnboundConnectionError } from '../src/sync/store.js';
@@ -87,7 +87,7 @@ describeSyncStoreContract('Dexie', async () => {
 		},
 		seedOp: async (op) => {
 			// In the app a queued delete always comes with its tombstone.
-			if (op.op === 'delete' && op.noteId !== undefined) {
+			if (op.op === 'delete') {
 				await db.notes.update([LOCAL_CONNECTION_ID, op.noteId], {
 					deletedLocally: 1,
 					dirty: 1,
@@ -194,7 +194,7 @@ describe('the Dexie sync store, beyond the contract', () => {
 		await db.syncState.delete(CONNECTION);
 		await db.syncState.put({ connectionId: 'gdrive-2', clientId: 'this-browser', boundAt: 1 });
 
-		await expect(store.applyPull({ changes: [], cursor: 'c1' })).rejects.toBeInstanceOf(
+		await expect(store.applyChanges({ changes: [], cursor: 'c1' })).rejects.toBeInstanceOf(
 			UnboundConnectionError
 		);
 		expect(await db.syncState.get('gdrive-2')).not.toHaveProperty('cursor');
@@ -220,7 +220,7 @@ describe('the Dexie sync store, beyond the contract', () => {
 		expect((await db.notes.get([LOCAL_CONNECTION_ID, 'p1']))?.updatedAt).toBe(edited);
 
 		const practised = passage(`progress:\n  ${FIRST}: { level: 2 }\n`);
-		await store.applyPull({
+		await store.applyChanges({
 			changes: [
 				{
 					kind: 'upsert-note',
@@ -238,7 +238,7 @@ describe('the Dexie sync store, beyond the contract', () => {
 		});
 
 		const reworded = passage('', '2026-10-12T09:00:00Z').replace('Jesus wept.', 'Jesus wept!');
-		await store.applyPull({
+		await store.applyChanges({
 			changes: [
 				{
 					kind: 'upsert-note',
@@ -359,5 +359,69 @@ describe('the engine over the Dexie store', () => {
 			provider.contentAt(made.path)
 		);
 		expect(await db.notes.count()).toBe(2);
+	});
+});
+
+describe('a queued op read back (#447)', () => {
+	/** A row as the queue stores it, written straight to the table. */
+	const queued = async (db: MemoriamDatabase, row: Record<string, unknown>): Promise<number> =>
+		db.opQueue.add({
+			connectionId: LOCAL_CONNECTION_ID,
+			attempts: 0,
+			queuedAt: 0,
+			...row,
+		} as unknown as OpQueueRecord);
+
+	it('reads every kind as the app queues it as the op it is', async () => {
+		const db = freshDatabase();
+		const store = await boundStore(db);
+		const rows = [
+			{ op: 'write', noteId: 'n1', path: 'a.md' },
+			{ op: 'move', noteId: 'n1', path: 'a.md', targetPath: 'b.md' },
+			{ op: 'delete', noteId: 'n2', path: 'c.md' },
+			{ op: 'mkdir', path: 'Work' },
+			{ op: 'rmdir', path: 'Old', remoteId: 'f1' },
+			{ op: 'rmdir', path: 'Never' },
+			{ op: 'upload', fileId: 'x1', path: 'a.png' },
+			{ op: 'upload', fileId: 'x2', path: 'b.png', copyOf: 'r9' },
+			{ op: 'move-file', fileId: 'x1', path: 'a.png', targetPath: 'Trips/a.png' },
+			{ op: 'delete-file', path: 'c.png', remoteId: 'r3' },
+		];
+		for (const row of rows) await queued(db, { ...row, lastError: 'kept', attempts: 2 });
+
+		const ops = await store.pendingOps();
+
+		expect(ops).toEqual(rows.map((row, at) => ({ ...row, seq: at + 1, attempts: 2 })));
+	});
+
+	it('reads a row that fits no kind as malformed, and the rest as they are', async () => {
+		const db = freshDatabase();
+		const store = await boundStore(db);
+		const lost = await queued(db, { op: 'move', noteId: 'n1', path: 'a.md', attempts: 1 });
+		const later = await queued(db, { op: 'teleport', path: 'b.md' });
+		await queued(db, { op: 'write', noteId: 'n1', path: 'a.md' });
+
+		const ops = await store.pendingOps();
+
+		expect(ops).toEqual([
+			{
+				op: 'malformed',
+				seq: lost,
+				path: 'a.md',
+				attempts: 1,
+				problem: expect.stringContaining('targetPath') as unknown,
+			},
+			{
+				op: 'malformed',
+				seq: later,
+				path: 'b.md',
+				attempts: 0,
+				problem: expect.stringContaining('teleport') as unknown,
+			},
+			{ op: 'write', seq: later + 1, noteId: 'n1', path: 'a.md', attempts: 0 },
+		]);
+		expect(await store.opBySeq(lost)).toMatchObject({ op: 'malformed' });
+		// Kept, for the engine to fail and the user to be told of.
+		expect(await db.opQueue.count()).toBe(3);
 	});
 });
