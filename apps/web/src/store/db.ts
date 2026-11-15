@@ -136,7 +136,7 @@ export interface OpQueueRecord {
  * A file in the library that is not a passage: a picture, a PDF, anything the
  * user keeps beside them. Nothing here shows one or makes one; sync keeps a
  * row for each the remote has, so that renaming a collection takes them with
- * it (§10, "Files, kept dormant").
+ * it (§10, "Files beside passages").
  */
 export interface FileRecord {
 	connectionId: string;

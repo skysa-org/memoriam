@@ -6,7 +6,7 @@ If a change departs from it, the same pull request amends it.
 
 Memoriam is built on the foundations of skysa-notes (same organisation, same licence).
 It uses skysa-notes' stack, conventions and much of its shell code, ported selectively.
-Where a section says "as skysa-notes", that project's `docs/ARCHITECTURE.md` has the longer reasoning.
+Where a section says "as skysa-notes", that project's `docs/ARCHITECTURE.md` has the longer reasoning; for sync, the Worker and the build, which moved from it to the shared kit, the kit's has it (§10).
 
 Each section has an anchor that does not change with its number or its wording, such as `ARCHITECTURE.md#sync`, and its number as well (`#s10`).
 Cite by anchor from now on; a citation such as `§10, "Push timing"` still works, and a test (`apps/web/tests/docs.test.ts`) checks that each one leads somewhere.
@@ -349,7 +349,7 @@ Both keep still under `prefers-reduced-motion`.
 Two tabs practising at once therefore cannot overwrite each other: each changes only its own chunk's entry, in the file as it is when the write is made.
 
 **Export and import** (`apps/web/src/archive/`, on the Settings screen).
-Until sync, the only copy of the library is the one in this browser, so a backup is a file the user keeps.
+Unless the library syncs, the only copy of it is the one in this browser, so a backup is a file the user keeps.
 - **Export** writes a ZIP of every row at its path, byte for byte, the activity files included (§3, "Layout").
   An empty collection gets a folder entry of its own.
   Entries are stored, not deflated: passages are small, and a stored archive needs no compressor.
@@ -437,7 +437,7 @@ A command is registered again only when what the palette shows of it changes (it
   Chromium's install event is held for a banner.
   Safari's menu path is named on iPhone, iPad and Mac.
 - **Keeping data.** Safari deletes a site's storage after 7 days without use unless the app is installed to the home screen, and any browser may clear storage it has not been granted for good when the disk runs short.
-  Until sync, the only copy of the library is this one.
+  Unless it syncs, the only copy of the library is this one.
   So, once there is a passage to keep:
   - **The install banner** shows, and not before.
   - **Persistent storage.** The app asks for it (`navigator.storage.persist()`, `store/persistence.ts`).
@@ -457,7 +457,7 @@ A command is registered again only when what the palette shows of it changes (it
 The Content-Security-Policy in `apps/web/public/_headers`, checked by `tests/csp.test.ts`:
 - `script-src 'self'`, and no inline script, `eval` or `new Function` in the shell.
   This is a hard requirement.
-  Once sync arrives, the shell holds a long-lived credential in IndexedDB, as skysa-notes does.
+  Where the library syncs, the shell holds a long-lived credential in IndexedDB (§10, "The sync client"), as skysa-notes' does.
 - `connect-src`: this origin, which serves the API, and the hosts of the storage providers the browser syncs with directly, as skysa-notes lists them.
   These are `*.dropboxapi.com`; `graph.microsoft.com` and the hosts OneDrive serves file bytes from (`*.files.1drv.com`, `my.microsoftpersonalcontent.com`, `*.sharepoint.com`); and `www.googleapis.com`.
   Nothing else leaves the device.
@@ -498,11 +498,11 @@ The adapters keep `readBytes` and `createFile`, and the engine skysa-notes' atta
 **Before the move.** The adapters and the engine were ported from skysa-notes at `fa92ad6`, with their tests, then took the fixes skysa-notes made after it: a round saying it is reading its pages (#350), Drive listing a round's new folders four at a time (#354), Drive leaving the folders a collection leaves behind (#356), Drive scanning when the change feed runs longer than a scan would, and a deleted passage never claimed by path (#362), a passage out of conflict names failing its op (#518), and a refresh going back to a dead cursor's scan (#536).
 The kit was compared against them before this app moved onto it (skysa-notes #700), and has every one.
 
-**Merge before a conflict copy.** skysa-notes never merges: on a conflict the remote keeps the path, and the local version is written beside it as a conflict copy.
+**Merge before a conflict copy.** The kit's engine never merges unless it is handed a merge, and skysa-notes hands it none: on a conflict the remote keeps the path, and the local version is written beside it as a conflict copy.
 Memoriam adds one merge before that rule, through the kit engine's `merge` option:
 - **The option.** `merge({ path, local, remote })` returns the merged text, or `undefined` for no merge.
   A merge that throws counts as no merge.
-  Without the option, the engine behaves as skysa-notes'.
+  Without the option, the engine never merges.
 - **`mergeFile`** (`packages/core/src/sync/merge.ts`) is the merge the app passes:
   - an activity file goes to `mergeActivity`, if the remote one can be read;
   - a passage (`.md`, not hidden) goes to `mergePassage`;
@@ -518,7 +518,7 @@ Memoriam adds one merge before that rule, through the kit engine's `merge` optio
 **`mergePassage`:**
 - If the bodies and the non-progress frontmatter match, merge `progress` chunk by chunk.
   The later `reviewed` wins, and the remote wins a tie.
-- Otherwise, a conflict copy as skysa-notes does.
+- Otherwise, a conflict copy, as the engine makes one without a merge.
 - Other metadata is not merged: with no base version, nobody can tell which side renamed it.
 
 **`mergeActivity`:**
@@ -595,7 +595,7 @@ Where it differs:
   - kept in IndexedDB, never localStorage.
     `script-src 'self'` (§9) is what protects them.
 - **The scheduler** follows the binding: the one source it is shown is the library's connection, which is never kept detached, has no first import to finish and no resume to verify.
-  From skysa-notes, unchanged: one run at a time per connection, across tabs, under the lock above; the backoff, `Retry-After` and `blocked`; a run that ends after the library was bound or let go (`bindingCount`) ignored; a run held up behind another tab's sync saying so after 5 seconds; and the user's pause, until Sync now, a re-scan, binding again or a reload.
+  The kit's, as skysa-notes runs it: one run at a time per connection, across tabs, under the lock above; the backoff, `Retry-After` and `blocked`; a run that ends after the library was bound or let go (`bindingCount`) ignored; a run held up behind another tab's sync saying so after 5 seconds; and the user's pause, until Sync now, a re-scan, binding again or a reload.
   skysa-notes also says when a run waits on another tab's reads of the database (`heldUp`).
   Memoriam does not follow its transactions, so only the wait for the lock is said.
 - **The account** (`sync/account.ts`).
@@ -727,7 +727,7 @@ Then the soak checks four things:
 
 **Known issue: a passage's id can differ between devices.**
 A passage made here that meets another at its path on the remote, before it was ever sent, keeps its row and its id for the remote's file.
-That file's `id` is the other passage's, and its own words go to a conflict copy (`resolutionFor` in the engine, as skysa-notes').
+That file's `id` is the other passage's, and its own words go to a conflict copy (`resolutionFor` in the kit's engine).
 The next edit of its details here writes the row's id into the file, and the other device's next edit writes its own back.
 No words or progress are lost.
 Import matches a backup's passages by the file's `id`, so a backup from the other device brings such a passage in as a second one rather than merging it.

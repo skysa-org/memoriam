@@ -30,15 +30,18 @@ and `main` are supported; older releases are not.
 
 ## What is in scope
 
-This repository: `apps/web` (the PWA) and `packages/core`.
+This repository: `apps/web` (the PWA), `packages/core`, and `apps/api` (the Worker's entry). Sync,
+the Worker's routes and the PWA build are the shared kit's,
+[skysa-kit](https://github.com/skysa-org/skysa-kit), and a finding in them is reported there.
 
 Especially worth looking at:
 
 - **The content security policy.** `script-src 'self'` with nothing inline is a hard requirement
   (`docs/ARCHITECTURE.md` §9). A way around it is a finding even without a script injection to go
   with it.
-- **Anything that sends a passage or its progress off the device.** Until sync arrives, nothing
-  does. Any path that does is a bug, whether or not it is exploitable.
+- **Anything that sends a passage or its progress off the device.** Only sync does, and only to
+  the storage account the user connected. Any other path is a bug, whether or not it is
+  exploitable, and so is a passage reaching the Worker.
 - **Imported files.** A zip or markdown file from elsewhere is untrusted input. Anything that turns
   one into script, or into a write outside the library, is a finding.
 

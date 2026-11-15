@@ -51,6 +51,9 @@ const unwrapped = (text: string): string =>
 	text.replace(/\s*\n\s*(?:\*\s|\/\/\s|>\s|#\s)?\s*/gu, ' ');
 const withoutFences = (text: string): string => text.replace(/^```[\s\S]*?^```/gmu, '');
 
+/** The section a number is in, at the top: §10 for §10.2. */
+const topOf = (number: string): string => number.split('.')[0] ?? number;
+
 /** A section by its number, and the names under it: headings, and the bold words a paragraph or an item opens with. */
 type Entry = Readonly<{ number: string; name: string }>;
 
@@ -62,7 +65,7 @@ const entriesOf = (text: string): readonly Entry[] =>
 				const numbered = /^#{2,3} (\d+(?:\.\d+)*)\.? (.*)$/u.exec(line);
 				if (numbered) {
 					const number = String(numbered[1]);
-					const top = number.split('.')[0] ?? number;
+					const top = topOf(number);
 					const here = number === top ? [top] : [top, number];
 					const name = String(numbered[2]).toLowerCase();
 					return {
@@ -94,23 +97,24 @@ const hasNumber = (doc: Doc, number: string): boolean =>
 		? anchors.includes(`s${number.replaceAll('.', '-')}`)
 		: ENTRIES.research.some((entry) => entry.number === number);
 
-/** Whether a name is how a heading or a lead-in of that section begins, a whole word at its end. */
+/** Whether a name is how an entry's name begins, a whole word at its end. */
+const begins = (entry: string, name: string): boolean =>
+	entry.startsWith(name.toLowerCase()) && !/\w/u.test(entry.charAt(name.length));
+
+/** Whether a name is how a heading or a lead-in of that section begins. */
 const hasName = (doc: Doc, number: string, name: string): boolean =>
-	ENTRIES[doc].some(
-		(entry) =>
-			entry.number === number &&
-			entry.name.startsWith(name.toLowerCase()) &&
-			!/\w/u.test(entry.name.charAt(name.length))
-	);
+	ENTRIES[doc].some((entry) => entry.number === number && begins(entry.name, name));
 
 /**
  * What names the document a `§` is in: this repo's two, skysa-notes', or
  * another (the shared kit's, an RFC, the ZIP format's note), whose sections are
  * not this test's to check. skysa-notes' are checked only for what moved to the
- * kit ("cites the kit, not skysa-notes").
+ * kit ("cites the kit, not skysa-notes"). skysa-notes' name without its
+ * ARCHITECTURE's is often its code's ("as skysa-notes'"), so it names the
+ * document only of a `§` right after it.
  */
 const MARKER =
-	/(?:([Ss]kysa-notes['’](?:\s*`?(?:docs\/)?ARCHITECTURE\.md`?)?)|`?(?:docs\/)?(ARCHITECTURE|research)\.md`?|RFC \d+|OpenID Connect Core|APPNOTE\.TXT|\[kit|the kit's\s*`?(?:docs\/)?ARCHITECTURE\.md`?)[,(]?\s*/gu;
+	/(?:([Ss]kysa-notes['’])(\s*`?(?:docs\/)?ARCHITECTURE\.md`?)?|`?(?:docs\/)?(ARCHITECTURE|research)\.md`?|RFC \d+|OpenID Connect Core|APPNOTE\.TXT|\[kit|the kit['’]s\s*`?(?:docs\/)?ARCHITECTURE\.md`?)\s*[,(]?\s*/gu;
 type Cited = Doc | 'skysa-notes';
 const docOf = (notes: string | undefined, word: string | undefined): Cited | undefined => {
 	if (notes !== undefined) return 'skysa-notes';
@@ -130,12 +134,15 @@ const citations = (file: string, text: string): readonly Citation[] => {
 	const flat = unwrapped(text);
 	const markers = [...flat.matchAll(MARKER)].map((match) => ({
 		end: match.index + match[0].length,
-		doc: docOf(match[1], match[2]),
+		doc: docOf(match[1], match[3]),
+		alone: match[1] !== undefined && match[2] === undefined,
 	}));
 	return [...flat.matchAll(/§(\d+(?:\.\d+)*)(?:,? ["“]([^"”]{3,80})["”])?/gu)].flatMap(
 		(match) => {
 			const adjacent = markers.find((marker) => marker.end === match.index);
-			const nearest = markers.filter((marker) => marker.end <= match.index).at(-1);
+			const nearest = markers
+				.filter((marker) => marker.end <= match.index && !marker.alone)
+				.at(-1);
 			const own = DOCS[file];
 			const doc = adjacent ? adjacent.doc : (own ?? (nearest ? nearest.doc : 'ARCHITECTURE'));
 			if (doc === undefined) return [];
@@ -157,28 +164,45 @@ const citations = (file: string, text: string): readonly Citation[] => {
  * the shared kit, which this repo cites at the kit now (skysa-notes' record
  * 0018, step 5). Its §4, §5 and §6, the adapters and the server, moved whole.
  * Every other section holds some of the kit's design and some of skysa-notes'
- * own app, so one is cited by the part it means, and the engine's parts of §7
- * are the kit's.
+ * own app, so one is cited by the part it means. The engine's parts of its §7,
+ * as that document stood when the engine moved, are named here in full, with
+ * the section's own name, since that is the whole of it; a citation names one
+ * as `hasName` reads a name here.
  */
 const KIT_SECTIONS = new Set(['4', '5', '6']);
 const KIT_PARTS = [
-	'sync loop',
-	'folder renames',
-	'conflict rule',
+	'local store and sync engine (client)',
+	'sync loop (per connection)',
+	'folder renames/moves',
+	'conflict rule (concrete)',
 	'merge before the copy',
-	'what the loop above left open',
-	'pushing files',
-	'a file that is not utf-8',
+	'pushing files, and pulling them',
+	'what the loop above left open, and how the engine answers it',
+	"the version a move hands back is not the note's until its bytes are known",
+	'a file that is not utf-8 is left alone',
+	'a path can be reused',
+	'a rename need not re-list what is inside it',
+	'a round is one batch',
+	"a push conflict over a file another note already holds is not that note's conflict",
+	"a directory the user's notebook left is removed by an op of its own, and only when five things agree",
+	'a folder is removed only where a listing can prove it empty',
+	'a dead `rmdir` is given up on rather than surfaced',
+	'a notebook the remote no longer has does not take the notes whose files were never in it',
+	'a rate limit is not an attempt',
 ];
 const movedToKit = ({ doc, number, name, exact }: Citation): boolean =>
 	doc === 'skysa-notes' &&
 	exact &&
-	(KIT_SECTIONS.has(number.split('.')[0] ?? number) ||
+	(KIT_SECTIONS.has(topOf(number)) ||
 		name === undefined ||
-		KIT_PARTS.some((part) => name.toLowerCase().startsWith(part)));
+		KIT_PARTS.some((part) => begins(part, name) || begins(name.toLowerCase(), part)));
 
-/** Where the rule's own examples are, which are not citations. */
-const THIS_FILE = 'apps/web/tests/docs.test.ts';
+/**
+ * skysa-notes' ARCHITECTURE, and a section's mark, as the examples here write
+ * them, so that an example is not a citation in this file of its own.
+ */
+const NOTES = "skysa-notes' docs/ARCHITECTURE.md";
+const AT = '§';
 
 /** Each anchor of this repo's ARCHITECTURE a text links to: not the shared kit's, which is its own. */
 const citedAnchors = (text: string): readonly string[] =>
@@ -225,11 +249,15 @@ describe('the docs', () => {
 	const cited = CITING.flatMap((file) =>
 		citations(file, read(file)).map((citation) => ({ file, ...citation }))
 	);
+	const ours = cited.filter(
+		(citation): citation is typeof citation & Readonly<{ doc: Doc }> =>
+			citation.doc !== 'skysa-notes'
+	);
 
 	it('finds what it is meant to look at', () => {
-		expect(cited.filter(({ doc }) => doc === 'ARCHITECTURE').length).toBeGreaterThan(150);
-		expect(cited.filter(({ doc }) => doc === 'research').length).toBeGreaterThan(20);
-		expect(cited.filter(({ name }) => name !== undefined).length).toBeGreaterThan(50);
+		expect(ours.filter(({ doc }) => doc === 'ARCHITECTURE').length).toBeGreaterThan(150);
+		expect(ours.filter(({ doc }) => doc === 'research').length).toBeGreaterThan(20);
+		expect(ours.filter(({ name }) => name !== undefined).length).toBeGreaterThan(50);
 		expect(layoutPaths(architecture)).toContain('packages/core/src/sync');
 	});
 
@@ -240,8 +268,17 @@ describe('the docs', () => {
 		expect(citations('a.ts', '(`docs/research.md` §2.1)')).toEqual([
 			{ doc: 'research', number: '2.1', exact: true },
 		]);
-		expect(citations('a.ts', `skysa-notes' docs/ARCHITECTURE.md §7, "Pushing files"`)).toEqual([
+		expect(citations('a.ts', `${NOTES} ${AT}7, "Pushing files"`)).toEqual([
 			{ doc: 'skysa-notes', number: '7', name: 'Pushing files', exact: true },
+		]);
+		expect(citations('a.ts', `as ${NOTES.slice(0, 12)} ${AT}6`)).toEqual([
+			{ doc: 'skysa-notes', number: '6', exact: true },
+		]);
+		expect(
+			citations('a.ts', `rows as ${NOTES.slice(0, 12)} (\`Row\`)\n * (${AT}10, "Files")`)
+		).toEqual([{ doc: 'ARCHITECTURE', number: '10', name: 'Files', exact: false }]);
+		expect(citations('a.ts', '`docs/ARCHITECTURE.md` (§3)')).toEqual([
+			{ doc: 'ARCHITECTURE', number: '3', exact: true },
 		]);
 		expect(citations('a.ts', 'RFC 9110 §10.2.3, which says')).toEqual([]);
 		expect(
@@ -251,6 +288,7 @@ describe('the docs', () => {
 			)
 		).toEqual([]);
 		expect(citations('a.ts', `the kit's docs/ARCHITECTURE.md §7, "Sync engine"`)).toEqual([]);
+		expect(citations('a.ts', 'the kit’s docs/ARCHITECTURE.md §7')).toEqual([]);
 		expect(citations('a.ts', `the kit's server; see §10, "Push timing"`)).toEqual([
 			{ doc: 'ARCHITECTURE', number: '10', name: 'Push timing', exact: false },
 		]);
@@ -261,10 +299,6 @@ describe('the docs', () => {
 			)
 		).toEqual([]);
 	});
-
-	const ours = cited.flatMap(({ doc, ...rest }) =>
-		doc === 'skysa-notes' ? [] : [{ doc, ...rest }]
-	);
 
 	it('has every citation by number lead to a section', () => {
 		const lost = ours
@@ -292,19 +326,28 @@ describe('the docs', () => {
 	});
 
 	it('cites the kit, not skysa-notes, for the design that moved to it', () => {
-		const notes = "skysa-notes' docs/ARCHITECTURE.md";
 		const moved = (text: string) => citations('a.ts', text).filter(movedToKit);
-		expect(moved(`${notes} §6, "Backend"`)).toHaveLength(1);
-		expect(moved(` * (${notes}\n * §7): the copy`)).toHaveLength(1);
-		expect(moved(`(${notes} §5.1)`)).toHaveLength(1);
-		expect(moved(`as each provider in ${notes.slice(0, 13)} §5.`)).toHaveLength(1);
-		expect(moved(`${notes} §7, "Pushing files, and pulling them"`)).toHaveLength(1);
-		expect(moved(`${notes} §8`)).toHaveLength(1);
-		expect(moved(`${notes} §8, "Share target"`)).toEqual([]);
-		expect(moved(`${notes.slice(0, 13)} sync/account.ts, as §10, "Connecting"`)).toEqual([]);
+		expect(moved(`${NOTES} ${AT}6, "Backend"`)).toHaveLength(1);
+		expect(moved(` * (${NOTES}\n * ${AT}7): the copy`)).toHaveLength(1);
+		expect(moved(`(${NOTES} ${AT}5.1)`)).toHaveLength(1);
+		expect(moved(`${NOTES} (${AT}7)`)).toHaveLength(1);
+		expect(moved(`as each provider in ${NOTES.slice(0, 13)} ${AT}5.`)).toHaveLength(1);
+		expect(moved(`${NOTES} ${AT}7, "Pushing files, and pulling them"`)).toHaveLength(1);
+		expect(moved(`${NOTES} ${AT}7, "A round is one batch"`)).toHaveLength(1);
+		expect(moved(`${NOTES} ${AT}7, "Conflict"`)).toHaveLength(1);
+		expect(moved(`${NOTES} ${AT}7, "Local store and sync engine (client)"`)).toHaveLength(1);
+		expect(moved(`${NOTES} ${AT}7, "Sync loop (per connection), step 3"`)).toHaveLength(1);
+		expect(moved(`${NOTES} ${AT}8`)).toHaveLength(1);
+		expect(moved(`${NOTES} ${AT}8, "Share target"`)).toEqual([]);
+		expect(moved(`${NOTES} ${AT}7, "IndexedDB schema (Dexie)"`)).toEqual([]);
+		expect(moved(`${NOTES} ${AT}7, "A path"`)).toHaveLength(1);
+		expect(moved(`${NOTES} ${AT}7, "A pathway"`)).toEqual([]);
+		expect(moved(`${NOTES.slice(0, 13)} sync/account.ts, as ${AT}10, "Connecting"`)).toEqual(
+			[]
+		);
 
 		const stale = cited
-			.filter((citation) => citation.file !== THIS_FILE && movedToKit(citation))
+			.filter(movedToKit)
 			.map(({ file, number, name }) => `${file}: §${number}${name ? `, "${name}"` : ''}`);
 		expect(stale).toEqual([]);
 	});
