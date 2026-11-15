@@ -424,11 +424,10 @@ export default tseslint.config(
 	},
 	{
 		// No Node built-ins anywhere in the Worker, `worker.ts` included: the
-		// entry module is the likeliest place for one to appear, and nothing else
-		// in the gate would notice. `pnpm typecheck` passes (apps/api's src and
-		// tests are one TypeScript program and the tests legitimately pull
-		// @types/node in) and so does `wrangler deploy --dry-run` — the import
-		// goes straight into the bundle, and only the deployed Worker finds out.
+		// entry module is the likeliest place for one to appear. `wrangler
+		// deploy --dry-run` passes one, since the import goes straight into the
+		// bundle, and only the deployed Worker finds out. `pnpm typecheck` fails
+		// on it too (`tsconfig.src.json` has no Node types), but this says why.
 		files: ['apps/api/src/**/*.ts'],
 		languageOptions: { globals: globals.node },
 		rules: {
@@ -444,8 +443,8 @@ export default tseslint.config(
 								'the Worker runs without nodejs_compat — Web Crypto and fetch only.',
 						},
 						{
-							// The rest of apps/api runs under Node in the tests and
-							// knows the runtime only through createApp's seams.
+							// The rest of apps/api runs under Node in the tests; the
+							// runtime is the entry's to name.
 							group: ['cloudflare:*'],
 							message: 'only src/worker.ts may name the Workers runtime.',
 						},
@@ -474,10 +473,10 @@ export default tseslint.config(
 		},
 	},
 	{
-		// Only worker.ts may read *configuration*. Per-request bindings still
-		// arrive on the Hono context — `c.env.DB` in app.ts is the one of those
-		// that cannot be handed over at createApp time, because there is no
-		// request yet when the app is built.
+		// Only worker.ts may read *configuration*; the rest of apps/api/src, which
+		// is what an operator's own entry imports, passes it to the kit's
+		// `createApp`, whose app reads its per-request bindings (the D1 database)
+		// from the request.
 		//
 		// There are three ways in. This block refuses two: the bare `process`
 		// and `globalThis.process`. The third, importing `node:process`, is a

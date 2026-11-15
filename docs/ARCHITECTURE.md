@@ -694,7 +694,7 @@ The one Worker serves the app as well, so `/api` and the app share an origin.
 What is this app's:
 - **The Worker entry** (`src/worker.ts`), the only module that reads the environment.
   It builds the kit's `createApp` with the seams' defaults: every account that connects may sync, and nothing is throttled.
-- **What an operator's own entry imports** (`src/index.ts`): `createApp`, `parseEnv`, `envWarnings` and `misconfigured` from the kit's server, and the rate-limit seam, `RateLimiter` and `neverLimited`, from its protocol, as before the kit.
+- **What an operator's own entry imports** (`src/index.ts`): `createApp`, `parseEnv`, `envWarnings` and `misconfigured` from the kit's server, and the rate-limit seam, `RateLimiter`, `RateLimitDecision` and `neverLimited`, from its protocol, as before the kit.
 - **No entitlement policy, connect gate or change relay.**
   The kit's server can take a policy, with a gate in front of connecting, and run a relay.
   This app shows no gate and no policy's refusal, and listens for no relay ("The sync client"), so the stock entry passes none of them, and says so at boot where `RELAY` is set.
@@ -848,7 +848,7 @@ apps/api/              the Worker over the kit's @skysa/server
   wrangler.toml        the D1 binding, whose migrations are the kit's; [assets] from ../web/dist
   src/
     worker.ts          the default Worker entry, the only module that reads the environment
-    index.ts           what an operator's own entry imports: createApp, parseEnv, the seams
+    index.ts           what an operator's own entry imports: createApp, parseEnv, the rate limiter
 docs/
   ARCHITECTURE.md      this file
   research.md          the evidence

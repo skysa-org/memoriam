@@ -17,7 +17,9 @@ pnpm install
 pnpm dev          # Vite on :5173
 ```
 
-There is no server yet. Everything runs in the browser against IndexedDB.
+Everything but connecting a storage account runs in the browser against IndexedDB. `pnpm dev`
+also starts the Worker that connects one, with `wrangler dev` on :8787, and
+[`docs/self-hosting.md`](docs/self-hosting.md) says what it needs to run.
 
 ## Before you open a pull request
 
@@ -26,8 +28,8 @@ pnpm verify   # format:check + lint + typecheck + knip + test
 ```
 
 CI runs the same checks, plus `pnpm build` and `pnpm size` (the web app's size budget), a check that
-the generated files (the route tree, the Worker's types, the migration snapshots) match their
-sources, the tests again on Node 22.13, and `pnpm audit --prod` for information only.
+the generated files (the route tree, the Worker's types) match their sources, the tests again on
+Node 22.13, and `pnpm audit --prod` for information only.
 
 What a change is expected to carry:
 

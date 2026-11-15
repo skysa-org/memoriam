@@ -7,7 +7,7 @@
  * the config is wrong, are new with it.
  */
 
-export { neverLimited, type RateLimiter } from '@skysa/protocol';
+export { neverLimited, type RateLimitDecision, type RateLimiter } from '@skysa/protocol';
 export {
 	type App,
 	type AppConfig,

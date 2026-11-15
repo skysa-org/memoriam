@@ -5,7 +5,7 @@ import { createApp, envWarnings, misconfigured, parseEnv } from './index.js';
 /**
  * The default Worker entry: the only module in `apps/api` that reads the
  * environment. An operator who needs different behavior writes their own entry
- * that imports `createApp` and passes its own seams, instead of forking.
+ * that imports `createApp` and passes its own rate limiter, instead of forking.
  */
 
 type AppOrError = ReturnType<typeof createApp> | Error;
@@ -27,7 +27,9 @@ const build = (env: Env): AppOrError => {
 		const config = parseEnv(env);
 		// The kit's server reads `RELAY`, but this entry hands it no relay
 		// (docs/ARCHITECTURE.md §10, "The server"), so the setting does nothing,
-		// and the operator is told as the kit tells of its own.
+		// and the operator is told as the kit tells of its own. After the parse,
+		// which reads the setting, so an environment refused for another reason
+		// says this once it boots.
 		if (config.relay) {
 			console.warn(
 				'Environment: RELAY: this app runs no change relay, so the setting does nothing ' +

@@ -256,6 +256,11 @@ finds its connection gone, as if it had been disconnected from another device, a
 library go, keeping every passage. Connecting again binds the library to the account once more,
 and its first sync merges what the two hold.
 
+What a device had not sent yet is forgotten as it lets go, though, as on any disconnect. An edit
+survives, since the device keeps the passage and sends it when it connects again, but a delete or
+a move does not: the account still has the passage where it was, and the first sync brings it back
+there. So before the reset, let each device sync.
+
 Two other things go with it. The refresh tokens it held are dropped, not revoked: each account's
 earlier grant to the app stays listed at its provider until the account's owner removes it there.
 And the record of which devices were revoked goes too, so a revoked device's credential could be

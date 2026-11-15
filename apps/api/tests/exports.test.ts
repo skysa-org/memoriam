@@ -6,6 +6,7 @@ import {
 	misconfigured,
 	neverLimited,
 	parseEnv,
+	type RateLimitDecision,
 	type RateLimiter,
 } from '../src/index.js';
 
@@ -25,8 +26,9 @@ describe('the package entry', () => {
 	});
 
 	it('exports the rate limiter seam, as it did before the kit', async () => {
-		// The type comes with it: an operator's limiter is written against it.
+		// The types come with it: an operator's limiter is written against them.
 		const limiter: RateLimiter = neverLimited;
-		await expect(limiter.check('connect:203.0.113.7')).resolves.toEqual({ allowed: true });
+		const decision: RateLimitDecision = await limiter.check('connect:203.0.113.7');
+		expect(decision).toEqual({ allowed: true });
 	});
 });
