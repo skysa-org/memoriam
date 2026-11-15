@@ -12,7 +12,8 @@ change.
 
 ## Stack (do not substitute)
 - pnpm workspace:
-  - `apps/web`: Vite + React + TS, TanStack Router, Dexie, vite-plugin-pwa;
+  - `apps/web`: Vite + React + TS, TanStack Router, Dexie, vite-plugin-pwa through the shared
+    kit's `@skysa/pwa`;
   - `packages/core`: framework-free TS;
   - `apps/api`: the Worker entry over the shared kit's `@skysa/server` (Hono on Cloudflare
     Workers, D1 through Drizzle).
