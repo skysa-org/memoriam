@@ -15,7 +15,7 @@ import {
 	type Result,
 } from '@skysa/client';
 import { ROOT } from '@skysa/storage';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
 	bindingCount,
@@ -49,6 +49,11 @@ let db: MemoriamDatabase;
 
 beforeEach(() => {
 	db = freshDatabase();
+});
+
+// A code held where every tab reads it, which the next test must not find.
+afterEach(() => {
+	dropConnectCode();
 });
 
 const connectionNamed = (id: string, overrides: Partial<Connection> = {}): Connection => ({

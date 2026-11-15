@@ -309,7 +309,7 @@ describe('the operator’s gate', () => {
 		expect(startConnect).toHaveBeenCalledWith('dropbox', expect.any(String), '/', 'INVITE-7');
 	});
 
-	it('asks for another code when told to, and hides the buttons until one is taken', async () => {
+	it('asks for another code when told to, hiding the buttons until one is taken or it is let be', async () => {
 		holdConnectCode('INVITE-7', 600);
 		const { client } = gated({ connectCode: { label: 'Invite code', required: true } });
 		const user = userEvent.setup();
@@ -320,6 +320,10 @@ describe('the operator’s gate', () => {
 
 		expect(screen.getByRole('textbox', { name: 'Invite code' })).toBeTruthy();
 		expect(screen.queryByRole('button', { name: 'Connect Dropbox' })).toBeNull();
+		// Back to the code held, which is still good.
+		await user.click(screen.getByRole('button', { name: 'Cancel' }));
+		expect(screen.getByRole('button', { name: 'Connect Dropbox' })).toBeTruthy();
+		expect(screen.queryByRole('textbox')).toBeNull();
 	});
 
 	it('says what went wrong asking about a code', async () => {
@@ -592,9 +596,11 @@ describe('connected', () => {
 		expect(screen.queryByRole('button', { name: 'Connect again' })).toBeNull();
 	});
 
-	it('says why the server’s policy stopped syncing, with its reason and the gate’s link', async () => {
+	it('says why the server’s policy stopped syncing, and offers to connect again behind its gate', async () => {
 		await bound();
-		const { client } = gated();
+		const { client, startConnect } = gated();
+		const leave = vi.fn();
+		const user = userEvent.setup();
 		showSettings({
 			client,
 			scheduler: schedulerShowing({
@@ -603,17 +609,25 @@ describe('connected', () => {
 				denial: { code: 'lapsed', reason: 'Your membership ended on 1 May.' },
 			}),
 			connectReturn: holding(),
+			leave,
 		});
 
 		expect(
 			await screen.findByText('This account’s access to sync on this server has lapsed.')
 		).toBeTruthy();
-		expect(await screen.findByText(/Your membership ended on 1 May\./)).toBeTruthy();
+		expect(screen.getByText('Your membership ended on 1 May.')).toBeTruthy();
+		expect(await screen.findByText('Sync is for members of the reading group.')).toBeTruthy();
 		expect(screen.getByRole('link', { name: 'Join the group' })).toBeTruthy();
 		expect(screen.queryByRole('button', { name: 'Connect again' })).toBeNull();
+		await user.click(screen.getByRole('button', { name: 'Already have access?' }));
+		await user.click(screen.getByRole('button', { name: 'Connect again' }));
+		await waitFor(() => {
+			expect(leave).toHaveBeenCalled();
+		});
+		expect(startConnect).toHaveBeenCalledWith('dropbox', expect.any(String), '/', undefined);
 		cleanup();
 
-		// The policy's reason without a gate: no link to go with it.
+		// The policy's reason without a gate: no link, and Connect again as it is.
 		showSettings({
 			client: fakes().client,
 			scheduler: schedulerShowing({
@@ -628,17 +642,39 @@ describe('connected', () => {
 			screen.getByText('This account is not allowed to sync on this server.')
 		).toBeTruthy();
 		expect(screen.queryByRole('link')).toBeNull();
+		expect(screen.getByRole('button', { name: 'Connect again' })).toBeTruthy();
 		cleanup();
 
 		// No code, no reason and no gate: the app's words alone.
-		const plain = fakes();
 		showSettings({
-			client: plain.client,
+			client: fakes().client,
 			scheduler: schedulerShowing({ phase: 'attention', refusal: 'not_entitled' }),
 			connectReturn: holding(),
 		});
 		expect(await screen.findByText('This account cannot sync on this server.')).toBeTruthy();
 		expect(screen.queryByRole('link')).toBeNull();
+	});
+
+	it('says nothing of a policy’s refusal under a provider this app cannot sync with', async () => {
+		await holdCredential(database, 'c1', { provider: 'webdav' });
+		await bindLibrary(database, { connectionId: 'c1', provider: 'webdav' });
+		const { client } = gated();
+		showSettings({
+			client,
+			scheduler: schedulerShowing({
+				phase: 'attention',
+				refusal: 'not_entitled',
+				denial: { code: 'lapsed', reason: 'Your membership ended on 1 May.' },
+			}),
+			connectReturn: holding(),
+		});
+
+		expect(
+			await screen.findByText('This app cannot sync with this storage provider yet.')
+		).toBeTruthy();
+		expect(screen.queryByText('Your membership ended on 1 May.')).toBeNull();
+		expect(screen.queryByRole('link')).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Connect again' })).toBeNull();
 	});
 
 	it('disconnects on the server, then here, keeping every passage', async () => {

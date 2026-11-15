@@ -221,27 +221,45 @@ interface Props {
 type Held = 'refused' | 'unreachable';
 
 /**
- * Beside a refusal by the server's policy, what it said of its own and the
- * link its gate offers, where it gave either: the one place the policy's own
- * words reach, since a refused connect comes back in a URL, which carries none.
+ * Under a refusal by the server's policy: what it said of its own, where it
+ * gave anything — the one place the policy's own words reach, since a refused
+ * connect comes back in a URL, which carries none — and a way to connect the
+ * account again, which takes it to the policy at the callback. Behind the
+ * operator's gate where there is one, with the code it asks for: a policy that
+ * let the account in by a code may need another to let it in again, and
+ * `/token` never carries one.
  */
-const Denied = ({
-	status,
+const Refused = ({
+	reason,
 	gate,
-}: Readonly<{ status: SchedulerStatus; gate: ConnectGate | undefined }>) => {
-	if (status.phase !== 'attention' || status.refusal !== 'not_entitled') return null;
-	const reason = status.denial?.reason;
-	if (reason === undefined && gate === undefined) return null;
+	client,
+	connect,
+	busy,
+}: Readonly<{
+	reason: string | undefined;
+	gate: ConnectGate | undefined;
+	client: Client;
+	connect: () => void;
+	busy: boolean;
+}>) => {
+	const again = (
+		<div className="form-actions">
+			<button type="button" className="button primary" disabled={busy} onClick={connect}>
+				{t('sync.settings.connectAgain')}
+			</button>
+		</div>
+	);
 	return (
-		<p className="field-hint">
-			{reason}
-			{reason !== undefined && gate !== undefined && ' '}
-			{gate !== undefined && (
-				<a href={gate.action.url} rel="noreferrer">
-					{gate.action.label}
-				</a>
+		<>
+			{reason !== undefined && <p className="field-hint">{reason}</p>}
+			{gate === undefined ? (
+				again
+			) : (
+				<SyncGate gate={gate} client={client}>
+					{again}
+				</SyncGate>
 			)}
-		</p>
+		</>
 	);
 };
 
@@ -270,6 +288,10 @@ const Connected = ({
 	const db = useDb();
 	const status = useSyncStatus(scheduler);
 	const reconnect = needsReconnect(status);
+	const syncable = CONNECTABLE.includes(kind);
+	// Said only where the status line says it (`statusLine`).
+	const refused =
+		!reconnect && syncable && status.phase === 'attention' && status.refusal === 'not_entitled';
 	const [asking, setAsking] = useState(false);
 	const [held, setHeld] = useState<Held | undefined>(undefined);
 	const provider = PROVIDER_LABELS[kind];
@@ -300,9 +322,19 @@ const Connected = ({
 			{/* Sync has stopped until the account is connected again: said in the
 			    colour of an error. */}
 			<p className={reconnect ? 'field-hint sync-problem' : 'field-hint'} role="status">
-				{statusLine(status, provider, CONNECTABLE.includes(kind), now)}
+				{statusLine(status, provider, syncable, now)}
 			</p>
-			<Denied status={status} gate={gate} />
+			{refused && (
+				<Refused
+					reason={status.denial?.reason}
+					gate={gate}
+					client={client}
+					connect={() => {
+						connect(kind);
+					}}
+					busy={busy}
+				/>
+			)}
 			{/* A run long enough to count: its bar, and the file it is on. A
 			    few passages' sync is over before a bar could be read. */}
 			{status.phase === 'syncing' && isLongRun(status.progress) && (

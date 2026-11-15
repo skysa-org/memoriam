@@ -54,7 +54,10 @@ const ASK_AGAIN_MS = 60 * 60_000;
  * guess the instance allows the address. One the policy no longer takes is let
  * go of, so the gate asks for a code before a consent screen rather than after
  * one; not asked, or not answered, it is kept, since the callback still
- * decides. An answer about a value no longer held changes nothing.
+ * decides. An answer about a value no longer held changes nothing. `/config`
+ * is asked here rather than through the shared hook, which only a component
+ * can use, and only while a pass is held and due: where the gate no longer
+ * asks for a code, that is each load until the pass ends.
  */
 export const askAgain = async (
 	client: Pick<ApiClient, 'config' | 'checkConnectCode'>,

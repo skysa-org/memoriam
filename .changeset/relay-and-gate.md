@@ -13,4 +13,7 @@ policy has a gate, Settings shows its message and link where the connect buttons
 for the code it asks for, which the policy is asked about as it is used and which is sent with each
 connect while it is held. A connect the policy refuses is said by the kind of no it gave, and a
 library the policy stops minting tokens for says why, with the policy's reason and the gate's
-link. `docs/self-hosting.md` has "Restricting who can sync" and "Instant updates between devices".
+link, and offers to connect it again behind the gate. `docs/self-hosting.md` has "Restricting who
+can sync" and "Instant updates between devices". A deployment that set `RELAY` to `true`, which
+until now did nothing, needs the `RELAY_HUB` binding the stock `wrangler.toml` declares, or the
+Worker will not boot. `pnpm dev` passes the relay's socket to `wrangler dev`.

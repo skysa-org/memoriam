@@ -463,6 +463,7 @@ The Content-Security-Policy in `apps/web/public/_headers`, checked by `tests/csp
   Nothing else leaves the device.
   The change relay's socket (§10, "The change relay") is on this origin too, at `wss:`, which `'self'` covers in a browser that follows CSP Level 3.
   A browser that does not refuses the socket, and finds other devices' changes by polling, as without a relay.
+  The kit's relay link still asks for a ticket again there, at most once a minute while the app is in view.
   `wss:` is not added for it, since that would let script reach any WebSocket host.
 - `src/jitless.ts` stops zod probing for `new Function`.
 
@@ -675,7 +676,7 @@ What is this app's:
   - paused, or offline, or retrying;
   - what needs attention, with the change that is stuck, or "Connect again" when connecting the account again is the answer (`needsReconnect` in `sync/status.ts`, as skysa-notes': the server or the provider wants the account asked again, or the credential reaches nothing).
     That sentence is drawn in the colour of an error, since sync has stopped until it is done;
-  - a policy's refusal, by the kind of no it gave, with its reason and the gate's link under it where there are any.
+  - a policy's refusal, by the kind of no it gave, with its reason under it where it gave one, and **Connect again**, behind the operator's gate where there is one ("The gate"), since a policy that let the account in by a code may need another to let it in again.
 
   Sync now runs a sync and tries again a stuck change.
   While a sync goes, a long run draws its bar and the file it is on under the line (`RunProgress`), and **Pause syncing** stops it.

@@ -56,13 +56,22 @@ const useHeldUntil = (): number | undefined => {
  * whether the code will do before anything is connected. Taken as typed, with
  * nothing capitalised or corrected: whether case matters is the policy's to
  * say. Under it, after a refusal, why, in the policy's words where it gave
- * some: a live region, since the answer comes after the press.
+ * some: a live region, since the answer comes after the press. The button
+ * stays pressable while the policy is asked, as skysa-notes' does: one
+ * disabled under the press takes the focus with it.
  */
 const CodeForm = ({
 	label,
 	client,
 	onAccepted,
-}: Readonly<{ label: string; client: Client; onAccepted: () => void }>) => {
+	onCancel,
+}: Readonly<{
+	label: string;
+	client: Client;
+	onAccepted: () => void;
+	/** Back to the code already held, where there is one. */
+	onCancel: (() => void) | undefined;
+}>) => {
 	const id = useId();
 	const [code, setCode] = useState('');
 	const [checking, setChecking] = useState(false);
@@ -103,9 +112,14 @@ const CodeForm = ({
 				}}
 			/>
 			<div className="form-actions">
-				<button type="submit" className="button" disabled={blank || checking}>
+				<button type="submit" className="button" disabled={blank}>
 					{checking ? t('sync.gate.code.checking') : t('sync.gate.code.use')}
 				</button>
+				{onCancel !== undefined && (
+					<button type="button" className="button ghost" onClick={onCancel}>
+						{t('common.cancel')}
+					</button>
+				)}
 			</div>
 			<p
 				id={`${id}-said`}
@@ -168,6 +182,13 @@ export const SyncGate = ({
 						onAccepted={() => {
 							setChanging(false);
 						}}
+						onCancel={
+							until === undefined
+								? undefined
+								: () => {
+										setChanging(false);
+									}
+						}
 					/>
 				))}
 			{holding || (!required && shown)
