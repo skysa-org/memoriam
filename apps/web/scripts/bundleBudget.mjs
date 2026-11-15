@@ -10,7 +10,8 @@
 //     its HTML preloads
 //   - all the CSS together
 //
-// Set (2026-11-04) at that day's build plus about five per cent. Raising one
+// Set (2026-11-04) at that day's build plus about five per cent; the largest
+// chunk raised to 135 kB when the engine was split into modules. Raising one
 // is fine when the growth is wanted; say so in the pull request. Plain Node,
 // no dependencies.
 
@@ -23,7 +24,7 @@ import { gzipSync } from 'node:zlib';
 const KB = 1000;
 
 const BUDGET = {
-	largestChunk: 128 * KB,
+	largestChunk: 135 * KB,
 	allScripts: 298 * KB,
 	pages: { 'index.html': 266 * KB },
 	allStyles: 5.2 * KB,

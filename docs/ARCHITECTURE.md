@@ -488,7 +488,7 @@ The Content-Security-Policy in `apps/web/public/_headers`, checked by `tests/csp
 
 Sync is skysa-notes' engine, ported:
 - the provider adapters, with their contract tests;
-- `sync/{engine,store,conflicts}`;
+- `sync/`: the engine, split by concern (below), its store contract, and a conflict copy's contents;
 - the Hono Worker for OAuth, with the same per-connection credentials and no identity layer.
 
 **Ported as it is.** Skysa-notes' design record for this code is its `docs/ARCHITECTURE.md`, as of
@@ -527,20 +527,56 @@ Only the names differ:
 The interface keeps `readBytes` and `createFile`, though nothing here yet writes a file that is not
 a passage. Every adapter's `read` is its `readBytes` decoded, and audio (Phase 3) would need both.
 
-**The engine** (`sync/engine.ts`, `sync/store.ts`, from S2) is ported whole, with its tests: the
+**The engine** (`sync/engine.ts`, `sync/store.ts`, from S2) is ported with its tests: the
 store contract (`tests/sync/storeContract.ts`), run against the in-memory store the engine tests
 use, the engine over every adapter's stub, and the randomized remote. The Google Drive tests that
 drive the engine through the adapter, held back in S1, are restored. Where it differs:
 - **No clipboard.** skysa-notes' engine pulls a clipboard folder for its share target. Memoriam
   has neither, so that path is gone, from the pull and from its progress reports.
 - **The app's own folder.** The engine passes over hidden paths, except `.memoriam/` and its
-  `activity-YYYY.md` files (`unsynced` in the engine). Every other hidden path, `.memoriam/` or
-  not, is left alone, as skysa-notes leaves it. `isHidden` itself is unchanged, so the library
-  still hides them.
+  `activity-YYYY.md` files (`sync/unsynced.ts`, asked wherever skysa-notes asks `isHidden`).
+  Every other hidden path, `.memoriam/` or not, is left alone, as skysa-notes leaves it.
+  `isHidden` itself is unchanged, so the library still hides them.
 - **Files, kept dormant.** The engine still carries skysa-notes' attachments: `SyncFile`, and the
   `upload`, `move-file` and `delete-file` ops. Nothing in the web app makes one yet. They stay so
   that audio (Phase 3) does not reopen the engine. `files.ts` holds the extension → content type
   map they need.
+- **Split by concern.** The engine's parts left `engine.ts` for modules of their own, as
+  skysa-notes moved them (its #446), with nothing they do changed and the differences above kept.
+  `engine.ts` keeps `createSyncEngine`, which builds the parts and wires them together.
+  - `sync/pull/`, the pull's: `attachments.ts` (files that are not passages, as a pull decides
+    them: placed, adopted, gone, clashing), `batch.ts` (what a batch's decisions are reached
+    against, and its readings that no decision changes), `cascade.ts` (what a folder's deletion
+    takes with it, and the folders above a kept passage it must not), `decide.ts` (a batch decided
+    entry by entry, each sent to the part for its kind), `decided.ts` (what a batch's decisions
+    have spoken for: written back, a `merge-note` among them, or said anything about),
+    `deletions.ts` (a deletion believed or not by the rest of the batch, and what it takes with
+    it), `files.ts` (where each file that is not a passage is, replayed through a batch's
+    decisions), `folders.ts` (folders, as a pull decides them: made, moved, moved over, deleted
+    once rescued), `notes.ts` (passages, as a pull decides them: matched, read, merged or
+    reconciled, moved aside, let go of), `occupancy.ts` (which passages end up in or under a
+    folder, and the names a copy there must not take), `reconcile.ts` (a scan's last word on what
+    it never mentioned), `replay.ts` (where a passage, a folder or an unreadable file is once the
+    decisions so far are applied, a `merge-note` among them), and `run.ts` (a pull run: a round
+    from the cursor or a scan from the top, a cursor reset, one retry after a refresh).
+  - `sync/push/`, the push's: `conflicts.ts` (a write the remote would not take: set aside under a
+    conflict name, merged, or reconciled by the conflict rule), `drain.ts` (the queue drained in
+    order, op by op, writes sent together, a failed op answered; `createPush` wires the parts),
+    `files.ts` (files that are not passages: uploaded, moved, deleted, or set beside what they
+    meet), `folders.ts` (the folders made before a write, and removed or left once empty), and
+    `notes.ts` (passages: written after a rename, renamed or moved aside, deleted).
+  - `sync/context.ts`, what every part of the engine is handed (`EngineContext`): the provider,
+    the store, the clock and ids, its bounds, a way to renew the token, the meter, and the merge
+    hook as `mergedOf`.
+  - `sync/names.ts`, finding a free conflict name: tried in turn, bounded, the last refusal
+    thrown (`findFreeName`).
+  - `sync/outcome.ts`, what a run comes to (`SyncOutcome`) and the pieces every outcome is built
+    from, without skysa-notes' clipboard and key-file flags.
+  - `sync/progress.ts`, how far the run under way has got, for `onProgress`: a scan's, a round's
+    and a push's count (`createProgress`).
+  - `sync/providerOps.ts`, asking the provider where "nothing there" is an answer: `orIfNotFound`,
+    and `withParent`, which makes the folder above and tries once more.
+  - `sync/unsynced.ts`, the hidden paths the engine still syncs (above).
 
 **Since the port.** Fixes skysa-notes made to its engine and adapters after `fa92ad6`, taken
 here:
@@ -582,6 +618,13 @@ here:
   its name to another file. A scan never says what was removed, so the passage deleted here was
   still at the path, was claimed by the newcomer, and its queued delete then removed that file.
   `noteForEntry` now passes over a passage the user has deleted wherever it stands.
+- **A passage out of conflict names fails its op** (skysa-notes #518). `freeNotePath` took its
+  hundredth name without asking whether it was free, which could stand a passage on another's
+  path. It throws now, as `freeFolderPath` did, so the op fails and is retried.
+- **A refresh goes back to a dead cursor's scan** (skysa-notes #536). A token that expired during
+  the scan that replaces a dead cursor, or a cursor found dead on the retry after a refresh, ended
+  the run as a retry. The cursor's recovery now sits inside the attempt that is retried, so the
+  refresh returns to the scan, keeping what the provider said about sending passages back up.
 
 **Merge before a conflict copy.** skysa-notes never merges: on a conflict the remote keeps the
 path, and the local version is written beside it as a conflict copy. Memoriam adds one merge
@@ -594,10 +637,11 @@ before that rule, through a `merge` option on the engine:
   - a passage (`.md`, not hidden) goes to `mergePassage`;
   - anything else gets no merge.
 - **On a pull.** Where a note changed here and on the remote since they last agreed, the engine
-  merges before it decides on a conflict copy. This includes a note never sent that meets a
+  merges before it decides on a conflict copy (`decideKnown` in `pull/notes.ts`). This includes a note never sent that meets a
   remote one at its path, such as two devices' `activity-2026.md`.
-- **On a push.** Where a write meets a `ConflictError` (`resolvePushConflict`), the engine reads
-  the remote, merges, and writes the merge against the version it read.
+- **On a push.** Where a write meets a `ConflictError` (`resolvePushConflict` and `pushMerged` in
+  `push/conflicts.ts`), the engine reads the remote, merges, and writes the merge against the
+  version it read.
 - **The `merge-note` pull change** carries the merge. The store applies it only if the note still
   holds the content the merge was made from (`base`), and otherwise refuses the whole pull, so the
   next one decides again.
@@ -855,7 +899,8 @@ packages/core/         framework-free TypeScript: browser, Node and Workers
     progress/          frontmatter codec, passage merge
     providers/         storage adapters and the in-memory fake (from skysa-notes)
     names/             a file's name: folded, slugged, cut to fit; a conflict copy's name
-    sync/              the engine and its store contract, a conflict copy's contents, the merge
+    sync/              the engine (pull/ and push/ by concern) and its store contract, a conflict
+                       copy's contents, the merge
     practice/          hiding, typing reducer, grading, fading
     schedule/          FSRS, the session planner
     rewards/           activity and its merge, streaks, mastery, badges
