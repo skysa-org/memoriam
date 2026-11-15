@@ -25,10 +25,12 @@ design decisions it led to.
 
 **How it is built.** A pnpm workspace:
 - a Vite + React PWA;
-- a framework-free core package holding the practice engine, the scheduler and the file format.
+- a framework-free core package holding the practice engine, the scheduler and the file format;
+- a Cloudflare Worker that connects storage, for the optional sync.
 
-It is built on the foundations of skysa-notes. [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) is
-the source of truth for the architecture.
+It is built on the foundations of skysa-notes. Sync, the Worker and the PWA build are the shared
+kit's, [skysa-kit](https://github.com/skysa-org/skysa-kit), which skysa-notes runs on too.
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) is the source of truth for the architecture.
 
 Licensed under [AGPL-3.0](LICENSE).
 

@@ -23,8 +23,10 @@ change.
   same as skysa-notes': functional style, arrow functions, no loops, `let` or classes, readonly
   types. This app's own blocks in `eslint.config.js` add its layers and that every user-facing
   string comes from `t()`.
-- Code ported from skysa-notes keeps its shape; rename `skysa` to `memoriam`. Check the original
-  there before reinventing something it already solves.
+- The shared layers are the kit's (`@skysa/*`, `docs/ARCHITECTURE.md` §10): a fix to one is a kit
+  PR, which this app takes by moving its pin. Code ported from skysa-notes that stays this app's
+  keeps its shape; rename `skysa` to `memoriam`, and check the original there before reinventing
+  something it already solves.
 
 ## Hard rules
 - `packages/core` imports nothing from `apps/*`, and has no framework, DOM or Node-only

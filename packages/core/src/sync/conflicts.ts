@@ -6,9 +6,10 @@ import {
 import { serializePassageFile } from '../markdown/passage.js';
 
 /**
- * What happens when both sides changed the same passage (skysa-notes'
- * docs/ARCHITECTURE.md §7): the copy is written beside it, under a name from
- * `names/passages.ts`, holding the contents this builds.
+ * What happens when both sides changed the same passage (the kit's
+ * docs/ARCHITECTURE.md §7, "Conflict rule (concrete)"): the copy is written
+ * beside it, under a name from `names/passages.ts`, holding the contents this
+ * builds.
  */
 
 /**

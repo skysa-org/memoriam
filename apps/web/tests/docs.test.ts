@@ -148,6 +148,32 @@ const citations = (file: string, text: string): readonly Citation[] => {
 	);
 };
 
+/**
+ * skysa-notes' sections whose design moved to the shared kit, which this repo
+ * cites at the kit now (skysa-notes' record 0018, step 5): the adapters (§4,
+ * §5), the server (§6), and the engine's parts of §7. The rest of §7 is
+ * skysa-notes' own app, cited by name; an unnamed §7 could be either.
+ */
+const KIT_IN_7 = [
+	'sync loop',
+	'folder renames',
+	'conflict rule',
+	'merge before the copy',
+	'what the loop above left open',
+];
+const NOTES_CITATION =
+	/skysa-notes'\s*`?(?:docs\/)?ARCHITECTURE\.md`?,?\s*§(\d+)(?:,? ["“]([^"”]{3,80})["”])?/gu;
+const citedAtNotes = (text: string): readonly string[] =>
+	[...unwrapped(text).matchAll(NOTES_CITATION)].flatMap(([whole, number, name]) =>
+		number === '4' ||
+		number === '5' ||
+		number === '6' ||
+		(number === '7' &&
+			(name === undefined || KIT_IN_7.some((part) => name.toLowerCase().startsWith(part))))
+			? [whole]
+			: []
+	);
+
 /** Each anchor of this repo's ARCHITECTURE a text links to: not the shared kit's, which is its own. */
 const citedAnchors = (text: string): readonly string[] =>
 	[...text.matchAll(/(?<!skysa-kit\/blob\/[^/\s)]+\/docs\/)ARCHITECTURE\.md#([a-z0-9-]+)/gu)].map(
@@ -253,6 +279,20 @@ describe('the docs', () => {
 				.map((id) => `${file}: #${id}`)
 		);
 		expect(lost).toEqual([]);
+	});
+
+	it('cites the kit, not skysa-notes, for the design that moved to it', () => {
+		const notes = "skysa-notes' docs/ARCHITECTURE.md";
+		expect(citedAtNotes(`${notes} §6, "Backend"`)).toHaveLength(1);
+		expect(citedAtNotes(` * (${notes}\n * §7): the copy`)).toHaveLength(1);
+		expect(citedAtNotes(`${notes} §7, "Conflict rule (concrete)"`)).toHaveLength(1);
+		expect(citedAtNotes(`${notes} §7, "Pushing files"`)).toEqual([]);
+		expect(citedAtNotes(`${notes} §8`)).toEqual([]);
+
+		const stale = CITING.flatMap((file) =>
+			citedAtNotes(read(file)).map((citation) => `${file}: ${citation}`)
+		);
+		expect(stale).toEqual([]);
 	});
 
 	it('cites a phase where the phases are', () => {

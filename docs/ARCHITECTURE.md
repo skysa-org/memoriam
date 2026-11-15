@@ -849,6 +849,7 @@ Phase 2 is sync (§10), in milestones of its own:
 | S4 | The sync client: credentials, tokens, the API client, the scheduler and push timing |
 | S5 | `apps/api`: the Worker for OAuth, with per-connection credentials |
 | S6 | Connecting storage in Settings, the conflict screen, and the two-device soak |
+| S7 | Onto the shared kit (skysa-notes' record 0018, step 5): the Worker, the PWA build, the lint, the adapters, the engine and the client, then the change relay, the gate and connect codes |
 
 Phase 3, later:
 - full-word or spoken recall checks;
