@@ -1,6 +1,6 @@
 import { type ApiClient, connectCodeHeldUntil, watchConnectCode } from '@skysa/client';
 import { type ConnectGate, MAX_CONNECT_CODE } from '@skysa/protocol';
-import { type ReactNode, useEffect, useId, useState } from 'react';
+import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
 
 import { formatMoment } from '../i18n/dates.js';
 import { t } from '../i18n/t.js';
@@ -12,7 +12,9 @@ import { askAbout } from '../sync/connectCode.js';
  * consent screen ends in a refusal. Where the gate asks for a code, a field
  * for it, and the buttons once the operator's policy has taken one; where it
  * does not require one, "Already have access?" shows the buttons as they are.
- * Showing them grants nothing: the policy decides at the callback.
+ * Showing them grants nothing: the policy decides at the callback. Each step
+ * takes the focus with it, as skysa-notes' does: the control pressed is gone
+ * once the step changes, and a focus left on nothing starts again at the top.
  */
 
 type Client = Pick<ApiClient, 'checkConnectCode'>;
@@ -65,14 +67,21 @@ const CodeForm = ({
 	client,
 	onAccepted,
 	onCancel,
+	focused,
 }: Readonly<{
 	label: string;
 	client: Client;
 	onAccepted: () => void;
 	/** Back to the code already held, where there is one. */
 	onCancel: (() => void) | undefined;
+	/** Whether the field takes the focus as it opens: asked for, not there from the first. */
+	focused: boolean;
 }>) => {
 	const id = useId();
+	const field = useRef<HTMLInputElement>(null);
+	useEffect(() => {
+		if (focused) field.current?.focus();
+	}, [focused]);
 	const [code, setCode] = useState('');
 	const [checking, setChecking] = useState(false);
 	const [problem, setProblem] = useState<string | undefined>(undefined);
@@ -98,6 +107,7 @@ const CodeForm = ({
 			<label htmlFor={id}>{label}</label>
 			<input
 				id={id}
+				ref={field}
 				className="field"
 				value={code}
 				maxLength={MAX_CONNECT_CODE}
@@ -109,6 +119,8 @@ const CodeForm = ({
 				aria-describedby={`${id}-said`}
 				onChange={(event) => {
 					setCode(event.target.value);
+					// What was said was about the code before this one.
+					setProblem(undefined);
 				}}
 			/>
 			<div className="form-actions">
@@ -132,20 +144,33 @@ const CodeForm = ({
 	);
 };
 
+/** Where the focus goes once a step has changed: a new object each time, so the same place twice moves it twice. */
+type FocusTo = Readonly<{ to: 'buttons' | 'field' | 'change' }>;
+
+/** The operator's gate in front of `children`, the connect buttons; the buttons as they are where there is none. */
 export const SyncGate = ({
 	gate,
 	client,
 	children,
 }: Readonly<{
-	gate: ConnectGate;
+	gate: ConnectGate | undefined;
 	client: Client;
-	/** The connect buttons. */
 	children: ReactNode;
 }>) => {
-	const asked = gate.connectCode;
+	const asked = gate?.connectCode;
 	const until = useHeldUntil();
 	const [shown, setShown] = useState(false);
 	const [changing, setChanging] = useState(false);
+	const [focus, setFocus] = useState<FocusTo | undefined>(undefined);
+	const buttons = useRef<HTMLDivElement>(null);
+	const change = useRef<HTMLButtonElement>(null);
+	useEffect(() => {
+		if (focus?.to === 'buttons') {
+			buttons.current?.querySelector<HTMLElement>('button:not(:disabled), a')?.focus();
+		}
+		if (focus?.to === 'change') change.current?.focus();
+	}, [focus]);
+	if (gate === undefined) return children;
 	const holding = asked !== undefined && until !== undefined && !changing;
 	const required = asked?.required === true;
 	return (
@@ -165,11 +190,15 @@ export const SyncGate = ({
 							time: formatMoment(until),
 						})}{' '}
 						<button
+							ref={change}
 							type="button"
 							className="button ghost"
 							aria-label={t('sync.gate.code.changeLabel', { label: asked.label })}
 							onClick={() => {
 								setChanging(true);
+								// Hidden again until a code is taken or let be, where they were shown.
+								setShown(false);
+								setFocus({ to: 'field' });
 							}}
 						>
 							{t('sync.gate.code.change')}
@@ -181,31 +210,37 @@ export const SyncGate = ({
 						client={client}
 						onAccepted={() => {
 							setChanging(false);
+							setFocus({ to: 'buttons' });
 						}}
 						onCancel={
 							until === undefined
 								? undefined
 								: () => {
 										setChanging(false);
+										setFocus({ to: 'change' });
 									}
 						}
+						focused={focus?.to === 'field'}
 					/>
 				))}
-			{holding || (!required && shown)
-				? children
-				: !required && (
-						<div className="form-actions">
-							<button
-								type="button"
-								className="button ghost"
-								onClick={() => {
-									setShown(true);
-								}}
-							>
-								{t('sync.gate.alreadyHave')}
-							</button>
-						</div>
-					)}
+			{holding || (!required && shown) ? (
+				<div ref={buttons}>{children}</div>
+			) : (
+				!required && (
+					<div className="form-actions">
+						<button
+							type="button"
+							className="button ghost"
+							onClick={() => {
+								setShown(true);
+								setFocus({ to: 'buttons' });
+							}}
+						>
+							{t('sync.gate.alreadyHave')}
+						</button>
+					</div>
+				)
+			)}
 		</>
 	);
 };

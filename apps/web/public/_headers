@@ -16,8 +16,9 @@
 #   'self' covers the relay's socket in browsers that follow CSP Level 3; one
 #   that does not refuses it, and that browser finds other devices' changes by
 #   polling, as without a relay, while the kit's relay link asks for a ticket
-#   again, at most once a minute while the app is in view. wss: is not added: it
-#   would let script reach any WebSocket host. https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/connect-src
+#   again each time the app comes to the front, and at most once a minute while
+#   it is in view. wss: is not added: it would let script reach any WebSocket
+#   host. https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/connect-src
 #   The providers' hosts, from skysa-notes:
 #   Dropbox: *.dropboxapi.com (api. for metadata, content. for bytes).
 #   OneDrive: graph.microsoft.com for everything but file bytes, which come

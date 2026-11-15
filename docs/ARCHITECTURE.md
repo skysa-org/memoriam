@@ -463,7 +463,7 @@ The Content-Security-Policy in `apps/web/public/_headers`, checked by `tests/csp
   Nothing else leaves the device.
   The change relay's socket (§10, "The change relay") is on this origin too, at `wss:`, which `'self'` covers in a browser that follows CSP Level 3.
   A browser that does not refuses the socket, and finds other devices' changes by polling, as without a relay.
-  The kit's relay link still asks for a ticket again there, at most once a minute while the app is in view.
+  The kit's relay link still asks for a ticket again there, each time the app comes to the front, and at most once a minute while it is in view.
   `wss:` is not added for it, since that would let script reach any WebSocket host.
 - `src/jitless.ts` stops zod probing for `new Function`.
 

@@ -252,13 +252,9 @@ const Refused = ({
 	return (
 		<>
 			{reason !== undefined && <p className="field-hint">{reason}</p>}
-			{gate === undefined ? (
-				again
-			) : (
-				<SyncGate gate={gate} client={client}>
-					{again}
-				</SyncGate>
-			)}
+			<SyncGate gate={gate} client={client}>
+				{again}
+			</SyncGate>
 		</>
 	);
 };
@@ -529,13 +525,9 @@ export const SyncSettings = ({
 			{bound === undefined ? null : bound === null || bound.provider === undefined ? (
 				<>
 					<p className="field-hint">{t('sync.settings.hint')}</p>
-					{gate === undefined ? (
+					<SyncGate gate={gate} client={client}>
 						<Offered offer={offer} connect={connect} busy={busy} />
-					) : (
-						<SyncGate gate={gate} client={client}>
-							<Offered offer={offer} connect={connect} busy={busy} />
-						</SyncGate>
-					)}
+					</SyncGate>
 				</>
 			) : (
 				<Connected

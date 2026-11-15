@@ -264,7 +264,10 @@ describe('the operator’s gate', () => {
 		expect(screen.queryByRole('textbox')).toBeNull();
 
 		await user.click(screen.getByRole('button', { name: 'Already have access?' }));
-		expect(screen.getByRole('button', { name: 'Connect Dropbox' })).toBeTruthy();
+		// Where the press was: the button pressed is gone.
+		expect(document.activeElement).toBe(
+			screen.getByRole('button', { name: 'Connect Dropbox' })
+		);
 	});
 
 	it('takes the code it requires, says why one is turned down, and sends one it took', async () => {
@@ -292,6 +295,9 @@ describe('the operator’s gate', () => {
 		// The policy's own words where it gave some, and the app's where not.
 		expect(await screen.findByText('That invite has been used.')).toBeTruthy();
 		await user.clear(field);
+		// What was said was about the code before this one.
+		expect(screen.queryByText('That invite has been used.')).toBeNull();
+		expect(field.getAttribute('aria-invalid')).toBeNull();
 		await user.type(field, 'WRONG-2');
 		await user.click(screen.getByRole('button', { name: 'Use code' }));
 		expect(await screen.findByText('That code was not accepted.')).toBeTruthy();
@@ -302,6 +308,9 @@ describe('the operator’s gate', () => {
 		expect(await screen.findByText(/^Invite code accepted on this device until /)).toBeTruthy();
 		expect(checkConnectCode).toHaveBeenLastCalledWith('INVITE-7');
 		expect(heldConnectCode()).toBe('INVITE-7');
+		expect(document.activeElement).toBe(
+			screen.getByRole('button', { name: 'Connect Dropbox' })
+		);
 		await user.click(screen.getByRole('button', { name: 'Connect Dropbox' }));
 		await waitFor(() => {
 			expect(leave).toHaveBeenCalled();
@@ -318,12 +327,31 @@ describe('the operator’s gate', () => {
 		expect(await screen.findByRole('button', { name: 'Connect Dropbox' })).toBeTruthy();
 		await user.click(screen.getByRole('button', { name: 'Use another Invite code' }));
 
-		expect(screen.getByRole('textbox', { name: 'Invite code' })).toBeTruthy();
+		expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Invite code' }));
 		expect(screen.queryByRole('button', { name: 'Connect Dropbox' })).toBeNull();
 		// Back to the code held, which is still good.
 		await user.click(screen.getByRole('button', { name: 'Cancel' }));
 		expect(screen.getByRole('button', { name: 'Connect Dropbox' })).toBeTruthy();
 		expect(screen.queryByRole('textbox')).toBeNull();
+		expect(document.activeElement).toBe(
+			screen.getByRole('button', { name: 'Use another Invite code' })
+		);
+	});
+
+	it('hides the buttons shown before while another code is asked for', async () => {
+		const { client, checkConnectCode } = gated({ connectCode: { label: 'Invite code' } });
+		checkConnectCode.mockResolvedValue({ ok: true, value: { accepted: true, expiresIn: 600 } });
+		const user = userEvent.setup();
+		showSettings({ client, scheduler: schedulerShowing(), connectReturn: holding() });
+
+		await user.click(await screen.findByRole('button', { name: 'Already have access?' }));
+		await user.type(screen.getByRole('textbox', { name: 'Invite code' }), 'INVITE-7');
+		await user.click(screen.getByRole('button', { name: 'Use code' }));
+		await user.click(await screen.findByRole('button', { name: 'Use another Invite code' }));
+
+		// Connecting from beside the field would send the code held, not the one in it.
+		expect(screen.queryByRole('button', { name: 'Connect Dropbox' })).toBeNull();
+		expect(screen.getByRole('button', { name: 'Already have access?' })).toBeTruthy();
 	});
 
 	it('says what went wrong asking about a code', async () => {
