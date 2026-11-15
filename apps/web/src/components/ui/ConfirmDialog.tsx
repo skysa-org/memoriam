@@ -1,8 +1,9 @@
 import { type ReactNode, type RefObject, useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
-import { useSuspendShortcuts } from '../commands/context.js';
-import { t } from '../i18n/t.js';
+import { useSuspendShortcuts } from '../../commands/context.js';
+import { t } from '../../i18n/t.js';
+import { useFocusBack } from './useFocusBack.js';
 
 /**
  * A question the app asks over everything, with one answer and Cancel.
@@ -48,15 +49,9 @@ export const ConfirmDialog = ({
 	const cancel = useRef<HTMLButtonElement>(null);
 	useSuspendShortcuts();
 
+	useFocusBack(returnFocus);
 	useEffect(() => {
-		// Read now: what it names is on the page for as long as the question is.
-		const back = returnFocus?.current ?? document.activeElement;
 		cancel.current?.focus();
-		return () => {
-			if (back instanceof HTMLElement && back.isConnected) back.focus();
-		};
-		// Mount and unmount only: the focus is taken once and given back once.
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	useEffect(() => {

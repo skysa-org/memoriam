@@ -16,6 +16,8 @@ export {
 	type ProviderKind,
 } from './config.js';
 
+export { type Cell, cell } from './cell.js';
+
 export {
 	AuthError,
 	isAuthError,

@@ -363,6 +363,10 @@ earn it.
 - Deleting a passage or a collection removes its rows while the library is not connected, and
   leaves tombstones while it is. Either way an undo notice puts them back.
 - A version only adds, and an upgrade carries forward what an older build wrote.
+- A component reads and writes the database it is drawn over (`useDb`, `store/database.tsx`, from
+  skysa-notes): the app's own, unless a `DatabaseProvider` above it names another, as a test does
+  with one of its own. The screens and the store's hooks read it too, so nothing hands a database
+  down as a prop. Only the sync runtime (`sync/runtime.ts`) is built over the app's own.
 
 **Recording a pass.** `recordPass` (`apps/web/src/store/practice.ts`) is one transaction:
 1. Read the row's current `source`, and cut it into chunks by its own `chunker`.
@@ -426,9 +430,12 @@ sent to a server.
 
 **Keyboard.** Commands are registered by the components that own them
 (`apps/web/src/commands/`), and the palette and the shortcuts read the same list. Shortcuts need a
-modifier, so they never collide with typing during practice.
-- `Mod+K` opens the palette (`components/CommandPalette.tsx`, ported from skysa-notes). It is the
-  only chord: the screens are a tap away in the bar, and the chords a browser keeps for itself
+modifier, so they never collide with typing during practice. A command is registered again only
+when what the palette shows of it changes (its label, group, chord, or whether it can run), not for
+a new `run`, which most callers hand over on every render; the registered command calls the latest
+`run` (`useLatest`), so the palette is not told of a change on every render.
+- `Mod+K` opens the palette (`components/shell/CommandPalette.tsx`, ported from skysa-notes). It is
+  the only chord: the screens are a tap away in the bar, and the chords a browser keeps for itself
   (`Mod+N`, `Mod+T`) cannot be taken.
 - `components/AppCommands.tsx` registers what can be done from anywhere: go to each screen, start
   today's practice, add a passage, export a backup. A passage's page adds practising and editing
@@ -823,7 +830,7 @@ any of them out. The one Worker serves the app as well, so `/api` and the app sh
     run of a few is not counted, so an edit's sync does not flash a number;
   - paused, or offline, or retrying;
   - what needs attention, with the change that is stuck, or "Connect again" when connecting the
-    account again is the answer (`needsReconnect` in `sync/runtime.ts`, as skysa-notes': the
+    account again is the answer (`needsReconnect` in `sync/status.ts`, as skysa-notes': the
     server or the provider wants the account asked again, or the credential reaches nothing).
     That sentence is drawn in the colour of an error, since sync has stopped until it is done.
 
@@ -895,7 +902,9 @@ apps/web/              the PWA
   public/_headers      CSP and HSTS
   src/
     routes/            TanStack Router, a file route per screen (hash history)
-    components/        the shell and shared UI
+    components/        the screens' parts; shell/ for the app's frame (the bar, the palette, the
+                       error, stale-tab and update screens), ui/ for the building blocks they share
+    hooks/             React hooks the UI shares that hold no app state (from skysa-notes)
     practice/          the practice screen and keystroke capture
     store/             Dexie: every local read and write, the push queue, credentials
     api/               the typed client for apps/api (from S4)
@@ -907,6 +916,7 @@ apps/web/              the PWA
 packages/core/         framework-free TypeScript: browser, Node and Workers
   src/
     index.ts           what the apps may use, by name; tests/exports.test.ts lists it
+    cell.ts            cell(): the one way to hold a value that changes, where `let` is refused
     passage/           body grammar, tokenizer, chunker, remap
     progress/          frontmatter codec, passage merge
     providers/         storage adapters and the in-memory fake (from skysa-notes)

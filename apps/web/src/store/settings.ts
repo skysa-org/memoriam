@@ -7,7 +7,8 @@ import {
 } from '@memoriam/core';
 import { useLiveQuery } from 'dexie-react-hooks';
 
-import { db as defaultDb, type MemoriamDatabase } from './db.js';
+import { useDb } from './database.js';
+import type { MemoriamDatabase } from './db.js';
 
 /**
  * How practice is scheduled and typed, as the user has set it on this device
@@ -94,5 +95,7 @@ export const saveSetting = async <K extends keyof Settings>(
 };
 
 /** The settings, live; `undefined` while the first read is on its way. */
-export const useSettings = (db: MemoriamDatabase = defaultDb): Settings | undefined =>
-	useLiveQuery(() => readSettings(db), [db]);
+export const useSettings = (): Settings | undefined => {
+	const db = useDb();
+	return useLiveQuery(() => readSettings(db), [db]);
+};

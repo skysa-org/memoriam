@@ -2,8 +2,11 @@ import { daysBetween, isHidden, localDay } from '@memoriam/core';
 import { useLiveQuery } from 'dexie-react-hooks';
 
 import { boundConnection } from './connection.js';
-import { db as defaultDb, isLive, LOCAL_CONNECTION_ID, type MemoriamDatabase } from './db.js';
+import { useDb } from './database.js';
+import { LOCAL_CONNECTION_ID, type MemoriamDatabase } from './db.js';
 import { getPreference, setPreference } from './prefs.js';
+import { rowsOf } from './rows.js';
+import { isLive } from './rowStates.js';
 
 /**
  * When to remind the user to export a backup (docs/ARCHITECTURE.md §8,
@@ -67,7 +70,7 @@ export const backupState = async (
 	db: MemoriamDatabase,
 	connectionId: string = LOCAL_CONNECTION_ID
 ): Promise<BackupState> => {
-	const rows = await db.notes.where('connectionId').equals(connectionId).filter(isLive).toArray();
+	const rows = await rowsOf(db.notes, connectionId).filter(isLive).toArray();
 	const passages = rows.filter((row) => !isHidden(row.path));
 	const exportedAt = await timeOf(db, EXPORTED_KEY);
 	const snoozedUntil = await timeOf(db, SNOOZED_KEY);
@@ -86,10 +89,8 @@ export const backupState = async (
 };
 
 /** The reminder, live: gone the moment a backup is made or put off. */
-export const useBackupReminder = (
-	now: Date = new Date(),
-	db: MemoriamDatabase = defaultDb
-): BackupReminder | undefined | null => {
+export const useBackupReminder = (now: Date = new Date()): BackupReminder | undefined | null => {
+	const db = useDb();
 	const day = localDay(now);
 	const reminder = useLiveQuery(
 		async () => backupReminder(await backupState(db), Date.now()) ?? null,

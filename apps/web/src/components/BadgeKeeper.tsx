@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
 
 import { t } from '../i18n/t.js';
-import { db } from '../store/db.js';
+import { useDb } from '../store/database.js';
 import { recordBadges, useRewards } from '../store/rewards.js';
 import { Icon } from './Icon.js';
 
@@ -17,6 +17,7 @@ import { Icon } from './Icon.js';
 const SHOWN_MS = 8000;
 
 export const BadgeKeeper = () => {
+	const db = useDb();
 	const rewards = useRewards();
 	const [shown, setShown] = useState<readonly Badge[]>([]);
 	// What was last tried, so a file that cannot be written is not tried on every change.
@@ -31,7 +32,7 @@ export const BadgeKeeper = () => {
 		void recordBadges(db, rewards.unrecorded).then((recorded) => {
 			if (recorded) setShown(earned);
 		});
-	}, [rewards]);
+	}, [db, rewards]);
 
 	useEffect(() => {
 		if (shown.length === 0) return undefined;

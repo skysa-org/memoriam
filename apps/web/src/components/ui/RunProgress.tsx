@@ -1,9 +1,9 @@
-import type { SchedulerStatus } from '../sync/scheduler.js';
+import type { SchedulerStatus } from '../../sync/scheduler.js';
 
 /**
  * How far a run has got, drawn: a bar, and under it, lightly, the file it is
  * on. Settings shows it under the sync's status line while a long run goes
- * (`SyncSettings`). As skysa-notes' `components/RunProgress.tsx`.
+ * (`SyncSettings`). As skysa-notes' `components/ui/RunProgress.tsx`.
  */
 
 /** How full the bar is, or nothing for a bar that cannot know. */

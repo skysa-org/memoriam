@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { type ReactNode, useState } from 'react';
 
-import { ErrorScreen } from '../components/ErrorScreen.js';
 import { Icon } from '../components/Icon.js';
 import { useNotices } from '../components/Notices.js';
+import { ErrorScreen } from '../components/shell/ErrorScreen.js';
 import { formatMoment } from '../i18n/dates.js';
 import { t } from '../i18n/t.js';
 import {
@@ -17,7 +17,8 @@ import {
 	type Resolved,
 	useConflicts,
 } from '../store/conflicts.js';
-import { db, type NoteRecord } from '../store/db.js';
+import { useDb } from '../store/database.js';
+import type { NoteRecord } from '../store/db.js';
 import { deletePassage, type Edited, passageText, restorePassages } from '../store/passages.js';
 
 /**
@@ -64,6 +65,7 @@ const Version = ({
 );
 
 const ConflictView = ({ conflict }: Readonly<{ conflict: Conflict }>) => {
+	const db = useDb();
 	const notices = useNotices();
 	const [busy, setBusy] = useState(false);
 	const { copy, original } = conflict;

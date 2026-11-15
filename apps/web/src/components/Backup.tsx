@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { exportLibrary } from '../archive/exportLibrary.js';
 import { gather, importLibrary, type ImportReport } from '../archive/importLibrary.js';
 import { LOCALE, t } from '../i18n/t.js';
-import { db } from '../store/db.js';
+import { useDb } from '../store/database.js';
 import { askToKeep, type Persistence, persistence } from '../store/persistence.js';
 import { Icon } from './Icon.js';
 
@@ -71,6 +71,7 @@ const Keeping = () => {
 };
 
 export const Backup = () => {
+	const db = useDb();
 	const [busy, setBusy] = useState<Busy>();
 	const [said, setSaid] = useState<readonly string[]>([]);
 	const picker = useRef<HTMLInputElement>(null);

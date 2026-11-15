@@ -1,3 +1,4 @@
+import { cell } from '@memoriam/core';
 import { Hono } from 'hono';
 import { csrf } from 'hono/csrf';
 import { createMiddleware } from 'hono/factory';
@@ -93,19 +94,18 @@ export const createApp = (options: CreateAppOptions) => {
 	/**
 	 * Key import is async and `createApp` is not, so the promises are built once
 	 * and awaited per request — every request after the first resolves an already
-	 * settled promise. A Map rather than a mutable binding, matching the isolate
-	 * cache in `src/worker.ts`.
+	 * settled promise. A cell, as the isolate cache in `src/worker.ts` is.
 	 */
-	const keys = new Map<'keys', Promise<readonly [SecretKey, CryptoKey]>>();
+	const keys = cell<Promise<readonly [SecretKey, CryptoKey]> | undefined>(undefined);
 	const keySet = (): Promise<readonly [SecretKey, CryptoKey]> => {
-		const cached = keys.get('keys');
+		const cached = keys.current;
 		if (cached !== undefined) return cached;
 
 		const built = Promise.all([
 			importSecretKey(config.secretsKey, config.secretsKeyId),
 			signingKey(config.secretsKey),
 		] as const);
-		keys.set('keys', built);
+		keys.current = built;
 		return built;
 	};
 

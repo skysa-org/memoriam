@@ -1,7 +1,8 @@
 import { foldName, isHidden, parentPath, ROOT, SEPARATOR } from '@memoriam/core';
 
 import { LOCALE } from '../i18n/t.js';
-import { type FolderRecord, isLive, type NoteRecord } from './db.js';
+import type { FolderRecord, NoteRecord } from './db.js';
+import { isLive } from './rowStates.js';
 
 /**
  * The library as the Library screen lists it: the passages in no collection,

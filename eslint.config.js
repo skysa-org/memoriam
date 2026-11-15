@@ -46,6 +46,43 @@ const RESTRICTED_SYNTAX = [
 ];
 
 /**
+ * The one way to hold a value that changes: `cell()` from `@memoriam/core`.
+ * Not a `Map` keyed by one literal, and not a `{ current }` written out — the
+ * two ways the rule against `let` used to be worked round, each to be learned
+ * where it was met. A React ref is a cell's shape already and is
+ * not written as one of these. In source only: tests keep their own idioms.
+ */
+const CELL_MESSAGE =
+	'a value that changes is a cell: cell() and Cell<T>, from @memoriam/core, or from src/cell.js inside core.';
+
+const CELL_SYNTAX = [
+	{
+		// Keyed by one literal, or by a union of nothing but literals: a value or
+		// two by name, not a table. A key named through a type alias is not seen;
+		// only a type-aware rule could, and review is that here.
+		selector:
+			"NewExpression[callee.name='Map'] > TSTypeParameterInstantiation > :first-child:matches(TSLiteralType, TSUnionType:not(:has(> :not(TSLiteralType))))",
+		message: CELL_MESSAGE,
+	},
+	{
+		// A set that can only ever hold one thing is a flag.
+		selector:
+			"NewExpression[callee.name='Set'] > TSTypeParameterInstantiation > TSLiteralType:first-child",
+		message: CELL_MESSAGE,
+	},
+	{
+		selector:
+			"ObjectExpression[properties.length=1] > Property:matches([key.name='current'], [key.value='current'])",
+		message: CELL_MESSAGE,
+	},
+	{
+		selector:
+			"TSTypeLiteral[members.length=1] > TSPropertySignature:matches([key.name='current'], [key.value='current'])",
+		message: CELL_MESSAGE,
+	},
+];
+
+/**
  * Every Node built-in, by bare name and by `node:` — read from Node itself, so a
  * hand-kept list cannot leave one out. Neither core nor the Worker has them:
  * core runs in the browser and Workers too, and the Worker runs without
@@ -299,11 +336,26 @@ export default tseslint.config(
 		},
 	},
 
+	{
+		// A value that changes is a cell, in every package's src. The API's env
+		// block below sets the rule again, so it spreads the list too.
+		files: ['packages/*/src/**/*.ts', 'apps/*/src/**/*.ts'],
+		rules: { 'no-restricted-syntax': ['error', ...RESTRICTED_SYNTAX, ...CELL_SYNTAX] },
+	},
+
 	// ---- The app's words ----------------------------------------------------
 
 	{
+		// The cell rule too, since this sets the rule again for every .tsx.
 		files: ['apps/web/src/**/*.tsx'],
-		rules: { 'no-restricted-syntax': ['error', ...RESTRICTED_SYNTAX, ...INLINE_WORDS] },
+		rules: {
+			'no-restricted-syntax': [
+				'error',
+				...RESTRICTED_SYNTAX,
+				...INLINE_WORDS,
+				...CELL_SYNTAX,
+			],
+		},
 	},
 
 	// ---- Boundaries ---------------------------------------------------------
@@ -450,6 +502,7 @@ export default tseslint.config(
 			'no-restricted-syntax': [
 				'error',
 				...RESTRICTED_SYNTAX,
+				...CELL_SYNTAX,
 				{
 					selector: "MemberExpression[object.name='globalThis'][property.name='process']",
 					message:

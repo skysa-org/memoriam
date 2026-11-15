@@ -2,17 +2,18 @@ import { parentPath } from '@memoriam/core';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 
-import { ErrorScreen } from '../components/ErrorScreen.js';
 import { MissingPassage } from '../components/MissingPassage.js';
 import { PassageEditor } from '../components/PassageEditor.js';
+import { ErrorScreen } from '../components/shell/ErrorScreen.js';
 import { t } from '../i18n/t.js';
-import { db } from '../store/db.js';
+import { useDb } from '../store/database.js';
 import { useLibrary, usePassage } from '../store/hooks.js';
 import { passageText, updatePassage } from '../store/passages.js';
 
 /** Editing a passage's words and details. */
 
 const EditPassage = () => {
+	const db = useDb();
 	const { id } = Route.useParams();
 	const passage = usePassage(id);
 	const library = useLibrary();

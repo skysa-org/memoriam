@@ -17,16 +17,18 @@ import {
 } from '@memoriam/core';
 import { useLiveQuery } from 'dexie-react-hooks';
 
+import { useDb } from './database.js';
 import {
-	db as defaultDb,
-	isLive,
+	type ConnectionScope,
 	LOCAL_CONNECTION_ID,
 	type MemoriamDatabase,
 	type NoteRecord,
-	writerTables,
 } from './db.js';
 import { changeActivity } from './practice.js';
+import { rowsOf } from './rows.js';
+import { isLive } from './rowStates.js';
 import { readied } from './schedule.js';
+import { writerTables } from './scopes.js';
 import { readSettings, type Settings } from './settings.js';
 
 /**
@@ -102,17 +104,13 @@ export const rewardsFor = (
 /** The rewards, live. */
 export const useRewards = (
 	now: Date = new Date(),
-	db: MemoriamDatabase = defaultDb,
 	connectionId: string = LOCAL_CONNECTION_ID
 ): Rewards | undefined => {
+	const db = useDb();
 	const day = localDay(now);
 	return useLiveQuery(
 		async () => {
-			const rows = await db.notes
-				.where('connectionId')
-				.equals(connectionId)
-				.filter(isLive)
-				.toArray();
+			const rows = await rowsOf(db.notes, connectionId).filter(isLive).toArray();
 			return rewardsFor(rows, await readSettings(db), new Date());
 		},
 		// The day, so a page left open past midnight counts the new one.
@@ -124,7 +122,7 @@ export const useRewards = (
 export const recordBadges = (
 	db: MemoriamDatabase,
 	badges: ReadonlyMap<Badge, string>,
-	{ connectionId = LOCAL_CONNECTION_ID }: Readonly<{ connectionId?: string }> = {},
+	{ connectionId = LOCAL_CONNECTION_ID }: ConnectionScope = {},
 	now: Date = new Date()
 ): Promise<boolean> =>
 	db.transaction('rw', writerTables(db), () =>

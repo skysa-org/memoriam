@@ -1,8 +1,9 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-import { useSuspendShortcuts } from '../commands/context.js';
-import { t } from '../i18n/t.js';
+import { useSuspendShortcuts } from '../../commands/context.js';
+import { t } from '../../i18n/t.js';
+import { useFocusBack } from './useFocusBack.js';
 
 /**
  * A name asked for over everything: a collection's, as it is made or renamed.
@@ -48,12 +49,9 @@ export const NameDialog = ({
 	const [shown, setShown] = useState(problem);
 	useSuspendShortcuts();
 
+	useFocusBack();
 	useEffect(() => {
-		const back = document.activeElement;
 		field.current?.select();
-		return () => {
-			if (back instanceof HTMLElement && back.isConnected) back.focus();
-		};
 	}, []);
 
 	useEffect(() => {

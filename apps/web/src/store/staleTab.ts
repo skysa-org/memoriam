@@ -1,5 +1,7 @@
+import { cell } from '@memoriam/core';
 import type Dexie from 'dexie';
 
+import { createStore } from './emitter.js';
 import { flushEditors } from './heldEdits.js';
 
 /**
@@ -36,26 +38,17 @@ export const CLOSE_GRACE_MS = 2000;
  */
 export const WAITING_NOTICE_MS = 1000;
 
-const tab: { current: TabState } = { current: 'current' };
-const listeners = new Set<() => void>();
+const tab = createStore<TabState>('current');
 
 const publish = (next: TabState) => {
 	// Out of date is for good: the connection is closed and will not reopen.
-	if (tab.current === next || tab.current === 'stale') return;
-	tab.current = next;
-	listeners.forEach((listener) => {
-		listener();
-	});
+	if (tab.get() === 'stale') return;
+	tab.set(next);
 };
 
-export const tabState = (): TabState => tab.current;
+export const tabState = (): TabState => tab.get();
 
-export const subscribeTabState = (listener: () => void): (() => void) => {
-	listeners.add(listener);
-	return () => {
-		listeners.delete(listener);
-	};
-};
+export const subscribeTabState = tab.subscribe;
 
 /**
  * `wait` is for the event: the upgrade has not happened yet, and is held up
@@ -107,7 +100,7 @@ export const watchForNewerTab = (db: Dexie): void => {
 		return false;
 	});
 
-	const notice: { current: ReturnType<typeof setTimeout> | null } = { current: null };
+	const notice = cell<ReturnType<typeof setTimeout> | null>(null);
 	db.on('blocked', () => {
 		notice.current ??= setTimeout(() => {
 			publish('waiting');

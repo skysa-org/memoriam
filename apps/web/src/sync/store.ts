@@ -26,6 +26,7 @@ import { z } from 'zod';
 
 import {
 	type FileBytesRecord,
+	type FileKey,
 	type FileRecord,
 	type FolderRecord,
 	LOCAL_CONNECTION_ID,
@@ -36,7 +37,10 @@ import {
 	type SyncStateRecord,
 } from '../store/db.js';
 import { pulledRow } from '../store/passages.js';
-import { queueMove, queueWrite } from '../store/queue.js';
+import { opsFor, opsForFile, queueMove, queueWrite } from '../store/queue.js';
+import { rowsOf } from '../store/rows.js';
+import { isLive, isTombstone } from '../store/rowStates.js';
+import { libraryTables } from '../store/scopes.js';
 import { eachInSlices } from '../store/slices.js';
 
 /**
@@ -91,7 +95,7 @@ const LIBRARY = LOCAL_CONNECTION_ID;
  * holding the text the user deleted. Reported clean, the pull writes the row
  * back and the delete behind it purges it: skysa-notes' "the delete wins".
  */
-const isDirty = (note: NoteRecord): boolean => note.dirty === 1 && note.deletedLocally === 0;
+const isDirty = (note: NoteRecord): boolean => note.dirty === 1 && isLive(note);
 
 const toSyncNote = (note: NoteRecord): SyncNote => ({
 	id: note.id,
@@ -248,19 +252,14 @@ export const createDexieSyncStore = (
 	 * two cannot interleave.
 	 */
 	const inTransaction = <T>(work: () => Promise<T>): Promise<T> =>
-		db.transaction(
-			'rw',
-			[db.notes, db.folders, db.opQueue, db.syncState, db.files, db.fileBytes],
-			async () => {
-				if ((await db.syncState.get(connectionId)) === undefined) {
-					throw new UnboundConnectionError(connectionId);
-				}
-				return work();
+		db.transaction('rw', libraryTables(db), async () => {
+			if ((await db.syncState.get(connectionId)) === undefined) {
+				throw new UnboundConnectionError(connectionId);
 			}
-		);
+			return work();
+		});
 
-	const notesOf = (scope: Scope): Promise<NoteRecord[]> =>
-		scope.notes.where('connectionId').equals(LIBRARY).toArray();
+	const notesOf = (scope: Scope): Promise<NoteRecord[]> => rowsOf(scope.notes, LIBRARY).toArray();
 
 	/**
 	 * The library's passages at or beneath `folderPath`, tombstones included,
@@ -287,15 +286,14 @@ export const createDexieSyncStore = (
 	};
 
 	const foldersOf = (scope: Scope): Promise<FolderRecord[]> =>
-		scope.folders.where('connectionId').equals(LIBRARY).toArray();
+		rowsOf(scope.folders, LIBRARY).toArray();
 
 	const opsOf = (scope: Scope): Promise<OpQueueRecord[]> =>
-		scope.opQueue.where('connectionId').equals(LIBRARY).toArray();
+		rowsOf(scope.opQueue, LIBRARY).toArray();
 
-	const filesOf = (scope: Scope): Promise<FileRecord[]> =>
-		scope.files.where('connectionId').equals(LIBRARY).toArray();
+	const filesOf = (scope: Scope): Promise<FileRecord[]> => rowsOf(scope.files, LIBRARY).toArray();
 
-	const fileKey = (id: string): [string, string] => [LIBRARY, id];
+	const fileKey = (id: string): FileKey => [LIBRARY, id];
 
 	const ownFile = (scope: Scope, id: string): Promise<FileRecord | undefined> =>
 		scope.files.get(fileKey(id));
@@ -306,10 +304,8 @@ export const createDexieSyncStore = (
 		await scope.fileBytes.delete(fileKey(id));
 	};
 
-	const fileOpsOf = async (scope: Scope, fileId: string): Promise<OpQueueRecord[]> =>
-		(await scope.opQueue.where('fileId').equals(fileId).toArray()).filter(
-			(op) => op.connectionId === LIBRARY
-		);
+	const fileOpsOf = (scope: Scope, fileId: string): Promise<OpQueueRecord[]> =>
+		opsForFile(scope, { connectionId: LIBRARY, id: fileId });
 
 	const withdraw = (scope: Scope, ops: readonly OpQueueRecord[]) =>
 		scope.opQueue.bulkDelete(ops.flatMap((op) => (op.seq === undefined ? [] : [op.seq])));
@@ -398,10 +394,8 @@ export const createDexieSyncStore = (
 	};
 
 	/** One passage's queued ops. */
-	const noteOpsOf = async (scope: Scope, noteId: string): Promise<OpQueueRecord[]> =>
-		(await scope.opQueue.where('noteId').equals(noteId).toArray()).filter(
-			(op) => op.connectionId === LIBRARY
-		);
+	const noteOpsOf = (scope: Scope, noteId: string): Promise<OpQueueRecord[]> =>
+		opsFor(scope, { connectionId: LIBRARY, id: noteId });
 
 	/**
 	 * Point a queued rename's *origin* at where the pull says the passage's file
@@ -460,7 +454,7 @@ export const createDexieSyncStore = (
 		// Deleted by the time the conflict lands: the delete wins, and the row is
 		// written back for the queued delete to purge. A copy would be a new
 		// passage holding the text the user just deleted.
-		if (note.deletedLocally === 1) return;
+		if (isTombstone(note)) return;
 
 		// The copy is made from the passage as it stands, not as the engine read
 		// it: a pass recorded while the engine was at the network is in it.
@@ -774,7 +768,7 @@ export const createDexieSyncStore = (
 	 * just queued to take the file out of it.
 	 */
 	const rmdirsBehind = async (scope: Scope, path: string): Promise<void> => {
-		const ops = await scope.opQueue.where('connectionId').equals(LIBRARY).sortBy('seq');
+		const ops = await rowsOf(scope.opQueue, LIBRARY).sortBy('seq');
 		const fold = (each: string) => foldName(normalizePath(each));
 		const over = ops.filter((op) => op.op === 'rmdir' && isWithin(fold(path), fold(op.path)));
 		await scope.opQueue.bulkDelete(
@@ -927,7 +921,7 @@ export const createDexieSyncStore = (
 	 */
 	const reuploadNote = async (scope: Scope, id: string): Promise<void> => {
 		const note = await ownNote(scope, id);
-		if (note === undefined || note.deletedLocally === 1) return;
+		if (note === undefined || isTombstone(note)) return;
 		await scope.notes.put({ ...withoutRemote(note), dirty: 1 });
 		await queue(scope, { op: 'write', noteId: note.id, path: note.path });
 	};
@@ -1079,7 +1073,7 @@ export const createDexieSyncStore = (
 		if (outcome.kind === 'purged') {
 			const note = await ownNote(scope, outcome.noteId);
 			if (note === undefined) return;
-			if (note.deletedLocally === 1) {
+			if (isTombstone(note)) {
 				await scope.notes.delete(noteKey(note));
 				return;
 			}
@@ -1161,7 +1155,7 @@ export const createDexieSyncStore = (
 			// A passage made at a name a tombstone still holds: the live one is
 			// the answer. Handing back the tombstone would have a file arriving
 			// at that path written into a row its queued delete is about to purge.
-			const note = notes.find((each) => each.deletedLocally === 0) ?? notes[0];
+			const note = notes.find(isLive) ?? notes[0];
 			return note === undefined ? undefined : toSyncNote(note);
 		},
 

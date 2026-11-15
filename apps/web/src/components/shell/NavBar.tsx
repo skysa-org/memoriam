@@ -1,7 +1,7 @@
 import { Link, useRouterState } from '@tanstack/react-router';
 
-import { t } from '../i18n/t.js';
-import { Icon } from './Icon.js';
+import { t } from '../../i18n/t.js';
+import { Icon } from '../Icon.js';
 
 /**
  * The bar of screens: across the bottom of a phone, within reach of a thumb,

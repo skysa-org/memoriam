@@ -1,3 +1,5 @@
+import { cell } from '@memoriam/core';
+
 import { createApp } from './app.js';
 import { parseEnv } from './env.js';
 
@@ -10,10 +12,10 @@ import { parseEnv } from './env.js';
 type AppOrError = ReturnType<typeof createApp> | Error;
 
 /**
- * Built once per isolate. A Map rather than a mutable binding so the cache is an
- * explicit, single-purpose piece of state rather than ambient module mutation.
+ * Built once per isolate. A cell so the cache is an explicit, single-purpose
+ * piece of state rather than ambient module mutation.
  */
-const cache = new Map<'singleton', AppOrError>();
+const cache = cell<AppOrError | undefined>(undefined);
 
 const build = (env: Env): AppOrError => {
 	try {
@@ -24,11 +26,11 @@ const build = (env: Env): AppOrError => {
 };
 
 const appFor = (env: Env): AppOrError => {
-	const cached = cache.get('singleton');
+	const cached = cache.current;
 	if (cached !== undefined) return cached;
 
 	const built = build(env);
-	cache.set('singleton', built);
+	cache.current = built;
 	return built;
 };
 

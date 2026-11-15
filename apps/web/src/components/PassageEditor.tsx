@@ -4,7 +4,7 @@ import { type SyntheticEvent, useId, useRef, useState } from 'react';
 
 import { t } from '../i18n/t.js';
 import type { PassageDetails } from '../store/passages.js';
-import { ConfirmDialog } from './ConfirmDialog.js';
+import { ConfirmDialog } from './ui/ConfirmDialog.js';
 
 /**
  * A passage's words and details, as they are added or edited: a title, where

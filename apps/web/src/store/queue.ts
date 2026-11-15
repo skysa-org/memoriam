@@ -9,6 +9,8 @@ import {
 import Dexie, { type PromiseExtended } from 'dexie';
 
 import type { FileRecord, MemoriamDatabase, NoteRecord, OpQueueRecord } from './db.js';
+import { rowsOf } from './rows.js';
+import { isTombstone } from './rowStates.js';
 
 /**
  * The push queue: what the sync engine owes the remote, in the order it has to
@@ -84,7 +86,7 @@ export const isBound = (db: Pick<MemoriamDatabase, 'syncState'>): PromiseExtende
 	db.syncState.count().then((count) => count > 0);
 
 /** The ops queued for one passage. */
-const opsFor = (
+export const opsFor = (
 	db: QueueDb,
 	note: Pick<NoteRecord, 'connectionId' | 'id'>
 ): PromiseExtended<OpQueueRecord[]> =>
@@ -134,7 +136,7 @@ export const queueWrite = (
 	timing: Timing = 'soon'
 ): Queued => {
 	// A tombstone owes the remote its delete and nothing else.
-	if (note.deletedLocally === 1) return nothing();
+	if (isTombstone(note)) return nothing();
 	return opsFor(db, note).then((ops) => {
 		const queued = ops.filter((op) => op.op === 'write' && op.seq !== except);
 		const lazy = timing === 'lazy';
@@ -245,9 +247,7 @@ export const queueMkdir = (db: QueueDb, connectionId: string, path: string): Que
  * ever remove, and the next pull would make the collection again, empty.
  */
 export const withdrawMkdirs = (db: QueueDb, connectionId: string, path: string): Queued =>
-	db.opQueue
-		.where('connectionId')
-		.equals(connectionId)
+	rowsOf(db.opQueue, connectionId)
 		.filter((op) => op.op === 'mkdir' && isWithin(op.path, path))
 		.toArray()
 		.then((inside) => db.opQueue.bulkDelete(seqsOf(inside)))
@@ -276,7 +276,7 @@ export const queueRmdir = (
 			);
 
 /** The ops queued for one file, as `opsFor` for a passage. */
-const opsForFile = (
+export const opsForFile = (
 	db: QueueDb,
 	file: Pick<FileRecord, 'connectionId' | 'id'>
 ): PromiseExtended<OpQueueRecord[]> =>

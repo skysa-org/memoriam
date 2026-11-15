@@ -9,7 +9,7 @@ import { RouterProvider } from '@tanstack/react-router';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import { StaleTabGate } from './components/StaleTabGate.js';
+import { StaleTabGate } from './components/shell/StaleTabGate.js';
 import { createAppRouter } from './router.js';
 import { makeWayWhenAsked, updateChannel } from './sync/beforeUpdate.js';
 import { connectReturn } from './sync/connectReturn.js';

@@ -8,6 +8,7 @@ import { createInstallPrompt } from '../src/install/installPrompt.js';
 import type { MemoriamDatabase } from '../src/store/db.js';
 import { rowFor } from '../src/store/passages.js';
 import { getInstallDismissed } from '../src/store/prefs.js';
+import { over } from './support/database.js';
 import { freshDatabase } from './support/db.js';
 
 /**
@@ -193,14 +194,9 @@ const show = ({ userAgent = UA.windowsEdge, maxTouchPoints = 0, passages = 1 } =
 	const target = new EventTarget();
 	const prompt = createInstallPrompt(target);
 	const view = () => (
-		<InstallBanner
-			database={db}
-			prompt={prompt}
-			device={device(userAgent, maxTouchPoints)}
-			name="Memoriam"
-		/>
+		<InstallBanner prompt={prompt} device={device(userAgent, maxTouchPoints)} name="Memoriam" />
 	);
-	const { rerender, unmount } = render(view());
+	const { rerender, unmount } = render(view(), over(db));
 	return { db, target, prompt, view, rerender, unmount };
 };
 
@@ -250,12 +246,8 @@ describe('the install banner', () => {
 		unmount();
 		const again = createInstallPrompt(target);
 		render(
-			<InstallBanner
-				database={db}
-				prompt={again}
-				device={device(UA.windowsEdge)}
-				name="Memoriam"
-			/>
+			<InstallBanner prompt={again} device={device(UA.windowsEdge)} name="Memoriam" />,
+			over(db)
 		);
 		offer(target);
 		expect(again.state().kind).toBe('ready');

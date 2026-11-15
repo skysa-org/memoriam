@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { bindLibrary, unbindLibrary } from '../src/store/connection.js';
-import { type MemoriamDatabase, writerTables } from '../src/store/db.js';
+import type { MemoriamDatabase } from '../src/store/db.js';
+import { connectionTables } from '../src/store/scopes.js';
 import type {
 	ProviderFactory,
 	SchedulerStatus,
@@ -39,7 +40,7 @@ const PROGRESS = 150;
  * does it: in one step, which liveQuery may never show.
  */
 const rebindAtOnce = (db: MemoriamDatabase) =>
-	db.transaction('rw', [...writerTables(db), db.fileBytes, db.prefs], async () => {
+	db.transaction('rw', connectionTables(db), async () => {
 		await unbindLibrary(db);
 		await bindLibrary(db, ACCOUNT);
 	});
