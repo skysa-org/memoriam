@@ -1,6 +1,13 @@
-import type { ProviderKind } from '@memoriam/core';
+import type { ApiClient, Connection, Refusal, Result } from '@skysa/client';
+import {
+	beginConnect,
+	credentialFor,
+	forgetCredential,
+	keepCredential,
+	pendingCredential,
+} from '@skysa/client';
+import type { ProviderKind } from '@skysa/protocol';
 
-import type { ApiClient, Connection, Refusal, Result } from '../api/client.js';
 import {
 	bindingCount,
 	bindLibrary,
@@ -8,13 +15,6 @@ import {
 	rememberAccount,
 	unbindLibrary,
 } from '../store/connection.js';
-import {
-	beginConnect,
-	credentialFor,
-	forgetCredential,
-	keepCredential,
-	pendingCredential,
-} from '../store/credentials.js';
 import type { CredentialRecord, MemoriamDatabase } from '../store/db.js';
 
 /**
@@ -46,6 +46,8 @@ export const PROVIDER_LABELS: Readonly<Record<ProviderKind, string>> = {
 	dropbox: 'Dropbox',
 	onedrive: 'OneDrive',
 	gdrive: 'Google Drive',
+	// Not offered here (`CONNECTABLE`), but a kind the kit's protocol has.
+	webdav: 'WebDAV',
 };
 
 export type AccountState =

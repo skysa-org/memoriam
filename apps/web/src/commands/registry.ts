@@ -1,6 +1,6 @@
-import { cell } from '@memoriam/core';
+import { createEmitter } from '@skysa/client';
+import { cell } from '@skysa/storage';
 
-import { createEmitter } from '../store/emitter.js';
 import type { Chord } from './chord.js';
 
 /**

@@ -1,3 +1,4 @@
+import { joinPath } from '@skysa/storage';
 import { Document, isMap, isScalar, parseDocument, type YAMLMap } from 'yaml';
 
 import { APP_DATA_FOLDER, PASSAGE_EXTENSION } from '../config.js';
@@ -6,7 +7,6 @@ import {
 	joinFrontmatter,
 	splitFrontmatter,
 } from '../markdown/frontmatter/index.js';
-import { joinPath } from '../paths.js';
 
 /**
  * A year's practice, in `.memoriam/activity-YYYY.md` (docs/ARCHITECTURE.md §3):

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { titleFromFilename } from '../../src/markdown/title.js';
-import { isPassageName } from '../../src/names/fold.js';
+import { isPassageName } from '../../src/names/passages.js';
 import {
 	passageFilename,
 	sanitizeFolderName,

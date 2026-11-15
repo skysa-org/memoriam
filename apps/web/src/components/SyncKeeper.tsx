@@ -1,10 +1,10 @@
+import type { SyncScheduler } from '@skysa/client';
+import { api as appApi, type ApiClient } from '@skysa/client';
 import { useEffect, useRef } from 'react';
 
-import { api as appApi, type ApiClient } from '../api/client.js';
 import { useDb } from '../store/database.js';
 import { claimConnection, reconcileAccount } from '../sync/account.js';
 import { syncScheduler, useSyncStatus } from '../sync/runtime.js';
-import type { SyncScheduler } from '../sync/scheduler.js';
 
 /**
  * Keeps the library's binding in step with the server (docs/ARCHITECTURE.md

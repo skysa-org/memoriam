@@ -1,3 +1,5 @@
+import type { AppFolderSpec } from '@skysa/storage';
+
 /**
  * Names that must stay put once anything has been written under them: the
  * library's folder on a storage provider, its marker file, and the hidden
@@ -7,10 +9,10 @@
  * Dropbox derive their app-folder name from the provider registration, so
  * those registrations must be named to match (§10).
  */
-export const APP_FOLDER_NAME = 'memoriam';
+const APP_FOLDER_NAME = 'memoriam';
 
 /** Name the app reports as its own in the marker file. */
-export const APP_NAME = 'memoriam';
+const APP_NAME = 'memoriam';
 
 /** Marker file written at the root of the library on first connect. */
 export const MARKER_FILE = '.memoriam-app.json';
@@ -19,18 +21,22 @@ export const MARKER_FILE = '.memoriam-app.json';
  * Layout version of the remote folder. A client that finds a marker with a
  * higher version than this opens the connection read-only — see `parseMarker`.
  */
-export const MARKER_SCHEMA_VERSION = 1;
+const MARKER_SCHEMA_VERSION = 1;
 
-/** The storage providers the library can sync with (docs/ARCHITECTURE.md §10). */
-export const PROVIDER_KINDS = ['gdrive', 'onedrive', 'dropbox'] as const;
-
-export type ProviderKind = (typeof PROVIDER_KINDS)[number];
+/**
+ * The library's folder, as the providers are handed it (skysa-notes' record
+ * 0018): its name, the tag Google Drive finds it by, and its marker. Every
+ * part is a name a 0.1.0 library already has on a provider, so none of them
+ * may change (`tests/folderSpec.test.ts`).
+ */
+export const MEMORIAM_FOLDER: AppFolderSpec = {
+	name: APP_FOLDER_NAME,
+	driveTag: 'memoriam',
+	marker: { file: MARKER_FILE, app: APP_NAME, version: MARKER_SCHEMA_VERSION },
+};
 
 /** Extension of every passage, and of every file the app keeps. */
 export const PASSAGE_EXTENSION = '.md';
-
-/** Anything at a path segment starting with this is invisible to the library. */
-export const HIDDEN_PREFIX = '.';
 
 /**
  * The app's own files, at the root of the library: a year's activity in each

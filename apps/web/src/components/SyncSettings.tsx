@@ -1,8 +1,11 @@
-import type { ProviderKind, SyncProgress } from '@memoriam/core';
+import type { SchedulerStatus, SyncScheduler } from '@skysa/client';
+import { api as appApi, type ApiClient } from '@skysa/client';
+import { isLongRun } from '@skysa/client';
+import type { ProviderKind } from '@skysa/protocol';
+import type { SyncProgress } from '@skysa/sync';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
 
-import { api as appApi, type ApiClient } from '../api/client.js';
 import { formatMoment } from '../i18n/dates.js';
 import { t } from '../i18n/t.js';
 import { boundConnection } from '../store/connection.js';
@@ -16,9 +19,7 @@ import {
 	stopSyncingHere,
 } from '../sync/account.js';
 import { type ConnectOutcome, connectReturn as appConnectReturn } from '../sync/connectReturn.js';
-import { isLongRun } from '../sync/progress.js';
 import { syncScheduler, useSyncStatus } from '../sync/runtime.js';
-import type { SchedulerStatus, SyncScheduler } from '../sync/scheduler.js';
 import { needsReconnect } from '../sync/status.js';
 import { ConflictsBanner } from './ConflictsBanner.js';
 import { Icon } from './Icon.js';

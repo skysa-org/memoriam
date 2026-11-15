@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 
+import { mulberry32 } from '@skysa/storage/testing';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -9,7 +10,6 @@ import {
 	keyText,
 	knowsChunker,
 } from '../../src/passage/chunk.js';
-import { mulberry32 } from '../support/random.js';
 
 const fixture = (name: string): string =>
 	readFileSync(new URL(`fixtures/${name}.txt`, import.meta.url), 'utf8');

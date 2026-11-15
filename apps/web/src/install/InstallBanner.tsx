@@ -1,4 +1,4 @@
-import { isHidden } from '@memoriam/core';
+import { isHidden } from '@skysa/storage';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useSyncExternalStore } from 'react';
 

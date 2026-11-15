@@ -1,4 +1,4 @@
-import { cell } from '@memoriam/core';
+import { cell } from '@skysa/storage';
 import { type RefObject, useEffect } from 'react';
 
 import { useLatest } from '../../hooks/useLatest.js';

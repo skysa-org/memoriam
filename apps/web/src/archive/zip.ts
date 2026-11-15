@@ -1,4 +1,4 @@
-import { ancestorPaths, basename, foldName, normalizePath, parentPath, ROOT } from '@memoriam/core';
+import { ancestorPaths, basename, foldName, normalizePath, parentPath, ROOT } from '@skysa/storage';
 
 /**
  * A ZIP archive written by hand, stored and not compressed, as skysa-notes

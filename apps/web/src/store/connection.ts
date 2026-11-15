@@ -1,4 +1,4 @@
-import type { ProviderKind } from '@memoriam/core';
+import type { ProviderKind } from '@skysa/protocol';
 import type { PromiseExtended } from 'dexie';
 
 import {

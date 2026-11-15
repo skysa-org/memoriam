@@ -1,4 +1,5 @@
-import { activityPath, addDays, chunkPassage, localDay, readActivity, ROOT } from '@memoriam/core';
+import { activityPath, addDays, chunkPassage, localDay, readActivity } from '@memoriam/core';
+import { ROOT } from '@skysa/storage';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';

@@ -1,6 +1,7 @@
+import { type Caps, cut } from '@skysa/storage';
+import { foldName } from '@skysa/storage';
+
 import { PASSAGE_EXTENSION } from '../config.js';
-import { type Caps, cut } from './bytes.js';
-import { foldName } from './fold.js';
 
 /**
  * Filenames are a slug of the title; `id` in frontmatter is the stable identity,

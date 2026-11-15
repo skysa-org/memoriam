@@ -5,9 +5,9 @@ import {
 	conflictPath,
 	parsePassageFile,
 	readProgress,
-	ROOT,
 	writeProgress,
 } from '@memoriam/core';
+import { ROOT } from '@skysa/storage';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import {

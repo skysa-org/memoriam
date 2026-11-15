@@ -8,88 +8,21 @@
  * `@memoriam/core/testing`.
  */
 
-export {
-	CURRENT_CHUNKER,
-	MARKER_FILE,
-	PASSAGE_EXTENSION,
-	PROVIDER_KINDS,
-	type ProviderKind,
-} from './config.js';
+export { CURRENT_CHUNKER, MARKER_FILE, MEMORIAM_FOLDER, PASSAGE_EXTENSION } from './config.js';
 
-export { API_ERROR_CODES, type ApiErrorCode } from './api.js';
-
-export { type Cell, cell } from './cell.js';
-
-export {
-	AuthError,
-	isAuthError,
-	isRateLimitError,
-	RateLimitError,
-	type RemoteEntry,
-	type StorageProvider,
-} from './providers/types.js';
-
-export { createDropboxProvider } from './providers/dropbox.js';
-export type { FetchLike } from './providers/http.js';
-
-export { createGDriveProvider } from './providers/gdrive/index.js';
-
-export { createOneDriveProvider } from './providers/onedrive.js';
-export { withoutNul } from './providers/text.js';
+export { syncsHidden } from './appFolder.js';
 
 export { mergeFile } from './sync/merge.js';
 
-export { conflictPath } from './names/conflicts.js';
-
-export { foldName } from './names/fold.js';
-
 export { sanitizeFolderName, uniqueFilename } from './names/slug.js';
+
+export { conflictPath } from './names/passages.js';
 
 export { conflictContent } from './sync/conflicts.js';
 
-export {
-	createSyncEngine,
-	type SyncEngine,
-	type SyncOutcome,
-	type SyncProgress,
-} from './sync/engine.js';
-
-export { messageOf } from './sync/outcome.js';
-
-export {
-	type ConflictResolution,
-	isFileChange,
-	type NewSyncOp,
-	type OpOutcome,
-	type PullBatch,
-	type PullChange,
-	type SyncFile,
-	type SyncFolder,
-	type SyncNote,
-	type SyncOp,
-	type SyncOperation,
-	type SyncStore,
-	type UnreadableFile,
-} from './sync/store.js';
-
-export { contentHash } from './hash.js';
-
-export {
-	ancestorPaths,
-	basename,
-	isHidden,
-	isWithin,
-	joinPath,
-	normalizePath,
-	parentPath,
-	pathSegments,
-	rebasePath,
-	replaceBasename,
-	ROOT,
-	SEPARATOR,
-} from './paths.js';
-
 export { frontmatterIsEditable, splitFrontmatter } from './markdown/frontmatter/index.js';
+
+export { PASSAGE_FORMAT } from './markdown/format.js';
 
 export { toLf } from './markdown/lineEndings.js';
 

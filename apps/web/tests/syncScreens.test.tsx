@@ -1,4 +1,8 @@
-import { conflictContent, conflictPath, ROOT } from '@memoriam/core';
+import { conflictContent, conflictPath } from '@memoriam/core';
+import type { ApiClient, Connection, Result } from '@skysa/client';
+import type { SchedulerStatus } from '@skysa/client';
+import { beginConnect, pendingCredential } from '@skysa/client';
+import { ROOT } from '@skysa/storage';
 import {
 	createMemoryHistory,
 	createRootRoute,
@@ -9,16 +13,13 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { ApiClient, Connection, Result } from '../src/api/client.js';
 import { SyncKeeper } from '../src/components/SyncKeeper.js';
 import { SyncSettings } from '../src/components/SyncSettings.js';
 import { createAppRouter } from '../src/router.js';
 import { bindLibrary, boundConnection } from '../src/store/connection.js';
-import { beginConnect, newCredential, pendingCredential } from '../src/store/credentials.js';
 import { db, type MemoriamDatabase, type NoteRecord } from '../src/store/db.js';
 import { createPassage, passageText, rowFor } from '../src/store/passages.js';
 import type { ConnectOutcome } from '../src/sync/connectReturn.js';
-import type { SchedulerStatus } from '../src/sync/scheduler.js';
 import { holdCredential } from './support/connection.js';
 import { over } from './support/database.js';
 import { freshDatabase } from './support/db.js';
@@ -65,6 +66,8 @@ const fakes = (answer: Result<Connection> = { ok: true, value: CONNECTION }): Fa
 		signOut,
 		token: unused,
 		startConnect,
+		relayTicket: unused,
+		checkConnectCode: unused,
 		withCredential: () => client,
 	};
 	return { config, startConnect, signOut, client };
@@ -115,7 +118,10 @@ const showSettings = (props: Parameters<typeof SyncSettings>[0]) => {
 };
 
 const bound = async () => {
-	await holdCredential(database, 'c1', { credential: newCredential(), createdAt: 1 });
+	await holdCredential(database, 'c1', {
+		credential: `sk1_${crypto.randomUUID()}`,
+		createdAt: 1,
+	});
 	await bindLibrary(database, { connectionId: 'c1', provider: 'dropbox', displayName: 'Ann' });
 };
 

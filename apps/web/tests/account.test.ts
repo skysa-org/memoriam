@@ -1,9 +1,16 @@
 import { createHash } from 'node:crypto';
 
-import { ROOT } from '@memoriam/core';
+import type { ApiClient, Connection, Refusal, Result } from '@skysa/client';
+import {
+	beginConnect,
+	credentialFor,
+	hashCredential,
+	keepCredential,
+	pendingCredential,
+} from '@skysa/client';
+import { ROOT } from '@skysa/storage';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import type { ApiClient, Connection, Refusal, Result } from '../src/api/client.js';
 import {
 	bindingCount,
 	bindLibrary,
@@ -12,16 +19,6 @@ import {
 	unbindLibrary,
 	updateBinding,
 } from '../src/store/connection.js';
-import {
-	beginConnect,
-	credentialFor,
-	forgetCredential,
-	hashCredential,
-	heldCredentials,
-	keepCredential,
-	newCredential,
-	pendingCredential,
-} from '../src/store/credentials.js';
 import {
 	LOCAL_CONNECTION_ID,
 	type MemoriamDatabase,
@@ -106,15 +103,20 @@ const clientFor = (server: Server, credential?: string): ApiClient => {
 			server.calls.push(`start ${provider} ${credentialHash} ${returnTo}`);
 			return Promise.resolve({ ok: true, value: `https://provider.example/consent` });
 		},
+		relayTicket: unused,
+		checkConnectCode: unused,
 		withCredential: (held) => clientFor(server, held),
 	};
 };
+
+/** A credential of the kind a connect writes down (`beginConnect`), each one new. */
+const freshCredential = (): string => `sk1_${crypto.randomUUID()}`;
 
 const PSALM = { title: 'Psalm 23', reference: '', collection: ROOT, text: 'The Lord.\n' };
 
 /** The library bound to `id`, with a credential for it that the server answers. */
 const boundTo = async (server: Server, id: string): Promise<string> => {
-	const credential = newCredential();
+	const credential = freshCredential();
 	await holdCredential(db, id, { credential, createdAt: 1 });
 	await bindLibrary(db, { connectionId: id, provider: 'dropbox' });
 	server.answers.set(credential, { ok: true, value: connectionNamed(id) });
@@ -126,9 +128,9 @@ const livePassages = async () =>
 
 describe('the credential', () => {
 	it('is fresh each time, and hashed as the server checks it', async () => {
-		const one = newCredential();
+		const { credential: one } = await beginConnect(db, 'dropbox', 0);
 		expect(one).toMatch(/^sk1_[A-Za-z0-9_-]{43}$/);
-		expect(newCredential()).not.toBe(one);
+		expect((await beginConnect(db, 'dropbox', 0)).credential).not.toBe(one);
 		expect(await hashCredential('sk1_test')).toBe(
 			createHash('sha256').update('sk1_test').digest('base64url')
 		);
@@ -155,26 +157,6 @@ describe('the credential', () => {
 		expect(await pendingCredential(db, 60 * 60 * 1000)).toBeDefined();
 		expect(await pendingCredential(db, 60 * 60 * 1000 + 1)).toBeUndefined();
 		expect(await db.credentials.count()).toBe(0);
-	});
-
-	it('lists the connections held, newest first, without the pending one', async () => {
-		await keepCredential(db, 'old', {
-			id: 'x',
-			credential: 'a',
-			provider: 'dropbox',
-			createdAt: 1,
-		});
-		await keepCredential(db, 'new', {
-			id: 'y',
-			credential: 'b',
-			provider: 'gdrive',
-			createdAt: 2,
-		});
-		await beginConnect(db, 'onedrive', 3);
-		expect((await heldCredentials(db)).map((held) => held.id)).toEqual(['new', 'old']);
-
-		await forgetCredential(db, 'new');
-		expect((await heldCredentials(db)).map((held) => held.id)).toEqual(['old']);
 	});
 });
 
@@ -371,7 +353,7 @@ describe('the server’s word on the binding', () => {
 	it('asks again about a binding made while it was asking about the last one', async () => {
 		const server = newServer();
 		const first = await boundTo(server, 'c1');
-		const second = newCredential();
+		const second = freshCredential();
 		await holdCredential(db, 'c2', { credential: second, createdAt: 2 });
 		server.answers.set(second, { ok: true, value: connectionNamed('c2') });
 		const client = clientFor(server);

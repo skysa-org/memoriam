@@ -1,11 +1,5 @@
-import {
-	ancestorPaths,
-	foldName,
-	isWithin,
-	type NewSyncOp,
-	parentPath,
-	pathSegments,
-} from '@memoriam/core';
+import { ancestorPaths, foldName, isWithin, parentPath, pathSegments } from '@skysa/storage';
+import type { NewSyncOp } from '@skysa/sync';
 import Dexie, { type PromiseExtended } from 'dexie';
 
 import type { FileRecord, MemoriamDatabase, NoteRecord, OpQueueRecord } from './db.js';

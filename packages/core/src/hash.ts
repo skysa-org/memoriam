@@ -1,26 +1,14 @@
 /**
- * Hashing, for two different jobs.
- *
- * `contentHash` tells "the same bytes" from "edited" without keeping a second
- * copy of every passage: SHA-256 through Web Crypto, so it runs unchanged in the
- * browser, in Node and in Workers, and is asynchronous as Web Crypto is.
- *
  * `shortKey` names a chunk of a passage in its frontmatter (docs/ARCHITECTURE.md
  * §3, "Chunk keys"). It has to be synchronous, since keys are computed while a
  * passage is read, and short, since a person reads them in the file. It is not
  * a cryptographic hash and nothing relies on it being one: two chunks of one
  * passage that share a key are told apart by an occurrence suffix, as a refrain
  * is.
+ *
+ * Telling "the same bytes" from "edited" is the kit's `contentHash`
+ * (`@skysa/storage`).
  */
-
-const toHex = (bytes: Uint8Array): string =>
-	Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
-
-/** SHA-256 of the UTF-8 encoding of `text`, lowercase hex. */
-export const contentHash = async (text: string): Promise<string> => {
-	const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-	return toHex(new Uint8Array(digest));
-};
 
 const mixUnit = ([a, b]: readonly [number, number], unit: number): readonly [number, number] => [
 	Math.imul(a ^ unit, 2654435761),

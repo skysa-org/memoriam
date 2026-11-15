@@ -1,5 +1,7 @@
-import { isPassageName } from '../names/fold.js';
-import { isHidden } from '../paths.js';
+import { isHidden } from '@skysa/storage';
+import type { MergeInput } from '@skysa/sync';
+
+import { isPassageName } from '../names/passages.js';
 import { mergePassage } from '../progress/merge.js';
 import {
 	activityIsReadable,
@@ -7,7 +9,6 @@ import {
 	mergeActivity,
 	readActivity,
 } from '../rewards/activity.js';
-import type { MergeInput } from './engine.js';
 
 /**
  * Memoriam's `SyncEngineOptions.merge` (docs/ARCHITECTURE.md §10, "Merge

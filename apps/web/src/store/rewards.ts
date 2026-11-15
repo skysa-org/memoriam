@@ -6,7 +6,6 @@ import {
 	earnedBadges,
 	isActivityPath,
 	isBadge,
-	isHidden,
 	localDay,
 	type Measure,
 	measure,
@@ -15,6 +14,7 @@ import {
 	type Streak,
 	streakOf,
 } from '@memoriam/core';
+import { isHidden } from '@skysa/storage';
 import { useLiveQuery } from 'dexie-react-hooks';
 
 import { useDb } from './database.js';

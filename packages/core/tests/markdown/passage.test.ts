@@ -1,6 +1,6 @@
+import { contentHash } from '@skysa/storage';
 import { describe, expect, it } from 'vitest';
 
-import { contentHash } from '../../src/hash.js';
 import { frontmatterHasDeclinedId } from '../../src/markdown/frontmatter/index.js';
 import { parsePassageFile, serializePassageFile } from '../../src/markdown/passage.js';
 
