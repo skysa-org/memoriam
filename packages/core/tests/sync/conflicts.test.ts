@@ -10,8 +10,8 @@ import { conflictContent } from '../../src/sync/conflicts.js';
 /**
  * The contents of a conflict copy: an id of its own, so the copy and the
  * original are never the same passage. Its name is the kit's
- * (`names/conflicts.ts`, `@skysa/storage`), made for a passage by
- * `names/passages.ts`.
+ * (`names/conflicts.ts`, `@skysa/storage`), which the engine makes from
+ * `PASSAGE_FORMAT`'s extension.
  */
 
 describe('conflictContent', () => {

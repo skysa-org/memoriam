@@ -2,8 +2,8 @@
 
 Memoriam is a local-first PWA for learning passages of text by heart. The user types the first
 letter of each word while words are progressively hidden. Review is scheduled with FSRS and
-practice is rewarded. It is built on the foundations of `../skysa-notes`. Optional sync to Dropbox,
-Drive or OneDrive is Phase 2.
+practice is rewarded. It is built on the foundations of `../skysa-notes`, and syncs, where the user
+asks it to, to Dropbox, Drive or OneDrive through the shared kit (Phase 2).
 
 Read `docs/ARCHITECTURE.md` before any non-trivial task. It is the source of truth for the
 architecture and the decisions behind it. `docs/research.md` is the evidence behind practice and
@@ -23,8 +23,10 @@ change.
   same as skysa-notes': functional style, arrow functions, no loops, `let` or classes, readonly
   types. This app's own blocks in `eslint.config.js` add its layers and that every user-facing
   string comes from `t()`.
-- Code ported from skysa-notes keeps its shape; rename `skysa` to `memoriam`. Check the original
-  there before reinventing something it already solves.
+- The shared layers are the kit's (the `@skysa/*` packages above): a fix to one is a kit
+  PR, which this app takes by moving its pin. Code ported from skysa-notes that stays this app's
+  keeps its shape; rename `skysa` to `memoriam` (but not the kit's `@skysa/*`), and check the
+  original there before reinventing something it already solves.
 
 ## Hard rules
 - `packages/core` imports nothing from `apps/*`, and has no framework, DOM or Node-only
@@ -37,7 +39,7 @@ change.
   edited safely, refuse and tell the user. Never drop a pass silently.
 - `chunker: N` pins the algorithm a passage was split with. Never change an existing chunker
   version's output; add a new version.
-- Never lose user data. Import and (later) sync merge progress where they can, and otherwise keep
+- Never lose user data. Import and sync merge progress where they can, and otherwise keep
   both copies.
 - `script-src 'self'` with nothing inline, eval'd or `new Function`'d. This is a hard requirement
   (`docs/ARCHITECTURE.md` §9). Nothing may be added to `script-src` in `apps/web/public/_headers`.

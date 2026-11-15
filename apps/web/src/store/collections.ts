@@ -206,8 +206,8 @@ export interface RemovedCollection {
 /**
  * Delete a collection and every passage in it. Undone by `restoreCollection`.
  *
- * Only the passages. A file sync keeps beside them (§10, "Files, kept
- * dormant") is the user's, and nothing here shows it, so nothing here deletes
+ * Only the passages. A file sync keeps beside them (§10, "Files beside
+ * passages") is the user's, and nothing here shows it, so nothing here deletes
  * it: its directory stays on the remote while it holds one, and the engine
  * leaves a directory that holds a file standing.
  */

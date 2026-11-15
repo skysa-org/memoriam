@@ -9,8 +9,8 @@ import { Icon } from './Icon.js';
 
 /**
  * The library out as a backup, and passages in from files
- * (docs/ARCHITECTURE.md §3, §10): the only copy there is, until sync, is the
- * one in this browser.
+ * (docs/ARCHITECTURE.md §3, §10): unless the library syncs, this browser holds
+ * its only copy.
  */
 
 type Busy = 'export' | 'import' | undefined;

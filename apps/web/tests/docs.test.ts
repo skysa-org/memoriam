@@ -43,6 +43,8 @@ const CITING = [
 	'CONTRIBUTING.md',
 	'README.md',
 	'docs/self-hosting.md',
+	'SECURITY.md',
+	'apps/web/brand/README.md',
 	...Object.keys(DOCS),
 ];
 
@@ -50,6 +52,9 @@ const CITING = [
 const unwrapped = (text: string): string =>
 	text.replace(/\s*\n\s*(?:\*\s|\/\/\s|>\s|#\s)?\s*/gu, ' ');
 const withoutFences = (text: string): string => text.replace(/^```[\s\S]*?^```/gmu, '');
+
+/** The section a number is in, at the top: §10 for §10.2. */
+const topOf = (number: string): string => number.split('.')[0] ?? number;
 
 /** A section by its number, and the names under it: headings, and the bold words a paragraph or an item opens with. */
 type Entry = Readonly<{ number: string; name: string }>;
@@ -62,7 +67,7 @@ const entriesOf = (text: string): readonly Entry[] =>
 				const numbered = /^#{2,3} (\d+(?:\.\d+)*)\.? (.*)$/u.exec(line);
 				if (numbered) {
 					const number = String(numbered[1]);
-					const top = number.split('.')[0] ?? number;
+					const top = topOf(number);
 					const here = number === top ? [top] : [top, number];
 					const name = String(numbered[2]).toLowerCase();
 					return {
@@ -94,44 +99,55 @@ const hasNumber = (doc: Doc, number: string): boolean =>
 		? anchors.includes(`s${number.replaceAll('.', '-')}`)
 		: ENTRIES.research.some((entry) => entry.number === number);
 
-/** Whether a name is how a heading or a lead-in of that section begins, a whole word at its end. */
+/** Whether a name is how an entry's name begins, a whole word at its end. */
+const begins = (entry: string, name: string): boolean =>
+	entry.startsWith(name.toLowerCase()) && !/\w/u.test(entry.charAt(name.length));
+
+/** Whether a name is how a heading or a lead-in of that section begins. */
 const hasName = (doc: Doc, number: string, name: string): boolean =>
-	ENTRIES[doc].some(
-		(entry) =>
-			entry.number === number &&
-			entry.name.startsWith(name.toLowerCase()) &&
-			!/\w/u.test(entry.name.charAt(name.length))
-	);
+	ENTRIES[doc].some((entry) => entry.number === number && begins(entry.name, name));
 
 /**
- * What names the document a `§` is in: this repo's two, or another (skysa-notes',
- * the shared kit's, an RFC, the ZIP format's note), whose sections are not this
- * test's to check.
+ * What names the document a `§` is in: this repo's two, skysa-notes', or
+ * another (the shared kit's, an RFC, the ZIP format's note), whose sections are
+ * not this test's to check. skysa-notes' are checked only for what moved to the
+ * kit ("cites the kit, not skysa-notes"). skysa-notes' name without its
+ * ARCHITECTURE's is often its code's ("as skysa-notes' (§10)" is this repo's
+ * §10), so it names the document only of a `§` right after it, with no `(` or
+ * `:` between.
  */
 const MARKER =
-	/(?:skysa-notes'\s*`?(?:docs\/)?ARCHITECTURE\.md`?|`?(?:docs\/)?(ARCHITECTURE|research)\.md`?|RFC \d+|OpenID Connect Core|APPNOTE\.TXT|skysa-notes'|\[kit|the kit's\s*`?(?:docs\/)?ARCHITECTURE\.md`?)[,(]?\s*/gu;
-const docOf = (word: string | undefined): Doc | undefined =>
-	word === 'ARCHITECTURE' || word === 'research' ? word : undefined;
+	/(?:([Ss]kysa-notes(?:['’]s?)?)(\s*(?:own\s+)?`?(?:docs\/)?ARCHITECTURE(?:\.md)?`?)?|`?(?:docs\/)?(ARCHITECTURE|research)\.md`?|RFC \d+|OpenID Connect Core|APPNOTE\.TXT|\[kit|\b(?:skysa-)?kit(?:['’]s)?\s*(?:own\s+)?\[?`?(?:docs\/)?ARCHITECTURE(?:\.md)?`?)\s*[,(:]?\s*/gu;
+type Cited = Doc | 'skysa-notes';
+const docOf = (notes: string | undefined, word: string | undefined): Cited | undefined => {
+	if (notes !== undefined) return 'skysa-notes';
+	return word === 'ARCHITECTURE' || word === 'research' ? word : undefined;
+};
 
 /** `exact` when its document is named right before it, so its number can be held to account. */
-type Citation = Readonly<{ doc: Doc; number: string; name?: string; exact: boolean }>;
+type Citation = Readonly<{ doc: Cited; number: string; name?: string; exact: boolean }>;
 
 /**
  * Each `§` in a text, with what it cites. One right after a document's name is
  * that document's. One standing alone is its own document's in the docs, and in
  * code the last document named above it, which is this repo's ARCHITECTURE when
  * none is: its number is too loose to check there, and only its name is.
+ * skysa-notes' name alone is not a document's above anything.
  */
 const citations = (file: string, text: string): readonly Citation[] => {
 	const flat = unwrapped(text);
-	const markers = [...flat.matchAll(MARKER)].map((match) => ({
-		end: match.index + match[0].length,
-		doc: docOf(match[1]),
-	}));
+	const markers = [...flat.matchAll(MARKER)].flatMap((match) => {
+		const alone = match[1] !== undefined && match[2] === undefined;
+		return alone && /[(:]\s*$/u.test(match[0])
+			? []
+			: [{ end: match.index + match[0].length, doc: docOf(match[1], match[3]), alone }];
+	});
 	return [...flat.matchAll(/§(\d+(?:\.\d+)*)(?:,? ["“]([^"”]{3,80})["”])?/gu)].flatMap(
 		(match) => {
 			const adjacent = markers.find((marker) => marker.end === match.index);
-			const nearest = markers.filter((marker) => marker.end <= match.index).at(-1);
+			const nearest = markers
+				.filter((marker) => marker.end <= match.index && !marker.alone)
+				.at(-1);
 			const own = DOCS[file];
 			const doc = adjacent ? adjacent.doc : (own ?? (nearest ? nearest.doc : 'ARCHITECTURE'));
 			if (doc === undefined) return [];
@@ -147,6 +163,34 @@ const citations = (file: string, text: string): readonly Citation[] => {
 		}
 	);
 };
+
+/**
+ * Whether a citation of skysa-notes' ARCHITECTURE may be of design that moved
+ * to the shared kit, which this repo cites at the kit now (skysa-notes' record
+ * 0018, step 5). Most of its sections hold some of each, and its names for the
+ * kit's parts have changed since this repo was ported from it, so a list of
+ * those would miss the older ones. What is listed instead is the parts that
+ * stayed skysa-notes' own and that this repo cites, by section, as its
+ * headings name them. One is added here once skysa-notes' document is checked
+ * for it; any other citation of it by section fails.
+ */
+const NOTES_OWN: Readonly<Record<string, readonly string[]>> = {
+	'7': ['IndexedDB schema (Dexie)'],
+};
+const unlisted = ({ doc, number, name, exact }: Citation): boolean =>
+	doc === 'skysa-notes' &&
+	exact &&
+	(name === undefined ||
+		!(NOTES_OWN[topOf(number)] ?? []).some((part) => begins(part.toLowerCase(), name)));
+
+/**
+ * skysa-notes' name and its ARCHITECTURE, and a section's mark, as the
+ * examples here write them, so that an example is not a citation in this file
+ * of its own.
+ */
+const NAME = "skysa-notes'";
+const NOTES = `${NAME} docs/ARCHITECTURE.md`;
+const AT = '§';
 
 /** Each anchor of this repo's ARCHITECTURE a text links to: not the shared kit's, which is its own. */
 const citedAnchors = (text: string): readonly string[] =>
@@ -193,11 +237,19 @@ describe('the docs', () => {
 	const cited = CITING.flatMap((file) =>
 		citations(file, read(file)).map((citation) => ({ file, ...citation }))
 	);
+	const ours = cited.filter(
+		(citation): citation is typeof citation & Readonly<{ doc: Doc }> =>
+			citation.doc !== 'skysa-notes'
+	);
 
 	it('finds what it is meant to look at', () => {
-		expect(cited.filter(({ doc }) => doc === 'ARCHITECTURE').length).toBeGreaterThan(150);
-		expect(cited.filter(({ doc }) => doc === 'research').length).toBeGreaterThan(20);
-		expect(cited.filter(({ name }) => name !== undefined).length).toBeGreaterThan(50);
+		expect(ours.filter(({ doc }) => doc === 'ARCHITECTURE').length).toBeGreaterThan(150);
+		expect(ours.filter(({ doc }) => doc === 'research').length).toBeGreaterThan(20);
+		expect(ours.filter(({ name }) => name !== undefined).length).toBeGreaterThan(50);
+		expect(
+			cited.filter(({ doc, exact }) => doc === 'skysa-notes' && exact),
+			'no citation of skysa-notes’ ARCHITECTURE is read: if none is left, this line can go'
+		).not.toEqual([]);
 		expect(layoutPaths(architecture)).toContain('packages/core/src/sync');
 	});
 
@@ -208,9 +260,21 @@ describe('the docs', () => {
 		expect(citations('a.ts', '(`docs/research.md` §2.1)')).toEqual([
 			{ doc: 'research', number: '2.1', exact: true },
 		]);
-		expect(citations('a.ts', `skysa-notes' docs/ARCHITECTURE.md §7, "Pushing files"`)).toEqual(
-			[]
-		);
+		expect(citations('a.ts', `${NOTES} ${AT}7, "Pushing files"`)).toEqual([
+			{ doc: 'skysa-notes', number: '7', name: 'Pushing files', exact: true },
+		]);
+		expect(citations('a.ts', `as ${NAME} ${AT}6`)).toEqual([
+			{ doc: 'skysa-notes', number: '6', exact: true },
+		]);
+		expect(citations('a.ts', `rows as ${NAME} (\`Row\`)\n * (${AT}10, "Files")`)).toEqual([
+			{ doc: 'ARCHITECTURE', number: '10', name: 'Files', exact: false },
+		]);
+		expect(citations('a.ts', `as ${NAME} store does.\n * (${AT}10, "Files")`)).toEqual([
+			{ doc: 'ARCHITECTURE', number: '10', name: 'Files', exact: false },
+		]);
+		expect(citations('a.ts', '`docs/ARCHITECTURE.md` (§3)')).toEqual([
+			{ doc: 'ARCHITECTURE', number: '3', exact: true },
+		]);
 		expect(citations('a.ts', 'RFC 9110 §10.2.3, which says')).toEqual([]);
 		expect(
 			citations(
@@ -219,6 +283,21 @@ describe('the docs', () => {
 			)
 		).toEqual([]);
 		expect(citations('a.ts', `the kit's docs/ARCHITECTURE.md §7, "Sync engine"`)).toEqual([]);
+		expect(citations('a.ts', 'the kit’s docs/ARCHITECTURE.md §7')).toEqual([]);
+		expect(
+			citations('a.ts', `the shared kit's docs/ARCHITECTURE.md §7, "Sync engine"`)
+		).toEqual([]);
+		expect(citations('a.ts', "skysa-kit's docs/ARCHITECTURE.md §7")).toEqual([]);
+		expect(citations('a.ts', "The kit's docs/ARCHITECTURE.md §6")).toEqual([]);
+		expect(citations('a.ts', "the kit's own docs/ARCHITECTURE.md §6")).toEqual([]);
+		expect(citations('a.ts', 'skysa-kit `docs/ARCHITECTURE.md` §6')).toEqual([]);
+		expect(citations('a.ts', "The kit's\n[ARCHITECTURE §6](https://…)")).toEqual([]);
+		expect(
+			citations('a.ts', 'APPNOTE.TXT (§4.3.7 local header, §4.3.12 central directory)')
+		).toEqual([]);
+		expect(citations('a.ts', `as ${NAME} (${AT}10, "Push timing")`)).toEqual([
+			{ doc: 'ARCHITECTURE', number: '10', name: 'Push timing', exact: false },
+		]);
 		expect(citations('a.ts', `the kit's server; see §10, "Push timing"`)).toEqual([
 			{ doc: 'ARCHITECTURE', number: '10', name: 'Push timing', exact: false },
 		]);
@@ -231,14 +310,14 @@ describe('the docs', () => {
 	});
 
 	it('has every citation by number lead to a section', () => {
-		const lost = cited
+		const lost = ours
 			.filter(({ exact, doc, number }) => exact && !hasNumber(doc, number))
 			.map(({ file, doc, number }) => `${file}: ${doc} §${number}`);
 		expect(lost).toEqual([]);
 	});
 
 	it('has every citation by name lead to that section', () => {
-		const lost = cited.flatMap(({ file, doc, number, name }) =>
+		const lost = ours.flatMap(({ file, doc, number, name }) =>
 			name === undefined || hasName(doc, number, name)
 				? []
 				: [`${file}: ${doc} §${number}, "${name}"`]
@@ -253,6 +332,34 @@ describe('the docs', () => {
 				.map((id) => `${file}: #${id}`)
 		);
 		expect(lost).toEqual([]);
+	});
+
+	it('cites the kit, not skysa-notes, for the design that moved to it', () => {
+		const flagged = (text: string) => citations('a.ts', text).filter(unlisted).length;
+		expect(flagged(`${NOTES} ${AT}6, "Backend"`)).toBe(1);
+		expect(flagged(` * (${NOTES}\n * ${AT}7): the copy`)).toBe(1);
+		expect(flagged(`(${NOTES} ${AT}5.1)`)).toBe(1);
+		expect(flagged(`${NOTES} (${AT}7)`)).toBe(1);
+		expect(flagged(`${NOTES}: ${AT}7`)).toBe(1);
+		expect(flagged(`as each provider in ${NAME} ${AT}5.`)).toBe(1);
+		expect(flagged(`${NOTES} ${AT}7, "Pulling files"`)).toBe(1);
+		expect(flagged(`${NOTES} ${AT}7, "When a push goes"`)).toBe(1);
+		expect(flagged(`${NOTES} ${AT}15`)).toBe(1);
+		expect(flagged(`skysa-notes \`docs/ARCHITECTURE.md\` ${AT}6`)).toBe(1);
+		expect(flagged(`skysa-notes's docs/ARCHITECTURE.md ${AT}6`)).toBe(1);
+		expect(flagged(`${NAME} own docs/ARCHITECTURE.md ${AT}6`)).toBe(1);
+		expect(flagged(`${NAME} ARCHITECTURE ${AT}7`)).toBe(1);
+		expect(flagged(`${NOTES} ${AT}7, "IndexedDB schema (Dexie)"`)).toBe(0);
+		expect(flagged(`${NOTES} ${AT}7, "IndexedDB schema"`)).toBe(0);
+		expect(flagged(`${NOTES} ${AT}7, "IndexedDB schemata"`)).toBe(1);
+		expect(flagged(`${NOTES} ${AT}8, "IndexedDB schema (Dexie)"`)).toBe(1);
+		expect(flagged(`${NAME} sync/account.ts, as ${AT}10, "Connecting"`)).toBe(0);
+		expect(flagged(`${NOTES} has more.\n * Then ${AT}10`)).toBe(0);
+
+		const stale = cited
+			.filter(unlisted)
+			.map(({ file, number, name }) => `${file}: §${number}${name ? `, "${name}"` : ''}`);
+		expect(stale).toEqual([]);
 	});
 
 	it('cites a phase where the phases are', () => {

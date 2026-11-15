@@ -55,8 +55,8 @@ describe('Content-Security-Policy', () => {
 	it('runs only this origin’s scripts', () => {
 		const directives = policy();
 		expect(directives.get('default-src')).toEqual(["'self'"]);
-		// A hard requirement, not a good default: once sync arrives this shell
-		// holds a long-lived credential in IndexedDB (docs/ARCHITECTURE.md §9),
+		// A hard requirement, not a good default: where the library syncs, this
+		// shell holds a long-lived credential in IndexedDB (docs/ARCHITECTURE.md §9),
 		// and script this policy lets run could read it and post it anywhere.
 		// Nothing may be added to this list.
 		expect(directives.get('script-src')).toEqual(["'self'"]);

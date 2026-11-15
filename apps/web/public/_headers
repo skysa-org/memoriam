@@ -6,8 +6,8 @@
 # - script-src 'self' only. zod would probe for `new Function` at startup and
 #   report a violation even though it catches the refusal, so src/jitless.ts
 #   turns the probe off before any schema is built. Nothing may be added to
-#   script-src: once sync arrives this shell holds a credential in IndexedDB,
-#   and script the policy lets run could read it.
+#   script-src: where the library syncs, this shell holds a credential in
+#   IndexedDB, and script the policy lets run could read it.
 # - style-src 'unsafe-inline': React sets element styles (the practice card's
 #   position over the keyboard). Neither can run script.
 # - connect-src: this origin (the API, and the change relay's WebSocket where
