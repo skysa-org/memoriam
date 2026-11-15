@@ -20,7 +20,7 @@ Cite by anchor from now on; a citation such as `§10, "Push timing"` still works
 |---|---|
 | What it is | A local-first PWA for learning passages of text by heart (poems, speeches, scripture, creeds, anything) and keeping them learnt |
 | Core interaction | Show one short chunk. The user types the first letter of each word. Words are hidden progressively across levels until the chunk is recalled from nothing |
-| Stack | As skysa-notes: a pnpm monorepo (`apps/web`, `packages/core`, and `apps/api` once sync arrives), strict TypeScript, its functional ESLint rules, Vite + React + TanStack Router + Dexie + vite-plugin-pwa, zod, Vitest, changesets |
+| Stack | As skysa-notes: a pnpm monorepo (`apps/web`, `packages/core`, and `apps/api` once sync arrives), strict TypeScript, its functional ESLint rules (the shared kit's `@skysa/eslint-config` now, with its TypeScript and Prettier settings), Vite + React + TanStack Router + Dexie + vite-plugin-pwa, zod, Vitest, changesets |
 | Storage | The markdown string is the only source of truth, held byte for byte in IndexedDB. Real `.md` files exist in zip exports, and on a storage provider once sync arrives |
 | Progress | Stored in each passage's own frontmatter, in a `progress:` map with one entry per chunk (§3). Daily activity and badges live in hidden `.memoriam/activity-YYYY.md` files |
 | Phasing | Phase 1: a complete app on one device, with export and import. Phase 2: optional sync to Dropbox, Google Drive or OneDrive, through skysa-notes' engine and Worker (§10) |
@@ -792,7 +792,12 @@ Fixing it means changing which row keeps which id in the engine's conflict rule,
 pnpm-workspace.yaml
 package.json           root scripts: dev, build, test, lint, knip, verify (the gate before a push),
                        size, db:migrate, changeset
-eslint.config.js       the lint rules, and the layers below held by no-restricted-imports
+eslint.config.js       the kit's lint (@skysa/eslint-config) with this app's own blocks: its words,
+                       core's boundaries, the Worker entry's rules, the web layers held by
+                       no-restricted-imports, and where core's test doubles may be reached from
+tsconfig.base.json     the kit's compiler settings, which every package's tsconfig extends
+tsconfig.json          the root vitest.config.ts, which the kit's lint reads with types
+.prettierrc.json       the kit's Prettier settings
 knip.json              what knip counts as used: the entries it cannot find on its own
 .changeset/            a changeset per pull request; README.md says how a release is cut
 .github/workflows/     ci.yml (the gate, the build and its size), cla.yml, release.yml

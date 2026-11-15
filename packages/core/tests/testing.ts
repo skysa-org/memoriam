@@ -1,7 +1,7 @@
 /**
  * Core's test doubles, for the apps' tests: `@memoriam/core/testing`. Kept out
- * of the main entry so nothing the app ships can reach them, and the lint rule
- * in `eslint.config.js` keeps it that way.
+ * of the main entry so nothing the app ships can reach them, and this app's own
+ * block in `eslint.config.js` keeps it that way.
  */
 export {
 	createFakeProvider,
