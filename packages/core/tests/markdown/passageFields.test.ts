@@ -4,7 +4,7 @@ import {
 	readFrontmatter,
 	splitFrontmatter,
 	writeFrontmatter,
-} from '../../src/markdown/frontmatter.js';
+} from '../../src/markdown/frontmatter/index.js';
 import { parsePassageFile } from '../../src/markdown/passage.js';
 
 /** The fields a passage has and a note does not (docs/ARCHITECTURE.md §3). */

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { MARKER_FILE } from '../../src/config.js';
+import {
+	conflictFilename,
+	conflictFolderName,
+	conflictNameKeepingExtension,
+} from '../../src/names/conflicts.js';
 import type { FetchLike } from '../../src/providers/dropbox.js';
 import { createGDriveProvider } from '../../src/providers/gdrive.js';
 import {
@@ -13,11 +18,6 @@ import {
 	RateLimitError,
 	type StorageProvider,
 } from '../../src/providers/types.js';
-import {
-	conflictFilename,
-	conflictFolderName,
-	conflictNameKeepingExtension,
-} from '../../src/sync/conflicts.js';
 import { createSyncEngine } from '../../src/sync/engine.js';
 import { createMemoryStore } from '../sync/memoryStore.js';
 import { drainChanges } from './contract.js';

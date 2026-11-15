@@ -1,20 +1,19 @@
 import {
 	chunkPassage,
 	contentHash,
-	createFakeProvider,
 	createSyncEngine,
-	type FakeProvider,
 	mergeFile,
 	parsePassageFile,
 	readProgress,
 	type RemoteEntry,
 } from '@memoriam/core';
+import {
+	createFakeProvider,
+	describeSyncStoreContract,
+	type FakeProvider,
+} from '@memoriam/core/testing';
 import { describe, expect, it } from 'vitest';
 
-// The suite lives beside the port it checks, in `packages/core`, and is not a
-// `*.test.ts` there so that it runs only where a store registers it. `core`
-// cannot import `apps/*`, so this store registers here instead.
-import { describeSyncStoreContract } from '../../../packages/core/tests/sync/storeContract.js';
 import { LOCAL_CONNECTION_ID, type MemoriamDatabase } from '../src/store/db.js';
 import { createPassage, deletePassage, pulledRow } from '../src/store/passages.js';
 import { recordPass } from '../src/store/practice.js';
@@ -29,6 +28,9 @@ const boundStore = async (db: MemoriamDatabase) => {
 	return createDexieSyncStore(db, { connectionId: CONNECTION, now: () => 0 });
 };
 
+// The suite lives beside the port it checks, in `packages/core`, and is not a
+// `*.test.ts` there so that it runs only where a store registers it. `core`
+// cannot import `apps/*`, so this store registers here instead.
 describeSyncStoreContract('Dexie', async () => {
 	const db = freshDatabase();
 	const store = await boundStore(db);

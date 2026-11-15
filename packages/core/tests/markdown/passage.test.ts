@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { contentHash } from '../../src/hash.js';
-import { frontmatterHasDeclinedId } from '../../src/markdown/frontmatter.js';
+import { frontmatterHasDeclinedId } from '../../src/markdown/frontmatter/index.js';
 import { parsePassageFile, serializePassageFile } from '../../src/markdown/passage.js';
 
 describe('parsePassageFile', () => {

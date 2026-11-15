@@ -1,5 +1,4 @@
-import { PASSAGE_EXTENSION } from '../../src/config.js';
-import { foldName } from '../../src/markdown/slug.js';
+import { isPassageName } from '../../src/names/fold.js';
 import type { FakeProvider } from '../../src/providers/fake.js';
 import type { RemoteEntry } from '../../src/providers/types.js';
 
@@ -32,7 +31,7 @@ export const createFrom = (
 	path: string,
 	bytes: Uint8Array<ArrayBuffer>
 ): Promise<RemoteEntry> =>
-	foldName(path).endsWith(PASSAGE_EXTENSION)
+	isPassageName(path)
 		? backing.write(path, new TextDecoder('utf-8', { ignoreBOM: true }).decode(bytes), {})
 		: backing.createFile(path, bytes);
 

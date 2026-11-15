@@ -5,14 +5,13 @@
 import {
 	AuthError,
 	chunkPassage,
-	createFakeProvider,
 	CURRENT_CHUNKER,
-	type FakeProvider,
 	parsePassageFile,
 	readProgress,
 	ROOT,
 	type StorageProvider,
 } from '@memoriam/core';
+import { createFakeProvider, type FakeProvider } from '@memoriam/core/testing';
 import { expect, vi } from 'vitest';
 
 import type { ApiClient } from '../../src/api/client.js';

@@ -1,7 +1,7 @@
 import { parseDocument } from 'yaml';
 
 import { CURRENT_CHUNKER } from '../config.js';
-import { splitFrontmatter } from '../markdown/frontmatter.js';
+import { splitFrontmatter } from '../markdown/frontmatter/index.js';
 import { parsePassageFile } from '../markdown/passage.js';
 import { chunkPassage } from '../passage/chunk.js';
 import { type ChunkProgress, readProgress, writeProgress } from './codec.js';

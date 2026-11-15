@@ -1,12 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { titleFromFilename } from '../../src/markdown/title.js';
+import { isPassageName } from '../../src/names/fold.js';
 import {
 	passageFilename,
 	sanitizeFolderName,
 	slugify,
 	uniqueFilename,
-} from '../../src/markdown/slug.js';
-import { titleFromFilename } from '../../src/markdown/title.js';
+} from '../../src/names/slug.js';
 
 /** Both caps in `slug.ts`, and the property a provider adapter needs of a name. */
 const utf8Bytes = (text: string): number => new TextEncoder().encode(text).length;
@@ -240,5 +241,18 @@ describe('sanitizeFolderName', () => {
 	it('sidesteps COM0, LPT0 and the superscript digits', () => {
 		expect(sanitizeFolderName('LPT0')).toBe('LPT0 folder');
 		expect(sanitizeFolderName('COM\u00b2')).toBe('COM\u00b2 folder');
+	});
+});
+
+describe('isPassageName', () => {
+	it.each([
+		['psalms/Psalm-23.md', true],
+		['Sonnet.MD', true],
+		['Ünïcode.Md', true],
+		['photo.png', false],
+		['readme.mdx', false],
+		['md', false],
+	])('%s is a passage: %s', (name, passage) => {
+		expect(isPassageName(name)).toBe(passage);
 	});
 });

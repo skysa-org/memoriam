@@ -1,8 +1,6 @@
 import {
 	chunkPassage,
-	createFakeProvider,
 	createSyncEngine,
-	type FakeProvider,
 	foldName,
 	isHidden,
 	isWithin,
@@ -16,6 +14,7 @@ import {
 	type SyncEngine,
 	type SyncOutcome,
 } from '@memoriam/core';
+import { createFakeProvider, type FakeProvider } from '@memoriam/core/testing';
 import { describe, expect, it } from 'vitest';
 
 import { createCollection, deleteCollection, renameCollection } from '../src/store/collections.js';

@@ -1,4 +1,5 @@
-import { createSyncEngine, type FakeProvider, mergeFile, RateLimitError } from '@memoriam/core';
+import { createSyncEngine, mergeFile, RateLimitError } from '@memoriam/core';
+import type { FakeProvider } from '@memoriam/core/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { ApiClient } from '../src/api/client.js';

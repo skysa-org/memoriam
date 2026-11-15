@@ -1,5 +1,4 @@
-import { PASSAGE_EXTENSION } from '../config.js';
-import { foldName } from '../markdown/slug.js';
+import { isPassageName } from '../names/fold.js';
 import { isHidden } from '../paths.js';
 import { mergePassage } from '../progress/merge.js';
 import {
@@ -25,7 +24,7 @@ export const mergeFile = ({ path, local, remote }: MergeInput): string | undefin
 		const merged = mergeActivity(local, readActivity(remote));
 		return merged.ok ? merged.text : undefined;
 	}
-	if (isHidden(path) || !foldName(path).endsWith(PASSAGE_EXTENSION)) return undefined;
+	if (isHidden(path) || !isPassageName(path)) return undefined;
 	const merged = mergePassage(local, remote);
 	if (merged.kind === 'same') return local;
 	return merged.kind === 'merged' ? merged.text : undefined;

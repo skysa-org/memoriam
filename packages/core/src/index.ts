@@ -1,90 +1,51 @@
+/**
+ * What the apps may use of core, by name. A name is here because something in
+ * `apps/` imports it, in its source or its tests (which assert with core's real
+ * errors and functions). One nothing outside core needs stays in its module,
+ * so the surface is chosen rather than whatever a module happens to export.
+ * `tests/exports.test.ts` lists the values and the types, so a change to this
+ * list is a change a reviewer sees. The test doubles are
+ * `@memoriam/core/testing`.
+ */
+
 export {
-	APP_DATA_FOLDER,
-	APP_FOLDER_NAME,
-	APP_NAME,
 	CURRENT_CHUNKER,
-	HIDDEN_PREFIX,
 	MARKER_FILE,
-	MARKER_SCHEMA_VERSION,
 	PASSAGE_EXTENSION,
 	PROVIDER_KINDS,
 	type ProviderKind,
 } from './config.js';
 
 export {
-	buildMarker,
-	type BuildMarkerInput,
-	type Marker,
-	type MarkerCreatedBy,
-	type MarkerParseResult,
-	parseMarker,
-	serializeMarker,
-} from './marker.js';
-
-export {
 	AuthError,
-	type ChangeEntry,
-	type ChangeSet,
-	ConflictError,
-	type CreateFileOptions,
-	CursorResetError,
-	type DeletedEntry,
-	type EntryRef,
 	isAuthError,
-	isConflictError,
-	isCursorResetError,
-	isNotFoundError,
 	isRateLimitError,
-	isUnreadableError,
-	NotFoundError,
-	parseRetryAfter,
-	type ProviderErrorCode,
 	RateLimitError,
 	type RemoteEntry,
 	type StorageProvider,
-	UnreadableError,
-	type WriteOptions,
 } from './providers/types.js';
 
-export { withoutNul } from './providers/text.js';
+export { createDropboxProvider, type FetchLike } from './providers/dropbox.js';
 
-export {
-	createDropboxProvider,
-	type DropboxProviderOptions,
-	type FetchLike,
-} from './providers/dropbox.js';
+export { createGDriveProvider } from './providers/gdrive.js';
 
-export { createGDriveProvider, type GDriveProviderOptions } from './providers/gdrive.js';
-export { createOneDriveProvider, type OneDriveProviderOptions } from './providers/onedrive.js';
-
-export {
-	createFakeProvider,
-	type FakeCall,
-	type FakeFault,
-	type FakeOperation,
-	type FakeProvider,
-	type FakeProviderOptions,
-} from './providers/fake.js';
+export { createOneDriveProvider } from './providers/onedrive.js';
 
 export { mergeFile } from './sync/merge.js';
 
-export {
-	conflictContent,
-	conflictFilename,
-	conflictFilePath,
-	conflictFolderPath,
-	conflictPath,
-	conflictStamp,
-} from './sync/conflicts.js';
+export { conflictPath } from './names/conflicts.js';
+
+export { foldName } from './names/fold.js';
+
+export { sanitizeFolderName, uniqueFilename } from './names/slug.js';
+
+export { conflictContent } from './sync/conflicts.js';
 
 export {
 	createSyncEngine,
-	type MergeInput,
 	type SyncEngine,
-	type SyncEngineOptions,
 	type SyncOutcome,
 	type SyncProgress,
-	type SyncStatus,
 } from './sync/engine.js';
 
 export type {
@@ -96,12 +57,11 @@ export type {
 	SyncFolder,
 	SyncNote,
 	SyncOp,
-	SyncOperation,
 	SyncStore,
 	UnreadableFile,
 } from './sync/store.js';
 
-export { contentHash, cyrb53, SHORT_KEY_LENGTH, shortKey } from './hash.js';
+export { contentHash } from './hash.js';
 
 export {
 	ancestorPaths,
@@ -118,138 +78,60 @@ export {
 	SEPARATOR,
 } from './paths.js';
 
-export {
-	frontmatterHasDeclinedId,
-	frontmatterIsEditable,
-	joinFrontmatter,
-	type PassageFrontmatter,
-	type PassageTimes,
-	type ProgressBlock,
-	readFrontmatter,
-	readPassageTimes,
-	splitFrontmatter,
-	type SplitDocument,
-	writeFrontmatter,
-} from './markdown/frontmatter.js';
+export { frontmatterIsEditable, splitFrontmatter } from './markdown/frontmatter/index.js';
 
-export { firstLineEnding, type LineEnding, toLf, withLineEnding } from './markdown/lineEndings.js';
+export { toLf } from './markdown/lineEndings.js';
 
 export {
 	type ParsedPassageFile,
 	parsePassageFile,
-	type ParsePassageFileOptions,
 	serializePassageFile,
-	type SerializePassageFileInput,
 } from './markdown/passage.js';
 
-export {
-	clusters,
-	extensionAt,
-	fitBytes,
-	foldName,
-	MAX_NAME_BYTES,
-	normalizeTag,
-	passageFilename,
-	sanitizeFolderName,
-	slugify,
-	uniqueFilename,
-	UNTITLED_SLUG,
-	utf8Length,
-} from './markdown/slug.js';
-
-export { readTime } from './markdown/time.js';
-
-export {
-	deriveTitle,
-	type DeriveTitleInput,
-	titleFromFilename,
-	UNTITLED_TITLE,
-} from './markdown/title.js';
+export { UNTITLED_TITLE } from './markdown/title.js';
 
 export {
 	type ChunkProgress,
 	MAX_LEVEL,
 	NO_PROGRESS,
 	type Progress,
-	progressBlock,
-	type ProgressRefusal,
-	type ProgressWrite,
 	readProgress,
 	writeProgress,
 } from './progress/codec.js';
 
-export {
-	type Chunk,
-	type ChunkedPassage,
-	chunkKeys,
-	chunkPassage,
-	keyText,
-	knowsChunker,
-} from './passage/chunk.js';
+export { type ChunkedPassage, chunkPassage } from './passage/chunk.js';
 
-export {
-	chunksWithWords,
-	commonWords,
-	type EditedProgress,
-	editedProgress,
-	fillGaps,
-	KEEPS_PROGRESS,
-	type NewChunk,
-	type OldChunk,
-	remapProgress,
-} from './passage/remap.js';
+export { editedProgress, fillGaps } from './passage/remap.js';
 
-export {
-	type PassageLine,
-	type PassageText,
-	type PassageWord,
-	readPassage,
-	type Section,
-} from './passage/text.js';
+export type { PassageLine, PassageWord } from './passage/text.js';
 
-export { firstKey, foldKey, type LineWords, tokenizeLine, type Word } from './passage/tokenize.js';
+export { fade, type Faded } from './practice/fade.js';
 
-export { fade, type Faded, STAY_SHARE, UP_SHARE } from './practice/fade.js';
+export { grade, type Grade } from './practice/grade.js';
 
-export { AGAIN_SHARE, grade, type Grade, type GradeOptions } from './practice/grade.js';
+export { hideWords, type PastPass, type Shown } from './practice/hide.js';
 
-export {
-	HIDDEN_SHARE,
-	type HideInput,
-	hideWords,
-	type PastPass,
-	type Shown,
-} from './practice/hide.js';
+export { QWERTY } from './practice/keyboard.js';
 
-export { isNeighbour, type Neighbours, QWERTY } from './practice/keyboard.js';
-
-export { median, type PassSummary, summarize, tallyMisses } from './practice/pass.js';
+export { type PassSummary, summarize } from './practice/pass.js';
 
 export { randoms } from './practice/random.js';
 
 export {
-	type Effect,
-	HESITATION_FACTOR,
-	HESITATION_FLOOR_MS,
 	hesitationThreshold,
-	type Hint,
 	isTyped,
-	OUTLINE_AFTER_MS,
 	startTyping,
 	type Typing,
 	typing,
 	type TypingEvent,
-	type TypingOptions,
-	WORD_AFTER_MS,
 	type WordResult,
 } from './practice/typing.js';
 
-export { addDays, daysBetween, instant, localDay, weekday } from './day.js';
+export { addDays, daysBetween, localDay } from './day.js';
 
-export { isLearnt, type LearnedPass, learningPass } from './practice/learn.js';
+export { isLearnt, learningPass } from './practice/learn.js';
 
 export {
-	type Activity,
 	type ActivityWrite,
 	activityIsReadable,
 	activityPath,
@@ -260,63 +142,33 @@ export {
 	dayTotals,
 	isActivityPath,
 	mergeActivity,
-	NO_DAY,
 	readActivity,
 	recordedBadges,
 } from './rewards/activity.js';
 
-export {
-	type Badge,
-	type BadgeInput,
-	BADGES,
-	earnedBadges,
-	HELD_BADGES,
-	isBadge,
-	STREAK_BADGES,
-	WORD_BADGES,
-} from './rewards/badges.js';
+export { type Badge, BADGES, earnedBadges, isBadge } from './rewards/badges.js';
 
-export { type HeatDay, heatmap, type HeatWeek } from './rewards/heatmap.js';
+export { heatmap } from './rewards/heatmap.js';
 
-export { mergePassage, type PassageMerge, sameApartFromProgress } from './progress/merge.js';
+export { mergePassage, sameApartFromProgress } from './progress/merge.js';
 
-export { daysHeld, MASTERED_STABILITY, type Measure, measure } from './rewards/mastery.js';
+export { type Measure, measure } from './rewards/mastery.js';
+
+export { type Kept, type Streak, streakOf } from './rewards/streak.js';
 
 export {
-	BREAK_DAYS,
-	FREEZE_EVERY,
-	type Kept,
-	MAX_FREEZES,
-	NO_STREAK,
-	REPAIR_DAYS,
-	REPAIR_FLOOR,
-	repairWords,
-	type Streak,
-	STREAK_MILESTONES,
-	streakOf,
-	type StreakOptions,
-} from './rewards/streak.js';
-
-export {
-	cardOf,
 	DEFAULT_RETENTION,
-	DEFAULT_SCHEDULE,
-	isDue,
-	isRelearning,
 	LAPSE_LEVEL,
 	MAX_INTERVAL,
-	recall,
 	type Retention,
 	RETENTIONS,
 	reviewed,
-	type ScheduleSettings,
 } from './schedule/fsrs.js';
 
 export {
 	DEFAULT_NEW_WORDS,
 	linkSpan,
 	planDay,
-	type PlanOptions,
 	type PlanPassage,
 	RUN_WORDS,
 	runSpan,
