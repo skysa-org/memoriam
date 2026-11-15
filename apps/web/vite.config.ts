@@ -12,8 +12,7 @@ const API_DEV_ORIGIN = 'http://localhost:8787';
 
 // What the app is called and how it looks (docs/ARCHITECTURE.md §8, "Brand"): a
 // deployment's own `brand.json` when `MEMORIAM_BRAND` names one, else `brand/`'s.
-// Set but empty, as a CI variable left unset is, it names none.
-const brand = loadBrand(process.env.MEMORIAM_BRAND || DEFAULT_BRAND);
+const brand = loadBrand(process.env.MEMORIAM_BRAND ?? DEFAULT_BRAND);
 
 const { version } = JSON.parse(
 	readFileSync(new URL('./package.json', import.meta.url), 'utf8')

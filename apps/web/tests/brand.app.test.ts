@@ -20,9 +20,12 @@ const { $schema: schema, ...defaults } = JSON.parse(readFileSync(DEFAULT_BRAND, 
 >;
 
 describe('the default brand', () => {
-	const brand = loadBrand(DEFAULT_BRAND);
+	// Read in each test, so a brand the kit refuses fails the test that reads it
+	// by name, rather than the file as its tests are collected.
+	const defaultBrand = () => loadBrand(DEFAULT_BRAND);
 
 	it('is "Memoriam", in indigo, carrying no one’s name', () => {
+		const brand = defaultBrand();
 		expect(brand.name).toBe('Memoriam');
 		expect(brand.shortName).toBe('Memoriam');
 		expect(brand.colors.light.brand).toBe('#4338CA');
@@ -31,6 +34,7 @@ describe('the default brand', () => {
 	});
 
 	it('keeps the system fonts', () => {
+		const brand = defaultBrand();
 		expect(brand.fonts).toEqual({});
 		const css = brandCss(brand);
 		expect(css).not.toContain('@font-face');
@@ -38,10 +42,11 @@ describe('the default brand', () => {
 		expect(css).toContain('--font-mono: ui-monospace, SFMono-Regular');
 	});
 
-	it('has all six icons', () => {
-		// The kit's loader, above, refuses a brand missing one, or with one at
-		// the wrong size; this is the list it read.
-		expect(brand.icons.map((icon) => icon.file)).toEqual(BRAND_ICONS.map((icon) => icon.file));
+	it('has all six icons, at their sizes', () => {
+		// The kit's loader refuses a brand missing one, or with one at the wrong size.
+		expect(defaultBrand().icons.map((icon) => icon.file)).toEqual(
+			BRAND_ICONS.map((icon) => icon.file)
+		);
 	});
 
 	it("points an editor at the kit's JSON Schema", () => {
