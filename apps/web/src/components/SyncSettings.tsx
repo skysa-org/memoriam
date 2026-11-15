@@ -233,8 +233,8 @@ const reasonOf = (standing: Standing): string | undefined =>
  * so what is shown under it would go with each, and a code half typed with it.
  * Let go once a run ends any other way. The line says how syncing stands as it
  * is. Until the kit keeps a refusal itself (skysa-org/skysa-kit#22), which will
- * also do what this cannot: a run that fails on the network lets it go, and one
- * that gets through keeps it until it ends. Followed in render, as React has
+ * also do what this cannot: going offline, or a run that fails on the network,
+ * lets it go, and one that gets through keeps it until it ends. Followed in render, as React has
  * state follow a prop. What is kept is the connection's it was kept under, so
  * another starts with nothing kept, and nothing else in the section is drawn
  * again for it.

@@ -680,7 +680,7 @@ What is this app's:
   - what needs attention, with the change that is stuck, or "Connect again" when connecting the account again is the answer (`needsReconnect` in `sync/status.ts`, as skysa-notes': the server or the provider wants the account asked again, or the credential reaches nothing).
     That sentence is drawn in the colour of an error, since sync has stopped until it is done.
     This Connect again is not behind the operator's gate, as the one under a policy's refusal is: the account was let in, and connecting it again is how it comes back.
-    Where the gate asks for a code, required or not, "Have a code? Enter it" is beside it (`CodeBeside`), so a policy that let the account in by one code can be given another without disconnecting first (memoriam#45, decided 2026-11-15).
+    Where the gate asks for a code, required or not, the code's line is under it (`CodeBeside`): the code held, until when, and "Use another", or "Have a code? Enter it", so a policy that let the account in by one code can be given another without disconnecting first (memoriam#45, decided 2026-11-15).
     skysa-notes and skysa-draw reach a new code where a source is added, which this app, with one library, cannot do without letting it go.
     The field and Connect again are never open together, as in the gate;
   - a policy's refusal, by the kind of no it gave, with its reason under it where it gave one, and **Connect again**, behind the operator's gate where there is one ("The gate"), since a policy that let the account in by a code may need another to let it in again.
@@ -688,7 +688,7 @@ What is this app's:
   Either, with what is under it, stays through the runs that go on meanwhile (`useStanding`): the kit's scheduler still starts one on focus and on edits, clearing the refusal as it starts, and a code half typed under it would go with each.
   The line says how syncing stands as it is.
   It is let go once a run ends any other way, and a new connection starts with nothing kept.
-  Until the kit keeps a refusal itself (skysa-org/skysa-kit#22), a run that fails on the network lets it go, and one that gets through keeps it until it ends.
+  Until the kit keeps a refusal itself (skysa-org/skysa-kit#22), going offline, or a run that fails on the network, lets it go, and a run that gets through keeps it until it ends.
 
   Sync now runs a sync and tries again a stuck change.
   While a sync goes, a long run draws its bar and the file it is on under the line (`RunProgress`), and **Pause syncing** stops it.

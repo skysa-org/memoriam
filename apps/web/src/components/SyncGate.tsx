@@ -15,8 +15,9 @@ import { askAbout } from '../sync/connectCode.js';
  * Showing them grants nothing: the policy decides at the callback. Each step
  * takes the focus with it, as skysa-notes' does: the control pressed is gone
  * once the step changes, and a focus left on nothing starts again at the top.
- * Beside Connect again, where a library must be connected again, the field
- * alone, never in front of it (`CodeBeside`).
+ * Beside Connect again, where a library must be connected again, the code's
+ * line and field without the message or link, never in front of it
+ * (`CodeBeside`).
  */
 
 type Client = Pick<ApiClient, 'checkConnectCode'>;
