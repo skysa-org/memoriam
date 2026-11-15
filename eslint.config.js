@@ -42,6 +42,16 @@ const CELL = CELL_SYNTAX.map((rule) => ({
 		'a value that changes is a cell: cell() and Cell<T>, from @memoriam/core, or from src/cell.js inside core.',
 }));
 
+/** Every package's source, as the kit names it for its own blocks over src. */
+const SOURCE = ['**/src/**/*.ts', '**/src/**/*.tsx'];
+
+/**
+ * The syntax refused in source: the kit's, this app's, and the cell rule in this
+ * app's words. A block below that sets the rule again starts from this, so none
+ * of the three is left out of the files it covers.
+ */
+const SOURCE_SYNTAX = [...RESTRICTED_SYNTAX, ...SYNTAX, ...CELL];
+
 /** What nothing in packages/core/src may import. */
 const CORE_IMPORTS = [
 	{
@@ -103,8 +113,8 @@ export default skysa({
 		{
 			// A value that changes is a cell, in every package's src, by this
 			// app's word for where it comes from (`CELL`, above).
-			files: ['**/src/**/*.ts', '**/src/**/*.tsx'],
-			rules: { 'no-restricted-syntax': ['error', ...RESTRICTED_SYNTAX, ...SYNTAX, ...CELL] },
+			files: SOURCE,
+			rules: { 'no-restricted-syntax': ['error', ...SOURCE_SYNTAX] },
 		},
 
 		// ---- The app's words ------------------------------------------------
@@ -113,13 +123,7 @@ export default skysa({
 			// The cell rule too, since this sets the rule again for every .tsx.
 			files: ['apps/web/src/**/*.tsx'],
 			rules: {
-				'no-restricted-syntax': [
-					'error',
-					...RESTRICTED_SYNTAX,
-					...SYNTAX,
-					...INLINE_WORDS,
-					...CELL,
-				],
+				'no-restricted-syntax': ['error', ...SOURCE_SYNTAX, ...INLINE_WORDS],
 			},
 		},
 
@@ -256,9 +260,7 @@ export default skysa({
 				],
 				'no-restricted-syntax': [
 					'error',
-					...RESTRICTED_SYNTAX,
-					...SYNTAX,
-					...CELL,
+					...SOURCE_SYNTAX,
 					{
 						selector:
 							"MemberExpression[object.name='globalThis'][property.name='process']",
@@ -337,7 +339,7 @@ export default skysa({
 			// any tests folder. The kit's own block refuses its packages' doubles
 			// and those paths; this one, set again over the same files, names them
 			// too, since it replaces the kit's list rather than adding to it.
-			files: ['**/src/**/*.ts', '**/src/**/*.tsx'],
+			files: SOURCE,
 			rules: {
 				'@typescript-eslint/no-restricted-imports': [
 					'error',

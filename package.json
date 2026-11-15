@@ -18,7 +18,7 @@
 		"knip": "knip",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
-		"typecheck": "pnpm -r run typecheck",
+		"typecheck": "pnpm -r run typecheck && tsc -p tsconfig.json --noEmit",
 		"db:migrate": "pnpm --filter @memoriam/api run db:migrate",
 		"db:migrate:remote": "pnpm --filter @memoriam/api run db:migrate:remote",
 		"verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm knip && pnpm test",
