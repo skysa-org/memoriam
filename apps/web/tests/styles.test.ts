@@ -1,9 +1,10 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { loadBrand } from '@skysa/pwa';
 import { describe, expect, it } from 'vitest';
 
-import { loadBrand } from '../brand.js';
+import { DEFAULT_BRAND } from '../pwaApp.js';
 import { allStyles, importedStyles, STYLES_FOLDER } from './support/styles.js';
 
 /**
@@ -16,7 +17,7 @@ const withoutComments = (css: string): string => css.replace(/\/\*[\s\S]*?\*\//g
 const tokensCss = (): string =>
 	withoutComments(readFileSync(join(STYLES_FOLDER, 'tokens.css'), 'utf8'));
 
-/** Written by the brand's stylesheet (`brand.ts`). */
+/** Written by the brand's stylesheet (the kit's `brandCss`). */
 const SET_ELSEWHERE: ReadonlySet<string> = new Set(['--font-mono', '--font-sans']);
 
 /** What `buttons.css` itself gives exactly this selector, not a rule that only starts like it. */
@@ -109,7 +110,7 @@ describe('the stylesheet', () => {
 	// The defaults stand in for the brand's stylesheet, so they are the default
 	// brand's own colours, and change with it.
 	it("defaults the brand's colours to the default brand's", () => {
-		const brand = loadBrand();
+		const brand = loadBrand(DEFAULT_BRAND);
 		const defaults = [...tokensCss().matchAll(/--(on-)?brand:\s*(#[0-9a-f]{6})/gi)].map(
 			(match) =>
 				`${match[1] === undefined ? 'brand' : 'onBrand'} ${(match[2] ?? '').toLowerCase()}`

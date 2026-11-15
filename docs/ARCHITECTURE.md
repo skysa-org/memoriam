@@ -413,8 +413,11 @@ A command is registered again only when what the palette shows of it changes (it
 <a id="pwa"></a><a id="s8"></a>
 ## 8. PWA
 
-- **Generated service worker.** vite-plugin-pwa (`apps/web/pwa.ts`) precaches the shell, so the app starts offline.
-  Navigation falls back to the shell only for `/`.
+- **Generated service worker.** The service worker and the manifest are built by the shared kit's `@skysa/pwa` from what this app hands it (`PwaApp`, made in `apps/web/pwaApp.ts`) and from its brand (below).
+  How they are built is the kit's ([kit §8, "PWA specifics"](https://github.com/skysa-org/skysa-kit/blob/main/docs/ARCHITECTURE.md#pwa-specifics)): the shell precached, so the app starts offline; `/api/*` and the storage providers' origins network-only, so none of the worker's caches answers one; nothing inline written into the page (§9); and the checklist a browser applies before it offers to install, which is a test there.
+- **One route.** The app has one, `/`, and where in it a link opens is in the hash, which no request carries: the shell answers `/`, and any other path on the origin is left to the network.
+  `MEMORIAM_PWA` in `pwaApp.ts` hands that route to the build, and `tests/pwa.app.test.ts` checks every route the router has against it.
+  It is no share target.
 - **Updates.** `registerType: 'prompt'`: a new build waits for the user to reload, and never swaps in under a pass being typed.
 - **Reload stops the app's requests first** (`sync/beforeUpdate.ts`, from skysa-notes #360).
   Reload asks the waiting worker to take over, and Chromium lets it only once the worker it replaces has no fetch event in flight.
@@ -425,7 +428,9 @@ A command is registered again only when what the palette shows of it changes (it
   A pause lasts only until the app is opened again, so syncing starts again by itself after the reload.
   The prompt says it is updating meanwhile, and after ten seconds what else will do it.
   A tab still on a build from before this does not listen, and can still hold the take-over to the five minutes.
-- **Brand.** The name, colours, icons and fonts come from a `brand.json`: `apps/web/brand/` by default, or the file `MEMORIAM_BRAND` names (`apps/web/brand.ts`).
+- **Brand.** The name, colours, icons and fonts come from a `brand.json`: `apps/web/brand/` by default ("Memoriam", in indigo, on the system fonts), or the file `MEMORIAM_BRAND` names.
+  The default is the app's, handed to the build (`DEFAULT_BRAND` in `pwaApp.ts`), and `tests/brand.app.test.ts` holds it to what is said here.
+  The kit reads and checks the file, stopping a build with a brand that would install without its icon, and its JSON Schema is the kit's (`@skysa/pwa/brand.schema.json`).
   The default icons are drawn by `apps/web/brand/draw-icons.mjs`.
 - **Installing from the browser.** As skysa-notes.
   Chromium's install event is held for a banner.
@@ -798,10 +803,10 @@ knip.json              what knip counts as used: the entries it cannot find on i
 .github/workflows/     ci.yml (the gate, the build and its size), cla.yml, release.yml
 apps/web/              the PWA
   vite.config.ts       vite-plugin-pwa, the brand, the /api proxy
-  brand/  brand.ts     the brand: name, colours, icons
-  pwa.ts               manifest and service worker
+  brand/               the default brand: name, colours, icons (draw-icons.mjs)
+  pwaApp.ts            what the kit's @skysa/pwa builds from: the one route, the default brand
   public/_headers      CSP and HSTS: nothing may be added to script-src (§9)
-  scripts/             bundleBudget.mjs: the size budget the build is held to (pnpm size)
+  scripts/             size.mjs: the size budget the build is held to (pnpm size), measured by @skysa/pwa/budget
   src/
     main.tsx jitless.ts the entry, and what it imports first: zod is never to use new Function
     router.ts          the router, over hash history
