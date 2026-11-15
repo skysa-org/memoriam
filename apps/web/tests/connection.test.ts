@@ -1,5 +1,5 @@
 import { chunkPassage, parsePassageFile, ROOT } from '@memoriam/core';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { importLibrary } from '../src/archive/importLibrary.js';
 import {
@@ -14,12 +14,7 @@ import {
 	boundConnection,
 	unbindLibrary,
 } from '../src/store/connection.js';
-import {
-	createDatabase,
-	LOCAL_CONNECTION_ID,
-	type MemoriamDatabase,
-	type NoteRecord,
-} from '../src/store/db.js';
+import { LOCAL_CONNECTION_ID, type MemoriamDatabase, type NoteRecord } from '../src/store/db.js';
 import { deviceId } from '../src/store/device.js';
 import { libraryView } from '../src/store/library.js';
 import {
@@ -30,6 +25,7 @@ import {
 	updatePassage,
 } from '../src/store/passages.js';
 import { recordPass } from '../src/store/practice.js';
+import { freshDatabase } from './support/db.js';
 
 /**
  * The library bound to a connection, and not (docs/ARCHITECTURE.md §10, "The
@@ -40,11 +36,7 @@ import { recordPass } from '../src/store/practice.js';
 let db: MemoriamDatabase;
 
 beforeEach(() => {
-	db = createDatabase(`connection-${crypto.randomUUID()}`);
-});
-
-afterEach(async () => {
-	await db.delete();
+	db = freshDatabase();
 });
 
 const DROPBOX = { connectionId: 'dropbox-1', provider: 'dropbox' } as const;

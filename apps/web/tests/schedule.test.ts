@@ -1,20 +1,17 @@
 import { addDays, chunkPassage, localDay, MAX_LEVEL, ROOT } from '@memoriam/core';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
-import { createDatabase, type MemoriamDatabase } from '../src/store/db.js';
+import type { MemoriamDatabase } from '../src/store/db.js';
 import { createPassage } from '../src/store/passages.js';
 import { recordPass } from '../src/store/practice.js';
 import { planCounts, planFor, startedOn } from '../src/store/schedule.js';
 import { DEFAULT_SETTINGS, readSettings, saveSetting } from '../src/store/settings.js';
+import { freshDatabase } from './support/db.js';
 
 let db: MemoriamDatabase;
 
 beforeEach(() => {
-	db = createDatabase(`schedule-${crypto.randomUUID()}`);
-});
-
-afterEach(async () => {
-	await db.delete();
+	db = freshDatabase();
 });
 
 const TEXT =

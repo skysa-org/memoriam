@@ -10,12 +10,11 @@ import {
 	type StorageProvider,
 	type SyncStore,
 } from '@memoriam/core';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { createCollection, deleteCollection, renameCollection } from '../src/store/collections.js';
 import { bindLibrary } from '../src/store/connection.js';
 import {
-	createDatabase,
 	isLive,
 	LOCAL_CONNECTION_ID,
 	type MemoriamDatabase,
@@ -31,6 +30,7 @@ import {
 } from '../src/store/passages.js';
 import { recordPass } from '../src/store/practice.js';
 import { createDexieSyncStore } from '../src/sync/store.js';
+import { freshDatabase } from './support/db.js';
 
 /**
  * The push queue a change here leaves behind, sent: skysa-notes'
@@ -40,18 +40,6 @@ import { createDexieSyncStore } from '../src/sync/store.js';
 
 const CONNECTION = 'dropbox-1';
 const NOW = () => new Date('2026-10-13T10:00:00Z');
-
-const opened: MemoriamDatabase[] = [];
-
-afterEach(async () => {
-	await Promise.all(opened.splice(0).map((db) => db.delete()));
-});
-
-const freshDatabase = (): MemoriamDatabase => {
-	const db = createDatabase(`push-${crypto.randomUUID()}`);
-	opened.push(db);
-	return db;
-};
 
 const details = (title: string, text = `${title}, the words.\n`, collection = ROOT) =>
 	({ title, reference: '', collection, text }) satisfies PassageDetails;

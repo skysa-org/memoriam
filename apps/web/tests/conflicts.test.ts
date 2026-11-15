@@ -8,7 +8,7 @@ import {
 	ROOT,
 	writeProgress,
 } from '@memoriam/core';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
 	conflictsIn,
@@ -22,7 +22,7 @@ import {
 	originalPathOf,
 } from '../src/store/conflicts.js';
 import { bindLibrary } from '../src/store/connection.js';
-import { createDatabase, type MemoriamDatabase, type NoteRecord } from '../src/store/db.js';
+import type { MemoriamDatabase, NoteRecord } from '../src/store/db.js';
 import {
 	createPassage,
 	deletePassage,
@@ -30,15 +30,12 @@ import {
 	passageText,
 	rowFor,
 } from '../src/store/passages.js';
+import { freshDatabase } from './support/db.js';
 
 let db: MemoriamDatabase;
 
 beforeEach(() => {
-	db = createDatabase(`conflicts-${crypto.randomUUID()}`);
-});
-
-afterEach(async () => {
-	await db.delete();
+	db = freshDatabase();
 });
 
 const PSALM: PassageDetails = {

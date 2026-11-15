@@ -9,13 +9,14 @@ import {
 	readActivity,
 	readProgress,
 } from '@memoriam/core';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { libraryArchive } from '../src/archive/exportLibrary.js';
 import { gather, importLibrary } from '../src/archive/importLibrary.js';
 import { joined, zipParts } from '../src/archive/zip.js';
-import { createDatabase, type MemoriamDatabase } from '../src/store/db.js';
+import type { MemoriamDatabase } from '../src/store/db.js';
 import { createPassage, rowFor } from '../src/store/passages.js';
+import { freshDatabase } from './support/db.js';
 
 /**
  * Files into the library (docs/ARCHITECTURE.md §10): a backup back in, the
@@ -26,11 +27,7 @@ import { createPassage, rowFor } from '../src/store/passages.js';
 let db: MemoriamDatabase;
 
 beforeEach(() => {
-	db = createDatabase(`import-${crypto.randomUUID()}`);
-});
-
-afterEach(async () => {
-	await db.delete();
+	db = freshDatabase();
 });
 
 const NOW = Date.UTC(2026, 9, 13, 9);
@@ -144,17 +141,10 @@ describe('importLibrary', () => {
 		const backup = file('memoriam.zip', joined(exported.ok ? exported.parts : []));
 		const before = (await rows()).map((row) => [row.id, row.path, row.source]);
 
-		const elsewhere = createDatabase(`import-${crypto.randomUUID()}`);
-		try {
-			expect(await bring([backup], elsewhere)).toMatchObject({ added: 1, records: 1 });
-			const after = await elsewhere.notes
-				.where('connectionId')
-				.equals('local')
-				.sortBy('path');
-			expect(after.map((row) => [row.id, row.path, row.source])).toEqual(before);
-		} finally {
-			await elsewhere.delete();
-		}
+		const elsewhere = freshDatabase();
+		expect(await bring([backup], elsewhere)).toMatchObject({ added: 1, records: 1 });
+		const after = await elsewhere.notes.where('connectionId').equals('local').sortBy('path');
+		expect(after.map((row) => [row.id, row.path, row.source])).toEqual(before);
 
 		expect(await bring([backup])).toMatchObject({ added: 0, unchanged: 1, records: 0 });
 		expect((await rows()).map((row) => [row.id, row.path, row.source])).toEqual(before);

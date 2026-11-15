@@ -10,9 +10,10 @@ import {
 	SNOOZED_KEY,
 } from '../src/store/backup.js';
 import { bindLibrary } from '../src/store/connection.js';
-import { createDatabase, type MemoriamDatabase } from '../src/store/db.js';
+import type { MemoriamDatabase } from '../src/store/db.js';
 import { rowFor } from '../src/store/passages.js';
 import { getPreference } from '../src/store/prefs.js';
+import { freshDatabase } from './support/db.js';
 
 /** When Today reminds the user to back up, and what puts the reminder away. */
 
@@ -63,12 +64,11 @@ describe('the backup store', () => {
 	let db: MemoriamDatabase;
 
 	beforeEach(() => {
-		db = createDatabase(`backup-${crypto.randomUUID()}`);
+		db = freshDatabase();
 	});
 
-	afterEach(async () => {
+	afterEach(() => {
 		vi.restoreAllMocks();
-		await db.delete();
 	});
 
 	const row = (path: string, createdAt: number, updatedAt: number) =>

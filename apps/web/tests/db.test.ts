@@ -1,13 +1,8 @@
 import Dexie from 'dexie';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { createDatabase, LOCAL_CONNECTION_ID, type MemoriamDatabase } from '../src/store/db.js';
-
-const opened: Dexie[] = [];
-
-afterEach(async () => {
-	await Promise.all(opened.splice(0).map((db) => db.delete()));
-});
+import { deleteAfterTest } from './support/db.js';
 
 describe('the schema', () => {
 	it('carries a library written by version 1 forward, every passage in it live, to the latest', async () => {
@@ -32,7 +27,7 @@ describe('the schema', () => {
 		before.close();
 
 		const db: MemoriamDatabase = createDatabase(name);
-		opened.push(db);
+		deleteAfterTest(db);
 		expect(await db.notes.get([LOCAL_CONNECTION_ID, 'p1'])).toMatchObject({
 			title: 'Psalm 23',
 			deletedLocally: 0,

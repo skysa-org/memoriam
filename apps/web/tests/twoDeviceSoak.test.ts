@@ -16,11 +16,11 @@ import {
 	type SyncEngine,
 	type SyncOutcome,
 } from '@memoriam/core';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { createCollection, deleteCollection, renameCollection } from '../src/store/collections.js';
 import { bindLibrary } from '../src/store/connection.js';
-import { createDatabase, isLive, type MemoriamDatabase, type NoteRecord } from '../src/store/db.js';
+import { isLive, type MemoriamDatabase, type NoteRecord } from '../src/store/db.js';
 import {
 	createPassage,
 	deletePassage,
@@ -31,6 +31,7 @@ import {
 } from '../src/store/passages.js';
 import { recordPass } from '../src/store/practice.js';
 import { createDexieSyncStore } from '../src/sync/store.js';
+import { freshDatabase } from './support/db.js';
 
 /**
  * Two devices sharing one remote, each with its own database, web store and
@@ -154,12 +155,6 @@ interface Soak {
 	/** What an action fired while a push was in flight threw. */
 	readonly errors: Map<number, string>;
 }
-
-const opened: MemoriamDatabase[] = [];
-
-afterEach(async () => {
-	await Promise.all(opened.splice(0).map((db) => db.delete()));
-});
 
 /** Every file on the remote, by path, leaving out the app's own. */
 const remoteFiles = (fake: FakeProvider) =>
@@ -566,8 +561,7 @@ const device = async (
 	fake: FakeProvider,
 	counters: Map<string, number>
 ): Promise<Device> => {
-	const db = createDatabase(`soak-${name}-${crypto.randomUUID()}`);
-	opened.push(db);
+	const db = freshDatabase();
 	await bindLibrary(db, { connectionId: CONNECTION, provider: 'dropbox' });
 	const now = () => START + (counters.get('clock') ?? 0) * 1000;
 	const store = createDexieSyncStore(db, { connectionId: CONNECTION, now });

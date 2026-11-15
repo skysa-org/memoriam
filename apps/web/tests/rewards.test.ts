@@ -1,18 +1,15 @@
 import { activityPath, addDays, chunkPassage, localDay, ROOT } from '@memoriam/core';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
-import { createDatabase, type MemoriamDatabase } from '../src/store/db.js';
+import type { MemoriamDatabase } from '../src/store/db.js';
 import { createPassage, rowFor } from '../src/store/passages.js';
 import { recordBadges, rewardsFor } from '../src/store/rewards.js';
+import { freshDatabase } from './support/db.js';
 
 let db: MemoriamDatabase;
 
 beforeEach(() => {
-	db = createDatabase(`rewards-${crypto.randomUUID()}`);
-});
-
-afterEach(async () => {
-	await db.delete();
+	db = freshDatabase();
 });
 
 const NOW = new Date(2026, 9, 13, 9, 0);

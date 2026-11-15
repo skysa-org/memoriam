@@ -414,7 +414,10 @@ copy of the library is the one in this browser, so a backup is a file the user k
 
 **A newer build in another tab ends this one.** As skysa-notes (`store/staleTab.ts`): the older
 tab flushes what it holds, closes its database for good, and says it is out of date. A frozen tab
-lets go of the database (`store/frozenTab.ts`).
+lets go of the database (`store/frozenTab.ts`). Only the app's own database is watched for either
+(`watchTab` in `store/db.ts`), not every one `createDatabase` makes. The frozen-tab watch puts a
+listener on `document`, and a database made for a test, or beside the app's for a moment, would
+otherwise leave one behind for each.
 
 **Where the app is.** The location lives in the URL hash: TanStack Router with hash history, a
 file route for each screen (`#/library`, `#/passage/<id>`). The server is only ever asked for `/`,

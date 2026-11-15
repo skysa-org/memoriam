@@ -3,14 +3,15 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { activityPath, ROOT } from '@memoriam/core';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { archiveName, libraryArchive } from '../src/archive/exportLibrary.js';
 import { readZip, type ZipEntry } from '../src/archive/readZip.js';
 import { crc32, joined, zipParts, type ZipWrite } from '../src/archive/zip.js';
 import { createCollection } from '../src/store/collections.js';
-import { createDatabase, type MemoriamDatabase } from '../src/store/db.js';
+import type { MemoriamDatabase } from '../src/store/db.js';
 import { createPassage, rowFor } from '../src/store/passages.js';
+import { freshDatabase } from './support/db.js';
 
 /**
  * The archive both ways: what the writer makes, the reader takes apart again,
@@ -110,11 +111,7 @@ describe('libraryArchive', () => {
 	let db: MemoriamDatabase;
 
 	beforeEach(() => {
-		db = createDatabase(`archive-${crypto.randomUUID()}`);
-	});
-
-	afterEach(async () => {
-		await db.delete();
+		db = freshDatabase();
 	});
 
 	it('holds every passage, every empty collection, and the activity files', async () => {
