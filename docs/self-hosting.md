@@ -334,7 +334,11 @@ logs record each socket being opened. Tell your users if that matters to them.
 
 **What it costs in requests.** Each device opens a socket each time the app comes to the front: a
 ticket request, the upgrade, and a Durable Object request. Roughly 80 Worker requests per active
-user per day, plus a few hundred WebSocket messages billed at 20:1 as Durable Object requests.
+user per day, plus a few hundred WebSocket messages billed at 20:1 as Durable Object requests. A
+browser whose security policy refuses the socket (`apps/web/public/_headers` says which) asks for
+a ticket again each time the app comes to the front, and up to once a minute while it is in view:
+up to 60 Worker requests an hour for each open window
+([skysa-org/skysa-kit#22](https://github.com/skysa-org/skysa-kit/issues/22)).
 
 - On **Workers Paid** that is about $0.0007 per active user per month (Cloudflare's published
   prices, 2026-10).

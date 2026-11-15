@@ -19,7 +19,7 @@ import {
 	createRouter,
 	RouterProvider,
 } from '@tanstack/react-router';
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -107,6 +107,32 @@ const schedulerShowing = (status: Partial<SchedulerStatus> = {}) => {
 		subscribe: () => () => undefined,
 		syncNow: vi.fn(() => Promise.resolve()),
 		pause: vi.fn(),
+	};
+};
+
+const IDLE: SchedulerStatus = { phase: 'idle', conflicts: [] };
+
+/** A scheduler whose status changes when told, telling its subscribers, as the kit's does. */
+const schedulerSaying = (first: Partial<SchedulerStatus>) => {
+	const said = new Map<'status', SchedulerStatus>([['status', { ...IDLE, ...first }]]);
+	const listeners = new Set<(status: SchedulerStatus) => void>();
+	return {
+		status: () => said.get('status') ?? IDLE,
+		subscribe: (listener: (status: SchedulerStatus) => void) => {
+			listeners.add(listener);
+			return () => {
+				listeners.delete(listener);
+			};
+		},
+		syncNow: vi.fn(() => Promise.resolve()),
+		pause: vi.fn(),
+		say: (status: Partial<SchedulerStatus>) => {
+			const now = { ...IDLE, ...status };
+			said.set('status', now);
+			listeners.forEach((listener) => {
+				listener(now);
+			});
+		},
 	};
 };
 
@@ -338,20 +364,57 @@ describe('the operator’s gate', () => {
 		);
 	});
 
-	it('hides the buttons shown before while another code is asked for', async () => {
+	it('never has the field and the buttons open together, where a code is not required', async () => {
 		const { client, checkConnectCode } = gated({ connectCode: { label: 'Invite code' } });
 		checkConnectCode.mockResolvedValue({ ok: true, value: { accepted: true, expiresIn: 600 } });
 		const user = userEvent.setup();
 		showSettings({ client, scheduler: schedulerShowing(), connectReturn: holding() });
 
-		await user.click(await screen.findByRole('button', { name: 'Already have access?' }));
-		await user.type(screen.getByRole('textbox', { name: 'Invite code' }), 'INVITE-7');
+		// A connect sends the code held, never what is in the field.
+		expect(await screen.findByRole('textbox', { name: 'Invite code' })).toBeTruthy();
+		expect(screen.queryByRole('button', { name: 'Connect Dropbox' })).toBeNull();
+		await user.click(screen.getByRole('button', { name: 'Already have access?' }));
+		expect(screen.queryByRole('textbox')).toBeNull();
+		expect(document.activeElement).toBe(
+			screen.getByRole('button', { name: 'Connect Dropbox' })
+		);
+
+		await user.click(screen.getByRole('button', { name: 'Have a code? Enter it' }));
+		expect(screen.queryByRole('button', { name: 'Connect Dropbox' })).toBeNull();
+		const field = screen.getByRole('textbox', { name: 'Invite code' });
+		expect(document.activeElement).toBe(field);
+		await user.type(field, 'INVITE-7');
 		await user.click(screen.getByRole('button', { name: 'Use code' }));
 		await user.click(await screen.findByRole('button', { name: 'Use another Invite code' }));
 
-		// Connecting from beside the field would send the code held, not the one in it.
+		// Another code, or Cancel back to the one held: not the buttons beside it.
+		expect(screen.getByRole('textbox', { name: 'Invite code' })).toBeTruthy();
 		expect(screen.queryByRole('button', { name: 'Connect Dropbox' })).toBeNull();
-		expect(screen.getByRole('button', { name: 'Already have access?' })).toBeTruthy();
+		expect(screen.queryByRole('button', { name: 'Already have access?' })).toBeNull();
+		expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy();
+	});
+
+	it('takes neither an edit nor Cancel while the policy is asked about a code', async () => {
+		holdConnectCode('INVITE-7', 600);
+		const { client, checkConnectCode } = gated({
+			connectCode: { label: 'Invite code', required: true },
+		});
+		const answer = Promise.withResolvers<Awaited<ReturnType<ApiClient['checkConnectCode']>>>();
+		checkConnectCode.mockReturnValue(answer.promise);
+		const user = userEvent.setup();
+		showSettings({ client, scheduler: schedulerShowing(), connectReturn: holding() });
+
+		await user.click(await screen.findByRole('button', { name: 'Use another Invite code' }));
+		const field = screen.getByRole('textbox', { name: 'Invite code' });
+		await user.type(field, 'INVITE-8');
+		await user.click(screen.getByRole('button', { name: 'Use code' }));
+
+		expect(await screen.findByRole('button', { name: 'Checking…' })).toBeTruthy();
+		expect(field.hasAttribute('readonly')).toBe(true);
+		expect(screen.getByRole('button', { name: 'Cancel' })).toHaveProperty('disabled', true);
+		answer.resolve({ ok: true, value: { accepted: true, expiresIn: 600 } });
+		expect(await screen.findByRole('button', { name: 'Connect Dropbox' })).toBeTruthy();
+		expect(heldConnectCode()).toBe('INVITE-8');
 	});
 
 	it('says what went wrong asking about a code', async () => {
@@ -681,6 +744,44 @@ describe('connected', () => {
 		});
 		expect(await screen.findByText('This account cannot sync on this server.')).toBeTruthy();
 		expect(screen.queryByRole('link')).toBeNull();
+	});
+
+	it('keeps a code half typed under a refusal through the runs that go on while refused', async () => {
+		await bound();
+		const { client } = gated({ connectCode: { label: 'Invite code', required: true } });
+		const refusal: Partial<SchedulerStatus> = {
+			phase: 'attention',
+			refusal: 'not_entitled',
+			denial: { code: 'lapsed' },
+		};
+		const scheduler = schedulerSaying(refusal);
+		const user = userEvent.setup();
+		showSettings({ client, scheduler, connectReturn: holding() });
+
+		await user.type(await screen.findByRole('textbox', { name: 'Invite code' }), 'INVITE');
+		// The window's focus starts a run, which the policy refuses again.
+		act(() => {
+			scheduler.say({ phase: 'syncing' });
+		});
+		expect(screen.getByText('Syncing…')).toBeTruthy();
+		expect(screen.getByRole('textbox', { name: 'Invite code' })).toHaveProperty(
+			'value',
+			'INVITE'
+		);
+		act(() => {
+			scheduler.say(refusal);
+		});
+		expect(screen.getByRole('textbox', { name: 'Invite code' })).toHaveProperty(
+			'value',
+			'INVITE'
+		);
+
+		// A run the policy let through: nothing refused is left to say.
+		act(() => {
+			scheduler.say({ phase: 'idle' });
+		});
+		expect(screen.queryByRole('textbox')).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Connect again' })).toBeNull();
 	});
 
 	it('says nothing of a policy’s refusal under a provider this app cannot sync with', async () => {

@@ -35,7 +35,8 @@ const build = (env: WorkerEnv): AppOrError => {
 			console.warn(`Environment: ${warning}`);
 		});
 		const config = parseEnv(env);
-		if (config.relay && env.RELAY_HUB === undefined) {
+		const hub = config.relay ? env.RELAY_HUB : undefined;
+		if (config.relay && hub === undefined) {
 			// The same shape as `parseEnv`'s refusals, so the operator reads one kind
 			// of message for every way the environment is wrong.
 			throw new Error(
@@ -45,9 +46,7 @@ const build = (env: WorkerEnv): AppOrError => {
 		}
 		return createApp({
 			config,
-			...(config.relay && env.RELAY_HUB !== undefined
-				? { relay: durableObjectRelay(env.RELAY_HUB) }
-				: {}),
+			...(hub === undefined ? {} : { relay: durableObjectRelay(hub) }),
 		});
 	} catch (err) {
 		return err instanceof Error ? err : new Error(String(err));

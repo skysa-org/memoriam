@@ -208,6 +208,31 @@ const statusLine = (
 	}
 };
 
+/**
+ * A refusal by the server's policy, with its reason, where the status line says
+ * it (`statusLine`). Kept through the runs that go on while refused, each of
+ * which starts as `syncing`, so the gate under it keeps a code half typed; let
+ * go once a run ends any other way. Followed in render, as React has state
+ * follow a prop.
+ */
+const useRefused = (
+	status: SchedulerStatus,
+	syncable: boolean
+): Readonly<{ reason: string | undefined }> | undefined => {
+	const now =
+		!needsReconnect(status) &&
+		syncable &&
+		status.phase === 'attention' &&
+		status.refusal === 'not_entitled';
+	const [refused, setRefused] = useState<Readonly<{ reason: string | undefined }> | undefined>(
+		undefined
+	);
+	const reason = status.denial?.reason;
+	if (now && (refused === undefined || refused.reason !== reason)) setRefused({ reason });
+	if (!now && status.phase !== 'syncing' && refused !== undefined) setRefused(undefined);
+	return now ? { reason } : refused;
+};
+
 interface Props {
 	client?: Client;
 	scheduler?: Pick<SyncScheduler, 'status' | 'subscribe' | 'syncNow' | 'pause'>;
@@ -285,9 +310,7 @@ const Connected = ({
 	const status = useSyncStatus(scheduler);
 	const reconnect = needsReconnect(status);
 	const syncable = CONNECTABLE.includes(kind);
-	// Said only where the status line says it (`statusLine`).
-	const refused =
-		!reconnect && syncable && status.phase === 'attention' && status.refusal === 'not_entitled';
+	const refused = useRefused(status, syncable);
 	const [asking, setAsking] = useState(false);
 	const [held, setHeld] = useState<Held | undefined>(undefined);
 	const provider = PROVIDER_LABELS[kind];
@@ -320,9 +343,9 @@ const Connected = ({
 			<p className={reconnect ? 'field-hint sync-problem' : 'field-hint'} role="status">
 				{statusLine(status, provider, syncable, now)}
 			</p>
-			{refused && (
+			{refused !== undefined && (
 				<Refused
-					reason={status.denial?.reason}
+					reason={refused.reason}
 					gate={gate}
 					client={client}
 					connect={() => {

@@ -60,7 +60,9 @@ const useHeldUntil = (): number | undefined => {
  * say. Under it, after a refusal, why, in the policy's words where it gave
  * some: a live region, since the answer comes after the press. The button
  * stays pressable while the policy is asked, as skysa-notes' does: one
- * disabled under the press takes the focus with it.
+ * disabled under the press takes the focus with it. The field, though, is
+ * read-only meanwhile, and Cancel not to be had: the answer is about the code
+ * asked about, and is held as it comes.
  */
 const CodeForm = ({
 	label,
@@ -110,6 +112,7 @@ const CodeForm = ({
 				ref={field}
 				className="field"
 				value={code}
+				readOnly={checking}
 				maxLength={MAX_CONNECT_CODE}
 				autoComplete="one-time-code"
 				autoCapitalize="off"
@@ -128,7 +131,12 @@ const CodeForm = ({
 					{checking ? t('sync.gate.code.checking') : t('sync.gate.code.use')}
 				</button>
 				{onCancel !== undefined && (
-					<button type="button" className="button ghost" onClick={onCancel}>
+					<button
+						type="button"
+						className="button ghost"
+						disabled={checking}
+						onClick={onCancel}
+					>
 						{t('common.cancel')}
 					</button>
 				)}
@@ -146,6 +154,12 @@ const CodeForm = ({
 
 /** Where the focus goes once a step has changed: a new object each time, so the same place twice moves it twice. */
 type FocusTo = Readonly<{ to: 'buttons' | 'field' | 'change' }>;
+
+/**
+ * The field and the buttons are never both open, as in skysa-notes' gate: a
+ * connect sends the code held, never what is in the field, so buttons beside
+ * a field would connect with a code other than the one on screen.
+ */
 
 /** The operator's gate in front of `children`, the connect buttons; the buttons as they are where there is none. */
 export const SyncGate = ({
@@ -171,8 +185,73 @@ export const SyncGate = ({
 		if (focus?.to === 'change') change.current?.focus();
 	}, [focus]);
 	if (gate === undefined) return children;
-	const holding = asked !== undefined && until !== undefined && !changing;
+	const held = asked !== undefined && until !== undefined;
 	const required = asked?.required === true;
+	// Open while another code is asked for, and where none is held until the
+	// buttons are asked for instead ("Already have access?", never where required).
+	const fieldOpen = asked !== undefined && (changing || (!held && !shown));
+	const showing = !fieldOpen && (held || shown);
+	const step = (): ReactNode => {
+		if (asked === undefined) return null;
+		if (held && !changing) {
+			return (
+				<p className="field-hint">
+					{t('sync.gate.code.accepted', {
+						label: asked.label,
+						time: formatMoment(until),
+					})}{' '}
+					<button
+						ref={change}
+						type="button"
+						className="button ghost"
+						aria-label={t('sync.gate.code.changeLabel', { label: asked.label })}
+						onClick={() => {
+							setChanging(true);
+							setShown(false);
+							setFocus({ to: 'field' });
+						}}
+					>
+						{t('sync.gate.code.change')}
+					</button>
+				</p>
+			);
+		}
+		if (fieldOpen) {
+			return (
+				<CodeForm
+					label={asked.label}
+					client={client}
+					onAccepted={() => {
+						setChanging(false);
+						setFocus({ to: 'buttons' });
+					}}
+					onCancel={
+						changing
+							? () => {
+									setChanging(false);
+									setFocus({ to: 'change' });
+								}
+							: undefined
+					}
+					focused={focus?.to === 'field'}
+				/>
+			);
+		}
+		return (
+			<p className="field-hint">
+				<button
+					type="button"
+					className="button ghost"
+					onClick={() => {
+						setShown(false);
+						setFocus({ to: 'field' });
+					}}
+				>
+					{t('sync.gate.code.enter')}
+				</button>
+			</p>
+		);
+	};
 	return (
 		<>
 			<p>{gate.message}</p>
@@ -182,51 +261,12 @@ export const SyncGate = ({
 					{gate.action.label}
 				</a>
 			</p>
-			{asked !== undefined &&
-				(holding ? (
-					<p className="field-hint">
-						{t('sync.gate.code.accepted', {
-							label: asked.label,
-							time: formatMoment(until),
-						})}{' '}
-						<button
-							ref={change}
-							type="button"
-							className="button ghost"
-							aria-label={t('sync.gate.code.changeLabel', { label: asked.label })}
-							onClick={() => {
-								setChanging(true);
-								// Hidden again until a code is taken or let be, where they were shown.
-								setShown(false);
-								setFocus({ to: 'field' });
-							}}
-						>
-							{t('sync.gate.code.change')}
-						</button>
-					</p>
-				) : (
-					<CodeForm
-						label={asked.label}
-						client={client}
-						onAccepted={() => {
-							setChanging(false);
-							setFocus({ to: 'buttons' });
-						}}
-						onCancel={
-							until === undefined
-								? undefined
-								: () => {
-										setChanging(false);
-										setFocus({ to: 'change' });
-									}
-						}
-						focused={focus?.to === 'field'}
-					/>
-				))}
-			{holding || (!required && shown) ? (
+			{step()}
+			{showing ? (
 				<div ref={buttons}>{children}</div>
 			) : (
-				!required && (
+				!required &&
+				!changing && (
 					<div className="form-actions">
 						<button
 							type="button"

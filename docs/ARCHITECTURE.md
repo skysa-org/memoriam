@@ -651,6 +651,8 @@ What is this app's:
   - Where the code is `required`, the buttons wait for one the policy has taken.
     Otherwise "Already have access?" shows them as they are.
     Showing them grants nothing: the policy decides at the callback.
+  - The field and the buttons are never open together, as in skysa-notes: a connect sends the code held, never what is in the field.
+    Each step moves the focus to what it opened.
   - A value the policy gave to hold in place of a typed code is never shown.
     It is asked about again as the app loads, hourly and at once after a refused connect, and let go of where the policy no longer takes it (`askAgain` in `sync/connectCode.ts`, as skysa-notes').
 - **The way back.** The server's callback sends the browser to the path the app started from, with the outcome in the query (`?connect=ok`).
@@ -677,6 +679,7 @@ What is this app's:
   - what needs attention, with the change that is stuck, or "Connect again" when connecting the account again is the answer (`needsReconnect` in `sync/status.ts`, as skysa-notes': the server or the provider wants the account asked again, or the credential reaches nothing).
     That sentence is drawn in the colour of an error, since sync has stopped until it is done;
   - a policy's refusal, by the kind of no it gave, with its reason under it where it gave one, and **Connect again**, behind the operator's gate where there is one ("The gate"), since a policy that let the account in by a code may need another to let it in again.
+    It stays through the runs that go on while refused, so a code half typed into the gate is kept.
 
   Sync now runs a sync and tries again a stuck change.
   While a sync goes, a long run draws its bar and the file it is on under the line (`RunProgress`), and **Pause syncing** stops it.
