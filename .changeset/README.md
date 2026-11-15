@@ -13,8 +13,8 @@ pnpm run changeset:version    # consume them: bump versions, write CHANGELOGs
 ## What is unusual here, and why
 
 **One version for all packages.**
-- `@memoriam/core` and `@memoriam/web` are `fixed` together, so they always carry the same number.
-  `@memoriam/api` joins them when sync arrives.
+- `@memoriam/core`, `@memoriam/web` and `@memoriam/api` are `fixed` together, so they always
+  carry the same number.
 - They are not separate libraries. They make up one app, and the shared number is what the
   `vX.Y.Z` tag names.
 

@@ -104,17 +104,21 @@ const hasName = (doc: Doc, number: string, name: string): boolean =>
 	);
 
 /**
- * What names the document a `§` is in: this repo's two, or another (skysa-notes',
- * the shared kit's, an RFC, the ZIP format's note), whose sections are not this
- * test's to check.
+ * What names the document a `§` is in: this repo's two, skysa-notes', or
+ * another (the shared kit's, an RFC, the ZIP format's note), whose sections are
+ * not this test's to check. skysa-notes' are checked only for what moved to the
+ * kit ("cites the kit, not skysa-notes").
  */
 const MARKER =
-	/(?:skysa-notes'\s*`?(?:docs\/)?ARCHITECTURE\.md`?|`?(?:docs\/)?(ARCHITECTURE|research)\.md`?|RFC \d+|OpenID Connect Core|APPNOTE\.TXT|skysa-notes'|\[kit|the kit's\s*`?(?:docs\/)?ARCHITECTURE\.md`?)[,(]?\s*/gu;
-const docOf = (word: string | undefined): Doc | undefined =>
-	word === 'ARCHITECTURE' || word === 'research' ? word : undefined;
+	/(?:([Ss]kysa-notes['’](?:\s*`?(?:docs\/)?ARCHITECTURE\.md`?)?)|`?(?:docs\/)?(ARCHITECTURE|research)\.md`?|RFC \d+|OpenID Connect Core|APPNOTE\.TXT|\[kit|the kit's\s*`?(?:docs\/)?ARCHITECTURE\.md`?)[,(]?\s*/gu;
+type Cited = Doc | 'skysa-notes';
+const docOf = (notes: string | undefined, word: string | undefined): Cited | undefined => {
+	if (notes !== undefined) return 'skysa-notes';
+	return word === 'ARCHITECTURE' || word === 'research' ? word : undefined;
+};
 
 /** `exact` when its document is named right before it, so its number can be held to account. */
-type Citation = Readonly<{ doc: Doc; number: string; name?: string; exact: boolean }>;
+type Citation = Readonly<{ doc: Cited; number: string; name?: string; exact: boolean }>;
 
 /**
  * Each `§` in a text, with what it cites. One right after a document's name is
@@ -126,7 +130,7 @@ const citations = (file: string, text: string): readonly Citation[] => {
 	const flat = unwrapped(text);
 	const markers = [...flat.matchAll(MARKER)].map((match) => ({
 		end: match.index + match[0].length,
-		doc: docOf(match[1]),
+		doc: docOf(match[1], match[2]),
 	}));
 	return [...flat.matchAll(/§(\d+(?:\.\d+)*)(?:,? ["“]([^"”]{3,80})["”])?/gu)].flatMap(
 		(match) => {
@@ -149,30 +153,32 @@ const citations = (file: string, text: string): readonly Citation[] => {
 };
 
 /**
- * skysa-notes' sections whose design moved to the shared kit, which this repo
- * cites at the kit now (skysa-notes' record 0018, step 5): the adapters (§4,
- * §5), the server (§6), and the engine's parts of §7. The rest of §7 is
- * skysa-notes' own app, cited by name; an unnamed §7 could be either.
+ * Whether a citation of skysa-notes' ARCHITECTURE is of design that moved to
+ * the shared kit, which this repo cites at the kit now (skysa-notes' record
+ * 0018, step 5). Its §4, §5 and §6, the adapters and the server, moved whole.
+ * Every other section holds some of the kit's design and some of skysa-notes'
+ * own app, so one is cited by the part it means, and the engine's parts of §7
+ * are the kit's.
  */
-const KIT_IN_7 = [
+const KIT_SECTIONS = new Set(['4', '5', '6']);
+const KIT_PARTS = [
 	'sync loop',
 	'folder renames',
 	'conflict rule',
 	'merge before the copy',
 	'what the loop above left open',
+	'pushing files',
+	'a file that is not utf-8',
 ];
-const NOTES_CITATION =
-	/skysa-notes'\s*`?(?:docs\/)?ARCHITECTURE\.md`?,?\s*§(\d+)(?:,? ["“]([^"”]{3,80})["”])?/gu;
-const citedAtNotes = (text: string): readonly string[] =>
-	[...unwrapped(text).matchAll(NOTES_CITATION)].flatMap(([whole, number, name]) =>
-		number === '4' ||
-		number === '5' ||
-		number === '6' ||
-		(number === '7' &&
-			(name === undefined || KIT_IN_7.some((part) => name.toLowerCase().startsWith(part))))
-			? [whole]
-			: []
-	);
+const movedToKit = ({ doc, number, name, exact }: Citation): boolean =>
+	doc === 'skysa-notes' &&
+	exact &&
+	(KIT_SECTIONS.has(number.split('.')[0] ?? number) ||
+		name === undefined ||
+		KIT_PARTS.some((part) => name.toLowerCase().startsWith(part)));
+
+/** Where the rule's own examples are, which are not citations. */
+const THIS_FILE = 'apps/web/tests/docs.test.ts';
 
 /** Each anchor of this repo's ARCHITECTURE a text links to: not the shared kit's, which is its own. */
 const citedAnchors = (text: string): readonly string[] =>
@@ -234,9 +240,9 @@ describe('the docs', () => {
 		expect(citations('a.ts', '(`docs/research.md` §2.1)')).toEqual([
 			{ doc: 'research', number: '2.1', exact: true },
 		]);
-		expect(citations('a.ts', `skysa-notes' docs/ARCHITECTURE.md §7, "Pushing files"`)).toEqual(
-			[]
-		);
+		expect(citations('a.ts', `skysa-notes' docs/ARCHITECTURE.md §7, "Pushing files"`)).toEqual([
+			{ doc: 'skysa-notes', number: '7', name: 'Pushing files', exact: true },
+		]);
 		expect(citations('a.ts', 'RFC 9110 §10.2.3, which says')).toEqual([]);
 		expect(
 			citations(
@@ -256,15 +262,19 @@ describe('the docs', () => {
 		).toEqual([]);
 	});
 
+	const ours = cited.flatMap(({ doc, ...rest }) =>
+		doc === 'skysa-notes' ? [] : [{ doc, ...rest }]
+	);
+
 	it('has every citation by number lead to a section', () => {
-		const lost = cited
+		const lost = ours
 			.filter(({ exact, doc, number }) => exact && !hasNumber(doc, number))
 			.map(({ file, doc, number }) => `${file}: ${doc} §${number}`);
 		expect(lost).toEqual([]);
 	});
 
 	it('has every citation by name lead to that section', () => {
-		const lost = cited.flatMap(({ file, doc, number, name }) =>
+		const lost = ours.flatMap(({ file, doc, number, name }) =>
 			name === undefined || hasName(doc, number, name)
 				? []
 				: [`${file}: ${doc} §${number}, "${name}"`]
@@ -283,15 +293,19 @@ describe('the docs', () => {
 
 	it('cites the kit, not skysa-notes, for the design that moved to it', () => {
 		const notes = "skysa-notes' docs/ARCHITECTURE.md";
-		expect(citedAtNotes(`${notes} §6, "Backend"`)).toHaveLength(1);
-		expect(citedAtNotes(` * (${notes}\n * §7): the copy`)).toHaveLength(1);
-		expect(citedAtNotes(`${notes} §7, "Conflict rule (concrete)"`)).toHaveLength(1);
-		expect(citedAtNotes(`${notes} §7, "Pushing files"`)).toEqual([]);
-		expect(citedAtNotes(`${notes} §8`)).toEqual([]);
+		const moved = (text: string) => citations('a.ts', text).filter(movedToKit);
+		expect(moved(`${notes} §6, "Backend"`)).toHaveLength(1);
+		expect(moved(` * (${notes}\n * §7): the copy`)).toHaveLength(1);
+		expect(moved(`(${notes} §5.1)`)).toHaveLength(1);
+		expect(moved(`as each provider in ${notes.slice(0, 13)} §5.`)).toHaveLength(1);
+		expect(moved(`${notes} §7, "Pushing files, and pulling them"`)).toHaveLength(1);
+		expect(moved(`${notes} §8`)).toHaveLength(1);
+		expect(moved(`${notes} §8, "Share target"`)).toEqual([]);
+		expect(moved(`${notes.slice(0, 13)} sync/account.ts, as §10, "Connecting"`)).toEqual([]);
 
-		const stale = CITING.flatMap((file) =>
-			citedAtNotes(read(file)).map((citation) => `${file}: ${citation}`)
-		);
+		const stale = cited
+			.filter((citation) => citation.file !== THIS_FILE && movedToKit(citation))
+			.map(({ file, number, name }) => `${file}: §${number}${name ? `, "${name}"` : ''}`);
 		expect(stale).toEqual([]);
 	});
 

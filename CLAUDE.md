@@ -23,7 +23,7 @@ change.
   same as skysa-notes': functional style, arrow functions, no loops, `let` or classes, readonly
   types. This app's own blocks in `eslint.config.js` add its layers and that every user-facing
   string comes from `t()`.
-- The shared layers are the kit's (`@skysa/*`, `docs/ARCHITECTURE.md` §10): a fix to one is a kit
+- The shared layers are the kit's (the `@skysa/*` packages above): a fix to one is a kit
   PR, which this app takes by moving its pin. Code ported from skysa-notes that stays this app's
   keeps its shape; rename `skysa` to `memoriam`, and check the original there before reinventing
   something it already solves.
@@ -39,7 +39,7 @@ change.
   edited safely, refuse and tell the user. Never drop a pass silently.
 - `chunker: N` pins the algorithm a passage was split with. Never change an existing chunker
   version's output; add a new version.
-- Never lose user data. Import and (later) sync merge progress where they can, and otherwise keep
+- Never lose user data. Import and sync merge progress where they can, and otherwise keep
   both copies.
 - `script-src 'self'` with nothing inline, eval'd or `new Function`'d. This is a hard requirement
   (`docs/ARCHITECTURE.md` §9). Nothing may be added to `script-src` in `apps/web/public/_headers`.

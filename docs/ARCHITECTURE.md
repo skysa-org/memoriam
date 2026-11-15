@@ -20,10 +20,10 @@ Cite by anchor from now on; a citation such as `§10, "Push timing"` still works
 |---|---|
 | What it is | A local-first PWA for learning passages of text by heart (poems, speeches, scripture, creeds, anything) and keeping them learnt |
 | Core interaction | Show one short chunk. The user types the first letter of each word. Words are hidden progressively across levels until the chunk is recalled from nothing |
-| Stack | As skysa-notes: a pnpm monorepo (`apps/web`, `packages/core`, and `apps/api` once sync arrives), strict TypeScript, its functional ESLint rules (the shared kit's `@skysa/eslint-config` now, with its TypeScript and Prettier settings), Vite + React + TanStack Router + Dexie + vite-plugin-pwa, zod, Vitest, changesets |
-| Storage | The markdown string is the only source of truth, held byte for byte in IndexedDB. Real `.md` files exist in zip exports, and on a storage provider once sync arrives |
+| Stack | As skysa-notes: a pnpm monorepo (`apps/web`, `packages/core` and `apps/api`), strict TypeScript, its functional ESLint rules (the shared kit's `@skysa/eslint-config` now, with its TypeScript and Prettier settings), Vite + React + TanStack Router + Dexie + vite-plugin-pwa, zod, Vitest, changesets |
+| Storage | The markdown string is the only source of truth, held byte for byte in IndexedDB. Real `.md` files exist in zip exports, and on a storage provider where the library syncs |
 | Progress | Stored in each passage's own frontmatter, in a `progress:` map with one entry per chunk (§3). Daily activity and badges live in hidden `.memoriam/activity-YYYY.md` files |
-| Phasing | Phase 1: a complete app on one device, with export and import. Phase 2: optional sync to Dropbox, Google Drive or OneDrive, through skysa-notes' engine and Worker (§10) |
+| Phasing | Phase 1: a complete app on one device, with export and import. Phase 2: optional sync to Dropbox, Google Drive or OneDrive, through the shared kit's engine and Worker (§10) |
 | Grading | Fully automatic, from misses, hints and hesitations. The user does not grade themselves |
 | A wrong key | Shows the correct word at once, in red. The user then types its letter, and it counts as one miss |
 | Rewards | Moderate, and informational rather than controlling (`docs/research.md` §5): a forgiving streak, mastery and memory health per passage, a due queue, an activity heat map, milestone badges |
@@ -64,7 +64,7 @@ Poems/
   Ozymandias.md
 .memoriam/                    the app's own files: hidden, but exported and synced
   activity-2026.md
-.memoriam-app.json            the marker, once sync arrives
+.memoriam-app.json            the marker, in a provider's folder
 ```
 
 **A passage file:**

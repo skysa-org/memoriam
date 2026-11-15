@@ -8,8 +8,8 @@ import { serializePassageFile } from '../markdown/passage.js';
 /**
  * What happens when both sides changed the same passage (the kit's
  * docs/ARCHITECTURE.md §7, "Conflict rule (concrete)"): the copy is written
- * beside it, under a name from `names/passages.ts`, holding the contents this
- * builds.
+ * beside it, under the name the engine makes from `PASSAGE_FORMAT`'s extension,
+ * holding the contents this builds.
  */
 
 /**
