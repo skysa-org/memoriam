@@ -7,6 +7,7 @@ import {
 	credentialFor,
 	hashCredential,
 	keepCredential,
+	PENDING_CREDENTIAL_ID,
 	pendingCredential,
 	type Refusal,
 	type Result,
@@ -22,11 +23,7 @@ import {
 	unbindLibrary,
 	updateBinding,
 } from '../src/store/connection.js';
-import {
-	LOCAL_CONNECTION_ID,
-	type MemoriamDatabase,
-	PENDING_CREDENTIAL_ID,
-} from '../src/store/db.js';
+import { LOCAL_CONNECTION_ID, type MemoriamDatabase } from '../src/store/db.js';
 import { createPassage } from '../src/store/passages.js';
 import { isLive } from '../src/store/rowStates.js';
 import {

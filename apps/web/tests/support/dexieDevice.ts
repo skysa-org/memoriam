@@ -72,7 +72,9 @@ export const dexieDevice = (): ClientDevice => {
 		store: clientStoreOf(db),
 		app: APP,
 		written: passageOf,
-		schedule: (options) => createLibraryScheduler(db, options),
+		// The suites hand their own timings, practice's wait among them: none
+		// unless they say.
+		schedule: (options) => createLibraryScheduler(db, { lazyMs: undefined, ...options }),
 		create: async (_connectionId, name, body) => {
 			const passage = await createPassage(db, {
 				title: name,
@@ -108,7 +110,8 @@ export const dexieDevice = (): ClientDevice => {
 				await db.fileBytes.add({
 					connectionId: LIBRARY,
 					id,
-					bytes: bytes.buffer,
+					// The view's own bytes, wherever in its buffer they are.
+					bytes: bytes.slice().buffer,
 					pinned: 1,
 					lastUsedAt: 0,
 				});
@@ -128,9 +131,12 @@ export const dexieDevice = (): ClientDevice => {
 				lazy: op.lazy === true,
 			})),
 		lastSyncAt: async (connectionId) => (await db.syncState.get(connectionId))?.lastSyncAt,
+		// The credential first, as the app holds it before it binds
+		// (`claimConnection`), and forgets it before it lets go
+		// (`stopSyncingHere`): a scheduler that sees the binding finds it.
 		bind: async (connectionId, credential) => {
-			await bindLibrary(db, { connectionId, provider: 'dropbox' });
 			await holdCredential(db, connectionId, credential === undefined ? {} : { credential });
+			await bindLibrary(db, { connectionId, provider: 'dropbox' });
 		},
 		show: async (connectionId) => {
 			// The library shows the connection it is bound to, and no other.
@@ -161,8 +167,8 @@ export const dexieDevice = (): ClientDevice => {
 		letGo: async (connectionId) => {
 			// Every passage is kept, unsent work or none: the library is cut loose,
 			// never kept detached (`unbindLibrary`).
-			await unbindLibrary(db, { connectionId });
 			await forgetCredential(db, connectionId);
+			await unbindLibrary(db, { connectionId });
 		},
 		reconnect: (connectionId) =>
 			// One transaction, which a live query may never show the middle of.

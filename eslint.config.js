@@ -252,7 +252,7 @@ export default skysa({
 				'no-restricted-imports': [
 					'error',
 					{
-						paths: [CLIENT_BELOW_SYNC(['CredentialRecord', 'PENDING_CREDENTIAL_ID'])],
+						paths: [CLIENT_BELOW_SYNC(['CredentialRecord'])],
 						patterns: [
 							NOT_ABOVE(
 								[

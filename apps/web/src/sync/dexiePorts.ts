@@ -1,9 +1,10 @@
 import type { ClientStore, TokenStates } from '@skysa/client';
+import { outOfAttempts } from '@skysa/sync';
 import { liveQuery } from 'dexie';
 
 import { bindingCount, boundConnection, updateBinding } from '../store/connection.js';
 import { LOCAL_CONNECTION_ID, type MemoriamDatabase } from '../store/db.js';
-import { MAX_OP_ATTEMPTS, outOfAttempts } from '../store/queue.js';
+import { MAX_OP_ATTEMPTS } from '../store/queue.js';
 import { rowsOf } from '../store/rows.js';
 import { createDexieSyncStore, toSyncOp } from './store.js';
 

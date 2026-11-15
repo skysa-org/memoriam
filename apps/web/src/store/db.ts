@@ -162,7 +162,7 @@ export interface FileBytesRecord {
 
 // A credential this device holds is a row of `credentials`, defined beside the
 // functions over it, which are the kit's (`@skysa/client`).
-export { type CredentialRecord, PENDING_CREDENTIAL_ID } from '@skysa/client';
+export type { CredentialRecord } from '@skysa/client';
 
 interface PreferenceRecord {
 	key: string;

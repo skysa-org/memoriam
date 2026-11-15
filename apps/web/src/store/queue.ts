@@ -59,16 +59,6 @@ type QueueDb = Pick<MemoriamDatabase, 'opQueue' | 'syncState'>;
  */
 export const MAX_OP_ATTEMPTS = 8;
 
-/**
- * Whether an op has been given up on for now, and is holding up everything
- * queued behind it: the engine stops a batch at `attempts >= maxAttempts`.
- * Never an `rmdir`, which the engine completes and steps over instead.
- */
-export const outOfAttempts = (
-	op: Pick<OpQueueRecord, 'op' | 'attempts'>,
-	maxAttempts: number = MAX_OP_ATTEMPTS
-): boolean => op.op !== 'rmdir' && op.attempts >= maxAttempts;
-
 // Every helper here returns the promise Dexie made rather than being an `async`
 // function. They run inside the writers' transactions, and Dexie follows its
 // own promises through a transaction reliably but native ones only for a

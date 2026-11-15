@@ -10,6 +10,7 @@ import {
 import type { SyncPhase, SyncSchedulerOptions } from '@skysa/client';
 import {
 	cleanups,
+	quiet,
 	reaches,
 	remote,
 	schedulerDefaults,
@@ -29,6 +30,7 @@ import { createLibraryScheduler } from '../src/sync/libraryScheduler.js';
 import { createDexieSyncStore } from '../src/sync/store.js';
 import { holdCredential } from './support/connection.js';
 import { freshDatabase } from './support/db.js';
+import { deferred } from './support/deferred.js';
 
 /**
  * The app's scheduler (`sync/libraryScheduler.ts`): the kit's, handed what is
@@ -67,15 +69,6 @@ const started = (
 	});
 	scheduler.start();
 	return { db, scheduler, env, server, remote: theRemote };
-};
-
-/** A promise the test settles when it says. */
-const deferred = () => {
-	let resolve: () => void = () => undefined;
-	const promise = new Promise<void>((settle) => {
-		resolve = settle;
-	});
-	return { promise, resolve };
 };
 
 const row = (db: MemoriamDatabase, id: string) => db.notes.get([LOCAL_CONNECTION_ID, id]);
@@ -184,6 +177,39 @@ describe("the app's scheduler", () => {
 		expect((await row(db, note.id))?.source).toBe(theRemote.fake.contentAt(note.path));
 		// The passage and the year's activity, each merged rather than copied.
 		expect(await db.notes.count()).toBe(2);
+	});
+
+	it('keeps a pass back past the debounce, to go with the next sync', async () => {
+		// Practice's rule (docs/ARCHITECTURE.md §10, "Push timing"), which the
+		// app's scheduler is made with whatever timings it is handed: a session
+		// records a pass every few seconds, and none is sent alone.
+		const db = await bound();
+		const note = await createPassage(db, {
+			title: 'Two verses',
+			reference: '',
+			collection: ROOT,
+			text: TWO_VERSES,
+		});
+		const { scheduler, env, remote: theRemote } = started(db);
+		await vi.waitFor(async () => {
+			expect((await row(db, note.id))?.dirty).toBe(0);
+		});
+		await reaches(scheduler, 'idle');
+		const sent = theRemote.fake.contentAt(note.path);
+		const waiting = env.pending().length;
+
+		await practise(db, note, { chunk: 0, level: 2, device: 'here' });
+		// Once the scheduler has seen it queued and set its wait, well past the
+		// kit's 2 s debounce and short of the minute's poll.
+		await vi.waitFor(() => {
+			expect(env.pending()).toHaveLength(waiting + 1);
+		});
+		env.advance(10_000);
+		await quiet();
+
+		expect(theRemote.fake.contentAt(note.path)).toBe(sent);
+		await scheduler.syncNow();
+		expect(levels(theRemote.fake.contentAt(note.path))).toEqual([2]);
 	});
 
 	it('follows the library to another connection once the first is let go', async () => {

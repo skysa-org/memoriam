@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { UpdatePrompt } from '../src/components/shell/UpdatePrompt.js';
+import { deferred } from './support/deferred.js';
 
 /**
  * The prompt a new build waiting to take over puts up. Reload stops the app's
@@ -21,15 +22,6 @@ vi.mock('virtual:pwa-register/react', () => ({
 		updateServiceWorker: registered.updateServiceWorker,
 	}),
 }));
-
-/** A promise the test settles. */
-const deferred = () => {
-	const box = new Map<'resolve', () => void>();
-	const promise = new Promise<void>((resolve) => {
-		box.set('resolve', resolve);
-	});
-	return { promise, resolve: () => box.get('resolve')?.() };
-};
 
 beforeEach(() => {
 	registered.setNeedRefresh.mockReset();
