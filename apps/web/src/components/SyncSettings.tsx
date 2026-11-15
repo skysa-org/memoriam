@@ -235,20 +235,28 @@ const reasonOf = (standing: Standing): string | undefined =>
  * is. Until the kit keeps a refusal itself (skysa-org/skysa-kit#22), which will
  * also do what this cannot: a run that fails on the network lets it go, and one
  * that gets through keeps it until it ends. Followed in render, as React has
- * state follow a prop; `Connected` is keyed by its connection, so another
- * starts with nothing kept.
+ * state follow a prop. What is kept is the connection's it was kept under, so
+ * another starts with nothing kept, and nothing else in the section is drawn
+ * again for it.
  */
-const useStanding = (status: SchedulerStatus, syncable: boolean): Standing | undefined => {
+const useStanding = (
+	status: SchedulerStatus,
+	syncable: boolean,
+	connectionId: string
+): Standing | undefined => {
 	const now = standingOf(status, syncable);
-	const [kept, setKept] = useState<Standing | undefined>(undefined);
+	const [kept, setKept] = useState<
+		Readonly<{ connectionId: string; standing: Standing }> | undefined
+	>(undefined);
+	const mine = kept?.connectionId === connectionId ? kept.standing : undefined;
 	if (
 		now !== undefined &&
-		(kept === undefined || kept.kind !== now.kind || reasonOf(kept) !== reasonOf(now))
+		(mine === undefined || mine.kind !== now.kind || reasonOf(mine) !== reasonOf(now))
 	) {
-		setKept(now);
+		setKept({ connectionId, standing: now });
 	}
 	if (now === undefined && status.phase !== 'syncing' && kept !== undefined) setKept(undefined);
-	return now ?? kept;
+	return now ?? mine;
 };
 
 /** Connect again, in a row of its own under what the line says. */
@@ -330,7 +338,7 @@ const Connected = ({
 	const db = useDb();
 	const status = useSyncStatus(scheduler);
 	const syncable = CONNECTABLE.includes(kind);
-	const standing = useStanding(status, syncable);
+	const standing = useStanding(status, syncable, bound.connectionId);
 	const reconnect = standing?.kind === 'reconnect';
 	const [asking, setAsking] = useState(false);
 	const [held, setHeld] = useState<Held | undefined>(undefined);
@@ -577,7 +585,6 @@ export const SyncSettings = ({
 				</>
 			) : (
 				<Connected
-					key={bound.connectionId}
 					bound={bound}
 					kind={bound.provider}
 					client={client}

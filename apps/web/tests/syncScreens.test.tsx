@@ -381,6 +381,9 @@ describe('the operator’s gate', () => {
 
 		await user.click(screen.getByRole('button', { name: 'Have a code? Enter it' }));
 		expect(screen.queryByRole('button', { name: 'Connect Dropbox' })).toBeNull();
+		// With nothing held to go back to, the way back is to the buttons.
+		expect(screen.getByRole('button', { name: 'Already have access?' })).toBeTruthy();
+		expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
 		const field = screen.getByRole('textbox', { name: 'Invite code' });
 		expect(document.activeElement).toBe(field);
 		await user.type(field, 'INVITE-7');
@@ -703,7 +706,11 @@ describe('connected', () => {
 			leave,
 		});
 
-		await user.click(await screen.findByRole('button', { name: 'Have a code? Enter it' }));
+		const enter = await screen.findByRole('button', { name: 'Have a code? Enter it' });
+		// Offered, under Connect again: not the field first, as where a library is connected first.
+		expect(screen.getByRole('button', { name: 'Connect again' })).toBeTruthy();
+		expect(screen.queryByRole('textbox')).toBeNull();
+		await user.click(enter);
 		// The account was let in once: no message and no link.
 		expect(screen.queryByText('Sync is for members of the reading group.')).toBeNull();
 		expect(screen.queryByRole('link')).toBeNull();
@@ -791,6 +798,16 @@ describe('connected', () => {
 			scheduler.say({ phase: 'syncing' });
 		});
 		expect(screen.getByRole('button', { name: 'Connect again' })).toBeTruthy();
+		// Not through a run that ends retrying, which the kit says nothing of the
+		// refusal in, until it keeps one (skysa-org/skysa-kit#22).
+		act(() => {
+			scheduler.say({ phase: 'retrying', error: 'Failed to fetch' });
+		});
+		expect(screen.queryByRole('button', { name: 'Connect again' })).toBeNull();
+		act(() => {
+			scheduler.say(reauthorize);
+		});
+		expect(screen.getByRole('button', { name: 'Connect again' })).toBeTruthy();
 
 		// A run that ended any other way: nothing to connect again.
 		act(() => {
@@ -834,6 +851,8 @@ describe('connected', () => {
 			scheduler.say({ phase: 'syncing' });
 		});
 		expect(screen.getByRole('button', { name: 'Connect again' })).toBeTruthy();
+		const disconnect = screen.getByRole('button', { name: 'Disconnect' });
+		disconnect.focus();
 
 		// Another tab connected again and took up a new connection, whose first
 		// run starts at once: nothing kept is about it.
@@ -847,6 +866,9 @@ describe('connected', () => {
 			expect(screen.queryByRole('button', { name: 'Connect again' })).toBeNull();
 		});
 		expect(screen.getByText('Syncing…')).toBeTruthy();
+		// Nothing else in the section is drawn again for it.
+		expect(screen.getByRole('button', { name: 'Disconnect' })).toBe(disconnect);
+		expect(document.activeElement).toBe(disconnect);
 	});
 
 	it('keeps Connect again where it is as the server says it has a gate', async () => {
@@ -882,10 +904,14 @@ describe('connected', () => {
 			answers.get('answer')?.();
 			await config.mock.results[0]?.value;
 		});
-		expect(screen.getByRole('button', { name: 'Have a code? Enter it' })).toBeTruthy();
-		// The same button, not one drawn again under the focus.
+		const enter = screen.getByRole('button', { name: 'Have a code? Enter it' });
+		// The same button, not one drawn again under the focus, and still first,
+		// so it does not move from under a pointer either.
 		expect(screen.getByRole('button', { name: 'Connect again' })).toBe(again);
 		expect(document.activeElement).toBe(again);
+		expect(again.compareDocumentPosition(enter) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+			Node.DOCUMENT_POSITION_FOLLOWING
+		);
 	});
 
 	it('says why a library bound to a provider this app cannot sync with does not', async () => {

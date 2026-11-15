@@ -248,20 +248,6 @@ export const SyncGate = ({
 	const showing = !fieldOpen && (held || shown);
 	const step = (): ReactNode => {
 		if (asked === undefined) return null;
-		if (held && !changing) {
-			return (
-				<CodeLine
-					label={asked.label}
-					until={until}
-					opener={change}
-					onClick={() => {
-						setChanging(true);
-						setShown(false);
-						setFocus({ to: 'field' });
-					}}
-				/>
-			);
-		}
 		if (fieldOpen) {
 			return (
 				<CodeForm
@@ -283,11 +269,14 @@ export const SyncGate = ({
 				/>
 			);
 		}
+		// The code held and Use another, or Have a code? Enter it.
 		return (
 			<CodeLine
 				label={asked.label}
-				until={undefined}
+				until={until}
+				opener={change}
 				onClick={() => {
+					if (held) setChanging(true);
 					setShown(false);
 					setFocus({ to: 'field' });
 				}}
@@ -337,10 +326,10 @@ export const SyncGate = ({
  * by one code is given another without disconnecting first. No message and no
  * link: the account was let in once. Closed until asked for, with Cancel back
  * to where it was opened from; Connect again is hidden while it is open, as
- * the gate hides its buttons, since a connect sends the code held. Where no
- * code is asked for, or `/config` has not answered, Connect again alone, in
- * the same place, so it is not drawn again under the focus as the answer
- * comes.
+ * the gate hides its buttons, since a connect sends the code held. Connect
+ * again comes first, so the line under it does not move it from under a
+ * pointer as `/config` answers; where no code is asked for, or `/config` has
+ * not answered, it is drawn alone, as the same button, so the focus stays.
  */
 export const CodeBeside = ({
 	asked,
@@ -383,12 +372,12 @@ export const CodeBeside = ({
 	};
 	return (
 		<>
-			{asked !== undefined && step(asked)}
 			{!open && (
 				<div ref={buttons} tabIndex={-1}>
 					{children}
 				</div>
 			)}
+			{asked !== undefined && step(asked)}
 		</>
 	);
 };
