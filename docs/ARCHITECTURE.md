@@ -461,6 +461,9 @@ The Content-Security-Policy in `apps/web/public/_headers`, checked by `tests/csp
 - `connect-src`: this origin, which serves the API, and the hosts of the storage providers the browser syncs with directly, as skysa-notes lists them.
   These are `*.dropboxapi.com`; `graph.microsoft.com` and the hosts OneDrive serves file bytes from (`*.files.1drv.com`, `my.microsoftpersonalcontent.com`, `*.sharepoint.com`); and `www.googleapis.com`.
   Nothing else leaves the device.
+  The change relay's socket (§10, "The change relay") is on this origin too, at `wss:`, which `'self'` covers in a browser that follows CSP Level 3.
+  A browser that does not refuses the socket, and finds other devices' changes by polling, as without a relay.
+  `wss:` is not added for it, since that would let script reach any WebSocket host.
 - `src/jitless.ts` stops zod probing for `new Function`.
 
 <a id="sync"></a><a id="s10"></a>
@@ -578,12 +581,13 @@ Those of their tests that need what one library does not have are skipped by nam
 They will run here once the kit can be told what a device has (skysa-org/skysa-kit#21).
 `sync/runtime.ts` makes the one scheduler, which `main.tsx` starts and which does nothing while the library is bound to nothing.
 Where it differs:
-- **No change relay, and no connect gate.** skysa-notes' server can run a relay, which tells a device as soon as another has pushed, and an operator's gate in front of connecting: a message, a code its policy checks, and the reasons beside a refusal.
-  Memoriam's server runs neither ("The server").
-  So the client asks for no relay tickets and holds no connect code, and Settings shows no gate.
-  The kit's client takes a `not_entitled` answer as a refusal.
-  This app's Worker sets no policy that gives one, though an operator's own entry over the kit's `createApp` could, and Settings has no words of its own for one yet.
-  A device hears of another's changes at its next sync: on opening, on focus, on coming into view, and every minute while in view.
+- **The change relay**, where the instance runs one ("The server"), is the kit's ([kit §6, "Change relay"](https://github.com/skysa-org/skysa-kit/blob/main/docs/ARCHITECTURE.md#change-relay)).
+  `sync/runtime.ts` hands the scheduler the kit's `createRelayFactory`, which asks `/config` first, so an instance without one is never asked for a ticket.
+  A device that has pushed says so over a socket, and the connection's other devices sync within a second or two.
+  It is only ever a hint.
+  A device still hears of another's changes at its next sync, on opening, on focus, on coming into view, and every minute while in view, and that is all it has where there is no relay, or the browser refuses the socket (§9).
+- **A policy's refusal.** The kit's client takes a `not_entitled` answer as a refusal, with the kind of no the policy gave and its reason (`status.denial`).
+  Settings says it, with the operator's link ("The gate").
 - **Credentials** are skysa-notes':
   - `sk1_` and 32 random bytes, made by the device, written down before the browser leaves for the provider (`beginConnect`), and filed under the connection once the server names it;
   - the server only ever sees the credential's SHA-256;
@@ -627,20 +631,33 @@ The one Worker serves the app as well, so `/api` and the app share an origin.
 What is this app's:
 - **The Worker entry** (`src/worker.ts`), the only module that reads the environment.
   It builds the kit's `createApp` with the seams' defaults: every account that connects may sync, and nothing is throttled.
-- **What an operator's own entry imports** (`src/index.ts`): `createApp`, `parseEnv`, `envWarnings` and `misconfigured` from the kit's server, and the rate-limit seam, `RateLimiter`, `RateLimitDecision` and `neverLimited`, from its protocol, as before the kit.
-- **No entitlement policy, connect gate or change relay.**
-  The kit's server can take a policy, with a gate in front of connecting, and run a relay.
-  This app shows no gate and no policy's refusal, and listens for no relay ("The sync client"), so the stock entry passes none of them, and says so at boot where `RELAY` is set.
+  It passes the change relay where `RELAY` is on, and will not boot where `RELAY` is on and the relay's binding is gone.
+- **What an operator's own entry imports** (`src/index.ts`): `createApp`, `parseEnv`, `envWarnings` and `misconfigured` from the kit's server; the rate-limit seam, `RateLimiter`, `RateLimitDecision` and `neverLimited`, from its protocol, as before the kit; and the entitlement seam, `EntitlementProvider` and its types, from its protocol too.
+- **The change relay** is the kit's Durable Object, `ConnectionRelay`, which `src/relay.ts` offers as `@memoriam/api/relay`.
+  `wrangler.toml` binds it as `RELAY_HUB` whether or not it is used, and it is off unless `RELAY = "true"` (`docs/self-hosting.md`, "Instant updates between devices").
+- **An entitlement policy**, and a gate in front of connecting, are an operator's own entry's to pass (`docs/self-hosting.md`, "Restricting who can sync").
+  The stock entry passes none.
 - **The migrations are the kit's**, which `wrangler.toml` reaches in `node_modules` (`migrations_dir = "node_modules/@skysa/server/migrations"`).
   Before the kit this app kept one of its own, `0000_init.sql`, under the kit's first's name; a database made with it is reset onto the kit's (`docs/self-hosting.md`, "A database from before the kit"), which `tests/migrations.test.ts` holds.
 
 **Connecting** (S6) is a section of Settings (`components/SyncSettings.tsx`):
 - **Unbound**, it offers each provider the server has set up (`/config`) and this build can sync with.
   Choosing one writes the credential down, then leaves for the provider's consent screen.
+- **The gate.** Where the instance's policy has one (`/config`'s `connectGate`), the unbound section shows its message and its one link where the provider buttons are (`components/SyncGate.tsx`), before a consent screen ends in a refusal.
+  - Where it asks for a code, a field under the operator's label.
+    The policy is asked about a code as it is used (`checkConnectCode`), and says why where it turns one down.
+    One it takes is held for as long as it says, in the kit's client (`holdAcceptedCode`), and sent with each connect while held.
+  - Where the code is `required`, the buttons wait for one the policy has taken.
+    Otherwise "Already have access?" shows them as they are.
+    Showing them grants nothing: the policy decides at the callback.
+  - A value the policy gave to hold in place of a typed code is never shown.
+    It is asked about again as the app loads, hourly and at once after a refused connect, and let go of where the policy no longer takes it (`askAgain` in `sync/connectCode.ts`, as skysa-notes').
 - **The way back.** The server's callback sends the browser to the path the app started from, with the outcome in the query (`?connect=ok`).
   It never sees the hash, which is where the app keeps its place.
   So `main.tsx` reads the outcome out of the real query before the router is made, puts the address back without it, and opens Settings (`sync/connectReturn.ts`).
   Settings says the outcome once.
+  A policy's refusal comes back as `?connect=refused`, with the kind of no as `code`, and is said by that kind: a URL carries no reason of the policy's own.
+  A plain no to a connect made with a typed code is said to be about the code, which is let go of so the field is empty for the next.
 - **The callback never answers in JSON**, since a browser is on it.
   With no flow of this browser's it sends it to `/?connect=expired`.
   Any other failure goes back to the flow's path with `?connect=failed`, and is logged: a provider turned off since the flow started, a callback with neither a code nor an error, or the callback's rate limit.
@@ -657,7 +674,8 @@ What is this app's:
     A run of a few is not counted, so an edit's sync does not flash a number;
   - paused, or offline, or retrying;
   - what needs attention, with the change that is stuck, or "Connect again" when connecting the account again is the answer (`needsReconnect` in `sync/status.ts`, as skysa-notes': the server or the provider wants the account asked again, or the credential reaches nothing).
-    That sentence is drawn in the colour of an error, since sync has stopped until it is done.
+    That sentence is drawn in the colour of an error, since sync has stopped until it is done;
+  - a policy's refusal, by the kind of no it gave, with its reason and the gate's link under it where there are any.
 
   Sync now runs a sync and tries again a stuck change.
   While a sync goes, a long run draws its bar and the file it is on under the line (`RunProgress`), and **Pause syncing** stops it.

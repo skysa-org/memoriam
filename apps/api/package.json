@@ -4,7 +4,10 @@
 	"private": true,
 	"license": "AGPL-3.0-only",
 	"type": "module",
-	"exports": "./src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./relay": "./src/relay.ts"
+	},
 	"scripts": {
 		"dev": "wrangler dev --port 8787",
 		"build": "wrangler deploy --dry-run --outdir dist",

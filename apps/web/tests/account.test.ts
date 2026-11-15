@@ -5,7 +5,9 @@ import {
 	beginConnect,
 	type Connection,
 	credentialFor,
+	dropConnectCode,
 	hashCredential,
+	holdConnectCode,
 	keepCredential,
 	PENDING_CREDENTIAL_ID,
 	pendingCredential,
@@ -99,8 +101,10 @@ const clientFor = (server: Server, credential?: string): ApiClient => {
 			);
 		},
 		token: unused,
-		startConnect: (provider, credentialHash, returnTo) => {
-			server.calls.push(`start ${provider} ${credentialHash} ${returnTo}`);
+		startConnect: (provider, credentialHash, returnTo, code) => {
+			server.calls.push(
+				`start ${provider} ${credentialHash} ${returnTo}${code === undefined ? '' : ` with ${code}`}`
+			);
 			return Promise.resolve({ ok: true, value: `https://provider.example/consent` });
 		},
 		relayTicket: unused,
@@ -216,6 +220,20 @@ describe('connecting', () => {
 		expect(result).toEqual({ ok: true, value: 'https://provider.example/consent' });
 		expect(server.calls).toEqual([
 			`start dropbox ${await hashCredential(pending?.credential ?? '')} /settings`,
+		]);
+	});
+
+	it('sends the code an operator’s gate took, while this device holds it', async () => {
+		const server = newServer();
+		holdConnectCode('INVITE-7', 15 * 60);
+
+		await startConnecting(db, clientFor(server), 'dropbox', '/settings');
+		dropConnectCode();
+		await startConnecting(db, clientFor(server), 'dropbox', '/settings');
+
+		expect(server.calls.map((call) => call.replace(/ \S+ \/settings/, ''))).toEqual([
+			'start dropbox with INVITE-7',
+			'start dropbox',
 		]);
 	});
 

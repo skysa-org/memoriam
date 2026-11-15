@@ -1,12 +1,17 @@
 import { conflictContent, conflictPath } from '@memoriam/core';
 import {
 	type ApiClient,
+	ApiError,
 	beginConnect,
 	type Connection,
+	dropConnectCode,
+	heldConnectCode,
+	holdConnectCode,
 	pendingCredential,
 	type Result,
 	type SchedulerStatus,
 } from '@skysa/client';
+import type { ConnectGate, EntitlementCode } from '@skysa/protocol';
 import { ROOT } from '@skysa/storage';
 import {
 	createMemoryHistory,
@@ -24,7 +29,7 @@ import { createAppRouter } from '../src/router.js';
 import { bindLibrary, boundConnection } from '../src/store/connection.js';
 import { db, type MemoriamDatabase, type NoteRecord } from '../src/store/db.js';
 import { createPassage, passageText, rowFor } from '../src/store/passages.js';
-import type { ConnectOutcome } from '../src/sync/connectReturn.js';
+import type { ConnectOutcome, Returned } from '../src/sync/connectReturn.js';
 import { holdCredential } from './support/connection.js';
 import { over } from './support/database.js';
 import { freshDatabase } from './support/db.js';
@@ -50,6 +55,7 @@ interface Fakes {
 	readonly config: ReturnType<typeof vi.fn<ApiClient['config']>>;
 	readonly startConnect: ReturnType<typeof vi.fn<ApiClient['startConnect']>>;
 	readonly signOut: ReturnType<typeof vi.fn<ApiClient['signOut']>>;
+	readonly checkConnectCode: ReturnType<typeof vi.fn<ApiClient['checkConnectCode']>>;
 	readonly client: ApiClient;
 }
 
@@ -63,6 +69,7 @@ const fakes = (answer: Result<Connection> = { ok: true, value: CONNECTION }): Fa
 	const signOut = vi.fn<ApiClient['signOut']>(() =>
 		Promise.resolve({ ok: true, value: { disconnected: true } })
 	);
+	const checkConnectCode = vi.fn<ApiClient['checkConnectCode']>(unused);
 	const client: ApiClient = {
 		config,
 		connection: () => Promise.resolve(answer),
@@ -72,10 +79,24 @@ const fakes = (answer: Result<Connection> = { ok: true, value: CONNECTION }): Fa
 		token: unused,
 		startConnect,
 		relayTicket: unused,
-		checkConnectCode: unused,
+		checkConnectCode,
 		withCredential: () => client,
 	};
-	return { config, startConnect, signOut, client };
+	return { config, startConnect, signOut, checkConnectCode, client };
+};
+
+/** An operator's gate, and the server's fakes with it in `/config`. */
+const gated = (gate: Partial<ConnectGate> = {}): Fakes => {
+	const made = fakes();
+	made.config.mockResolvedValue({
+		providers: ['dropbox', 'gdrive'],
+		connectGate: {
+			message: 'Sync is for members of the reading group.',
+			action: { label: 'Join the group', url: 'https://operator.example/join' },
+			...gate,
+		},
+	});
+	return made;
 };
 
 /** A scheduler that says one thing. The same object each time, as a store's snapshot must be. */
@@ -89,9 +110,11 @@ const schedulerShowing = (status: Partial<SchedulerStatus> = {}) => {
 	};
 };
 
-const holding = (outcome?: ConnectOutcome) => {
-	const held = new Map<'outcome', ConnectOutcome>(
-		outcome === undefined ? [] : [['outcome', outcome]]
+const holding = (outcome?: ConnectOutcome, code?: EntitlementCode) => {
+	const held = new Map<'outcome', Returned>(
+		outcome === undefined
+			? []
+			: [['outcome', code === undefined ? { outcome } : { outcome, code }]]
 	);
 	return {
 		peek: () => held.get('outcome'),
@@ -109,6 +132,7 @@ beforeEach(() => {
 
 afterEach(() => {
 	vi.restoreAllMocks();
+	dropConnectCode();
 });
 
 const showSettings = (props: Parameters<typeof SyncSettings>[0]) => {
@@ -147,7 +171,7 @@ describe('connecting', () => {
 		// Written down before the browser leaves: the one thing that cannot wait.
 		const pending = await pendingCredential(database);
 		expect(pending?.provider).toBe('dropbox');
-		expect(startConnect).toHaveBeenCalledWith('dropbox', expect.any(String), '/');
+		expect(startConnect).toHaveBeenCalledWith('dropbox', expect.any(String), '/', undefined);
 	});
 
 	it('says so when the server cannot be reached', async () => {
@@ -193,6 +217,172 @@ describe('connecting', () => {
 			expect(held.forget).toHaveBeenCalled();
 		});
 		expect(held.peek()).toBeUndefined();
+	});
+
+	it('says why the server’s policy refused a connect, by the kind of no it gave', async () => {
+		const { client } = fakes();
+		const said: [EntitlementCode | undefined, string][] = [
+			[
+				'not_allowed',
+				'Nothing was connected: this account is not allowed to sync on this server.',
+			],
+			[
+				'lapsed',
+				'Nothing was connected: this account’s access to sync on this server has lapsed.',
+			],
+			[
+				'limit_reached',
+				'Nothing was connected: this server is at its limit for syncing accounts.',
+			],
+			[undefined, 'Nothing was connected: this account cannot sync on this server.'],
+		];
+		await said.reduce(async (prior, [code, words]) => {
+			await prior;
+			showSettings({
+				client,
+				scheduler: schedulerShowing(),
+				connectReturn: holding('refused', code),
+			});
+			expect(await screen.findByText(words)).toBeTruthy();
+			cleanup();
+		}, Promise.resolve());
+	});
+});
+
+describe('the operator’s gate', () => {
+	it('shows its message and link where the buttons were, and the buttons when asked', async () => {
+		const { client } = gated();
+		const user = userEvent.setup();
+		showSettings({ client, scheduler: schedulerShowing(), connectReturn: holding() });
+
+		expect(await screen.findByText('Sync is for members of the reading group.')).toBeTruthy();
+		expect(screen.getByRole('link', { name: 'Join the group' })).toHaveProperty(
+			'href',
+			'https://operator.example/join'
+		);
+		expect(screen.queryByRole('button', { name: 'Connect Dropbox' })).toBeNull();
+		expect(screen.queryByRole('textbox')).toBeNull();
+
+		await user.click(screen.getByRole('button', { name: 'Already have access?' }));
+		expect(screen.getByRole('button', { name: 'Connect Dropbox' })).toBeTruthy();
+	});
+
+	it('takes the code it requires, says why one is turned down, and sends one it took', async () => {
+		const { client, checkConnectCode, startConnect } = gated({
+			connectCode: { label: 'Invite code', required: true },
+		});
+		checkConnectCode
+			.mockResolvedValueOnce({
+				ok: true,
+				value: { accepted: false, reason: 'That invite has been used.' },
+			})
+			.mockResolvedValueOnce({ ok: true, value: { accepted: false } })
+			.mockResolvedValueOnce({ ok: true, value: { accepted: true, expiresIn: 600 } });
+		const leave = vi.fn();
+		const user = userEvent.setup();
+		showSettings({ client, scheduler: schedulerShowing(), connectReturn: holding(), leave });
+
+		const field = await screen.findByRole('textbox', { name: 'Invite code' });
+		// Required: no way to the buttons but a code.
+		expect(screen.queryByRole('button', { name: 'Already have access?' })).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Connect Dropbox' })).toBeNull();
+
+		await user.type(field, 'USED-1');
+		await user.click(screen.getByRole('button', { name: 'Use code' }));
+		// The policy's own words where it gave some, and the app's where not.
+		expect(await screen.findByText('That invite has been used.')).toBeTruthy();
+		await user.clear(field);
+		await user.type(field, 'WRONG-2');
+		await user.click(screen.getByRole('button', { name: 'Use code' }));
+		expect(await screen.findByText('That code was not accepted.')).toBeTruthy();
+		await user.clear(field);
+		await user.type(field, 'INVITE-7');
+		await user.click(screen.getByRole('button', { name: 'Use code' }));
+
+		expect(await screen.findByText(/^Invite code accepted on this device until /)).toBeTruthy();
+		expect(checkConnectCode).toHaveBeenLastCalledWith('INVITE-7');
+		expect(heldConnectCode()).toBe('INVITE-7');
+		await user.click(screen.getByRole('button', { name: 'Connect Dropbox' }));
+		await waitFor(() => {
+			expect(leave).toHaveBeenCalled();
+		});
+		expect(startConnect).toHaveBeenCalledWith('dropbox', expect.any(String), '/', 'INVITE-7');
+	});
+
+	it('asks for another code when told to, and hides the buttons until one is taken', async () => {
+		holdConnectCode('INVITE-7', 600);
+		const { client } = gated({ connectCode: { label: 'Invite code', required: true } });
+		const user = userEvent.setup();
+		showSettings({ client, scheduler: schedulerShowing(), connectReturn: holding() });
+
+		expect(await screen.findByRole('button', { name: 'Connect Dropbox' })).toBeTruthy();
+		await user.click(screen.getByRole('button', { name: 'Use another Invite code' }));
+
+		expect(screen.getByRole('textbox', { name: 'Invite code' })).toBeTruthy();
+		expect(screen.queryByRole('button', { name: 'Connect Dropbox' })).toBeNull();
+	});
+
+	it('says what went wrong asking about a code', async () => {
+		const { client, checkConnectCode } = gated({ connectCode: { label: 'Invite code' } });
+		checkConnectCode
+			.mockResolvedValueOnce({ ok: false, refusal: 'forbidden_origin' })
+			.mockRejectedValueOnce(new ApiError('too many', 429))
+			.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+		const user = userEvent.setup();
+		showSettings({ client, scheduler: schedulerShowing(), connectReturn: holding() });
+
+		const field = await screen.findByRole('textbox', { name: 'Invite code' });
+		await user.type(field, 'INVITE-7');
+		await user.click(screen.getByRole('button', { name: 'Use code' }));
+		const notChecked =
+			'The code could not be checked. Check that you are online, and try again.';
+		expect(await screen.findByText(notChecked)).toBeTruthy();
+		expect(field.getAttribute('aria-invalid')).toBe('true');
+		await user.click(screen.getByRole('button', { name: 'Use code' }));
+		expect(
+			await screen.findByText(
+				'Too many codes have been tried from here. Wait a while, and try again.'
+			)
+		).toBeTruthy();
+		await user.click(screen.getByRole('button', { name: 'Use code' }));
+		expect(await screen.findByText(notChecked)).toBeTruthy();
+		expect(checkConnectCode).toHaveBeenCalledTimes(3);
+		// Not required: the buttons are still a press away.
+		expect(screen.getByRole('button', { name: 'Already have access?' })).toBeTruthy();
+		expect(heldConnectCode()).toBeUndefined();
+	});
+
+	it('says a refused connect made with a typed code was about the code, and lets it go', async () => {
+		holdConnectCode('INVITE-7', 600);
+		const { client } = gated({ connectCode: { label: 'Invite code', required: true } });
+		showSettings({
+			client,
+			scheduler: schedulerShowing(),
+			connectReturn: holding('refused', 'not_allowed'),
+		});
+
+		expect(
+			await screen.findByText('Nothing was connected: the code you entered was not accepted.')
+		).toBeTruthy();
+		expect(await screen.findByRole('textbox', { name: 'Invite code' })).toBeTruthy();
+		expect(heldConnectCode()).toBeUndefined();
+	});
+
+	it('keeps a typed code through a refusal that is not about it', async () => {
+		holdConnectCode('INVITE-7', 600);
+		const { client } = gated({ connectCode: { label: 'Invite code', required: true } });
+		showSettings({
+			client,
+			scheduler: schedulerShowing(),
+			connectReturn: holding('refused', 'limit_reached'),
+		});
+
+		expect(
+			await screen.findByText(
+				'Nothing was connected: this server is at its limit for syncing accounts.'
+			)
+		).toBeTruthy();
+		expect(heldConnectCode()).toBe('INVITE-7');
 	});
 });
 
@@ -355,7 +545,7 @@ describe('connected', () => {
 		await waitFor(() => {
 			expect(leave).toHaveBeenCalled();
 		});
-		expect(startConnect).toHaveBeenCalledWith('dropbox', expect.any(String), '/');
+		expect(startConnect).toHaveBeenCalledWith('dropbox', expect.any(String), '/', undefined);
 	});
 
 	it('asks for the provider again for every problem connecting again answers, and for none other', async () => {
@@ -400,6 +590,55 @@ describe('connected', () => {
 			await screen.findByText('This app cannot sync with this storage provider yet.')
 		).toBeTruthy();
 		expect(screen.queryByRole('button', { name: 'Connect again' })).toBeNull();
+	});
+
+	it('says why the server’s policy stopped syncing, with its reason and the gate’s link', async () => {
+		await bound();
+		const { client } = gated();
+		showSettings({
+			client,
+			scheduler: schedulerShowing({
+				phase: 'attention',
+				refusal: 'not_entitled',
+				denial: { code: 'lapsed', reason: 'Your membership ended on 1 May.' },
+			}),
+			connectReturn: holding(),
+		});
+
+		expect(
+			await screen.findByText('This account’s access to sync on this server has lapsed.')
+		).toBeTruthy();
+		expect(await screen.findByText(/Your membership ended on 1 May\./)).toBeTruthy();
+		expect(screen.getByRole('link', { name: 'Join the group' })).toBeTruthy();
+		expect(screen.queryByRole('button', { name: 'Connect again' })).toBeNull();
+		cleanup();
+
+		// The policy's reason without a gate: no link to go with it.
+		showSettings({
+			client: fakes().client,
+			scheduler: schedulerShowing({
+				phase: 'attention',
+				refusal: 'not_entitled',
+				denial: { code: 'not_allowed', reason: 'Sync is for the reading group.' },
+			}),
+			connectReturn: holding(),
+		});
+		expect(await screen.findByText('Sync is for the reading group.')).toBeTruthy();
+		expect(
+			screen.getByText('This account is not allowed to sync on this server.')
+		).toBeTruthy();
+		expect(screen.queryByRole('link')).toBeNull();
+		cleanup();
+
+		// No code, no reason and no gate: the app's words alone.
+		const plain = fakes();
+		showSettings({
+			client: plain.client,
+			scheduler: schedulerShowing({ phase: 'attention', refusal: 'not_entitled' }),
+			connectReturn: holding(),
+		});
+		expect(await screen.findByText('This account cannot sync on this server.')).toBeTruthy();
+		expect(screen.queryByRole('link')).toBeNull();
 	});
 
 	it('disconnects on the server, then here, keeping every passage', async () => {

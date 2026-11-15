@@ -2,6 +2,7 @@ import { MEMORIAM_FOLDER, PASSAGE_FORMAT } from '@memoriam/core';
 import {
 	api,
 	createProviderFactory,
+	createRelayFactory,
 	type SchedulerStatus,
 	type SyncScheduler,
 } from '@skysa/client';
@@ -29,6 +30,9 @@ export const syncScheduler: SyncScheduler = createLibraryScheduler(db, {
 		appVersion: APP_VERSION,
 		timedOut: () => t('sync.timedOut'),
 	}),
+	// Asks `/config` first, so an instance without a relay is never asked for
+	// a ticket (`createRelayFactory`, the kit's). Polling goes on as it is.
+	relay: createRelayFactory({ credentials: db, client: api }),
 });
 
 /** What the scheduler says now, re-rendering whenever that changes. */

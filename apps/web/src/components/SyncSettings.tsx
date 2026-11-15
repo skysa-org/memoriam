@@ -1,11 +1,16 @@
 import {
+	answer,
 	api as appApi,
 	type ApiClient,
+	type Asked,
+	dropConnectCode,
+	type InstanceConfig,
 	isLongRun,
 	type SchedulerStatus,
 	type SyncScheduler,
+	useInstanceConfig,
 } from '@skysa/client';
-import type { ProviderKind } from '@skysa/protocol';
+import type { ConnectGate, EntitlementCode, ProviderKind } from '@skysa/protocol';
 import type { SyncProgress } from '@skysa/sync';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
@@ -22,11 +27,13 @@ import {
 	startConnecting,
 	stopSyncingHere,
 } from '../sync/account.js';
-import { type ConnectOutcome, connectReturn as appConnectReturn } from '../sync/connectReturn.js';
+import { codeWasRefused } from '../sync/connectCode.js';
+import { connectReturn as appConnectReturn, type Returned } from '../sync/connectReturn.js';
 import { syncScheduler, useSyncStatus } from '../sync/runtime.js';
 import { needsReconnect } from '../sync/status.js';
 import { ConflictsBanner } from './ConflictsBanner.js';
 import { Icon } from './Icon.js';
+import { SyncGate } from './SyncGate.js';
 import { ConfirmDialog } from './ui/ConfirmDialog.js';
 import { RunProgress } from './ui/RunProgress.js';
 
@@ -40,7 +47,7 @@ import { RunProgress } from './ui/RunProgress.js';
  * or cannot answer, the way out is to stop syncing on this device alone.
  */
 
-type Client = Pick<ApiClient, 'config' | 'startConnect' | 'withCredential'>;
+type Client = Pick<ApiClient, 'config' | 'startConnect' | 'withCredential' | 'checkConnectCode'>;
 
 /** What the server offers to connect: still asking, its providers, or no answer. */
 type Offer =
@@ -48,34 +55,65 @@ type Offer =
 	| Readonly<{ kind: 'ready'; providers: readonly ProviderKind[] }>
 	| Readonly<{ kind: 'unavailable' }>;
 
-const RETURNED: Readonly<Record<ConnectOutcome, () => string>> = {
-	ok: () => t('sync.returned.ok'),
-	denied: () => t('sync.returned.denied'),
-	failed: () => t('sync.returned.failed'),
-	partial: () => t('sync.returned.partial'),
-	expired: () => t('sync.returned.expired'),
+/**
+ * A refusal by the server's policy, by the kind of no it gave: on the way back
+ * from a connect (`returned`), or as the status of an account it later stops
+ * minting tokens for.
+ */
+const REFUSED: Readonly<
+	Record<'returned' | 'status', Readonly<Record<EntitlementCode | 'unspecified', () => string>>>
+> = {
+	returned: {
+		not_allowed: () => t('sync.returned.refused.notAllowed'),
+		lapsed: () => t('sync.returned.refused.lapsed'),
+		limit_reached: () => t('sync.returned.refused.limitReached'),
+		unspecified: () => t('sync.returned.refused.unspecified'),
+	},
+	status: {
+		not_allowed: () => t('sync.status.refused.notAllowed'),
+		lapsed: () => t('sync.status.refused.lapsed'),
+		limit_reached: () => t('sync.status.refused.limitReached'),
+		unspecified: () => t('sync.status.refused.unspecified'),
+	},
 };
 
-/** The providers the server offers that this build can sync with, asked once. */
-const useOffer = (client: Pick<ApiClient, 'config'>): Offer => {
-	const [offer, setOffer] = useState<Offer>({ kind: 'asking' });
-	useEffect(() => {
-		const gone = new AbortController();
-		void client
-			.config()
-			.then((config) => ({
-				kind: 'ready' as const,
-				providers: CONNECTABLE.filter((kind) => config.providers.includes(kind)),
-			}))
-			.catch(() => ({ kind: 'unavailable' as const }))
-			.then((next) => {
-				if (!gone.signal.aborted) setOffer(next);
-			});
-		return () => {
-			gone.abort();
-		};
-	}, [client]);
-	return offer;
+const refusedWords = (kind: 'returned' | 'status', code: EntitlementCode | undefined): string =>
+	REFUSED[kind][code ?? 'unspecified']();
+
+/**
+ * How a connect went. A plain no to one made with a code typed into the
+ * gate is said to be about the code (`codeWasRefused`).
+ */
+const returnedWords = ({ outcome, code }: Returned, codeRefused: boolean): string => {
+	switch (outcome) {
+		case 'refused':
+			return codeRefused ? t('sync.returned.refused.code') : refusedWords('returned', code);
+		case 'ok':
+			return t('sync.returned.ok');
+		case 'denied':
+			return t('sync.returned.denied');
+		case 'failed':
+			return t('sync.returned.failed');
+		case 'partial':
+			return t('sync.returned.partial');
+		case 'expired':
+			return t('sync.returned.expired');
+	}
+};
+
+/** The providers the server offers that this build can sync with. */
+const offerOf = (asked: Asked<InstanceConfig>): Offer => {
+	switch (asked.kind) {
+		case 'asking':
+			return { kind: 'asking' };
+		case 'unreachable':
+			return { kind: 'unavailable' };
+		case 'answered':
+			return {
+				kind: 'ready',
+				providers: CONNECTABLE.filter((kind) => asked.value.providers.includes(kind)),
+			};
+	}
 };
 
 /** How far a long run has got, in a sentence (`isLongRun`). */
@@ -159,6 +197,8 @@ const statusLine = (
 		case 'attention':
 			if (needsReconnect(status)) return t('sync.status.reconnect', { provider });
 			if (!syncable) return t('sync.unsupported');
+			if (status.refusal === 'not_entitled')
+				return refusedWords('status', status.denial?.code);
 			return status.stuck === undefined
 				? t('sync.status.attention', { error })
 				: t('sync.status.stuck', {
@@ -180,10 +220,36 @@ interface Props {
 /** Why a disconnect did not happen: the server said no, or did not answer. */
 type Held = 'refused' | 'unreachable';
 
+/**
+ * Beside a refusal by the server's policy, what it said of its own and the
+ * link its gate offers, where it gave either: the one place the policy's own
+ * words reach, since a refused connect comes back in a URL, which carries none.
+ */
+const Denied = ({
+	status,
+	gate,
+}: Readonly<{ status: SchedulerStatus; gate: ConnectGate | undefined }>) => {
+	if (status.phase !== 'attention' || status.refusal !== 'not_entitled') return null;
+	const reason = status.denial?.reason;
+	if (reason === undefined && gate === undefined) return null;
+	return (
+		<p className="field-hint">
+			{reason}
+			{reason !== undefined && gate !== undefined && ' '}
+			{gate !== undefined && (
+				<a href={gate.action.url} rel="noreferrer">
+					{gate.action.label}
+				</a>
+			)}
+		</p>
+	);
+};
+
 const Connected = ({
 	bound,
 	kind,
 	client,
+	gate,
 	scheduler,
 	connect,
 	busy,
@@ -193,6 +259,7 @@ const Connected = ({
 	bound: SyncStateRecord;
 	kind: ProviderKind;
 	client: Client;
+	gate: ConnectGate | undefined;
 	scheduler: NonNullable<Props['scheduler']>;
 	connect: (provider: ProviderKind) => void;
 	busy: boolean;
@@ -235,6 +302,7 @@ const Connected = ({
 			<p className={reconnect ? 'field-hint sync-problem' : 'field-hint'} role="status">
 				{statusLine(status, provider, CONNECTABLE.includes(kind), now)}
 			</p>
+			<Denied status={status} gate={gate} />
 			{/* A run long enough to count: its bar, and the file it is on. A
 			    few passages' sync is over before a bar could be read. */}
 			{status.phase === 'syncing' && isLongRun(status.progress) && (
@@ -379,8 +447,13 @@ export const SyncSettings = ({
 	const db = useDb();
 	// `null` once read and there is none, so the screen can tell that from reading.
 	const bound = useLiveQuery(async () => (await boundConnection(db)) ?? null, [db]);
-	const offer = useOffer(client);
+	const config = useInstanceConfig(client);
+	const offer = offerOf(config);
+	const gate = answer(config)?.connectGate;
 	const [returned] = useState(() => connectReturn.peek());
+	const [codeRefused] = useState(
+		() => returned?.outcome === 'refused' && codeWasRefused(returned.code)
+	);
 	const [busy, setBusy] = useState<ProviderKind | undefined>(undefined);
 	const [said, setSaid] = useState<string | undefined>(undefined);
 
@@ -388,6 +461,10 @@ export const SyncSettings = ({
 	useEffect(() => {
 		connectReturn.forget();
 	}, [connectReturn]);
+	// The code just turned down is let go of, so the field is empty for the next.
+	useEffect(() => {
+		if (codeRefused) dropConnectCode();
+	}, [codeRefused]);
 
 	const connect = (provider: ProviderKind) => {
 		setBusy(provider);
@@ -412,7 +489,7 @@ export const SyncSettings = ({
 			<h2 id="settings-sync">{t('sync.settings.title')}</h2>
 			{returned !== undefined && (
 				<p className="settings-said" role="status">
-					{RETURNED[returned]()}
+					{returnedWords(returned, codeRefused)}
 				</p>
 			)}
 			{/* A binding with no provider is one this app never writes
@@ -420,13 +497,20 @@ export const SyncSettings = ({
 			{bound === undefined ? null : bound === null || bound.provider === undefined ? (
 				<>
 					<p className="field-hint">{t('sync.settings.hint')}</p>
-					<Offered offer={offer} connect={connect} busy={busy} />
+					{gate === undefined ? (
+						<Offered offer={offer} connect={connect} busy={busy} />
+					) : (
+						<SyncGate gate={gate} client={client}>
+							<Offered offer={offer} connect={connect} busy={busy} />
+						</SyncGate>
+					)}
 				</>
 			) : (
 				<Connected
 					bound={bound}
 					kind={bound.provider}
 					client={client}
+					gate={gate}
 					scheduler={scheduler}
 					connect={connect}
 					busy={busy !== undefined}
