@@ -8,7 +8,7 @@ import type { Kept } from './streak.js';
  * light week still shows its shape beside a heavy one.
  */
 
-export interface HeatDay {
+interface HeatDay {
 	readonly day: string;
 	readonly words: number;
 	/** 0 for none; 1 to 4 by the quarter of the practised days in view it falls in. */

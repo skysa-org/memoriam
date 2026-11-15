@@ -88,7 +88,7 @@ const onApple = (): boolean => {
 };
 
 /** The key `Mod` is on the user's own keyboard: ⌘ on a Mac, Ctrl elsewhere. */
-export const modKeyLabel = (apple = onApple()): string => (apple ? '⌘' : t('shell.keys.ctrl'));
+const modKeyLabel = (apple = onApple()): string => (apple ? '⌘' : t('shell.keys.ctrl'));
 
 // The arrows and Enter are symbols, as are the Apple modifiers below: the same
 // in every language. The keys that are words come from the catalog.

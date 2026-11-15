@@ -568,10 +568,10 @@ export default tseslint.config(
 
 	{
 		// A warning, not an error, while the long files that came from
-		// skysa-notes (the sync engine, the Drive adapter, the web sync store
-		// and scheduler) are split: it says which those are, and keeps a split
-		// file from growing back. Code lines only — the comments here are long
-		// on purpose. Tests are left out for now.
+		// skysa-notes (the web sync store and scheduler) are split: it says
+		// which those are, and keeps a split file from growing back. Code lines
+		// only — the comments here are long on purpose. Tests are left out for
+		// now.
 		files: ['packages/*/src/**/*.ts', 'apps/*/src/**/*.{ts,tsx}'],
 		rules: {
 			'max-lines': ['warn', { max: 600, skipBlankLines: true, skipComments: true }],

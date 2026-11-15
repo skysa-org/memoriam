@@ -24,7 +24,7 @@ export const SNOOZED_KEY = 'backup.snoozed';
 /** How old the last backup may be before the user is reminded. */
 export const BACKUP_DAYS = 7;
 /** How long "Not now" puts the reminder off for. */
-export const SNOOZE_DAYS = 3;
+const SNOOZE_DAYS = 3;
 
 const DAY_MS = 86_400_000;
 

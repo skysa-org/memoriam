@@ -12,7 +12,7 @@ import { cell } from '@memoriam/core';
  * waits for at most one slice, where it waited for the whole of the work when
  * that was one piece.
  */
-export const SLICE_MS = 8;
+const SLICE_MS = 8;
 
 /**
  * The thread handed back for a turn, so whatever is waiting — a key, a frame —
@@ -20,7 +20,7 @@ export const SLICE_MS = 8;
  * browsers hold back to 4 ms once timeouts have nested five deep: work of a
  * hundred slices would spend half as long again doing nothing.
  */
-export const handBack = (): Promise<void> =>
+const handBack = (): Promise<void> =>
 	new Promise((resolve) => {
 		const { port1, port2 } = new MessageChannel();
 		port1.addEventListener(

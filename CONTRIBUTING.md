@@ -22,7 +22,7 @@ There is no server yet. Everything runs in the browser against IndexedDB.
 ## Before you open a pull request
 
 ```bash
-pnpm verify   # format:check + lint + typecheck + test
+pnpm verify   # format:check + lint + typecheck + knip + test
 ```
 
 CI runs the same checks, plus `pnpm build` and `pnpm size` (the web app's size budget), a check that

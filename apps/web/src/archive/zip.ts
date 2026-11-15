@@ -91,7 +91,7 @@ export const joined = (parts: readonly Uint8Array[]): Bytes => {
  * unpacks it ("zip slip"): relative, with no empty, `.` or `..` segment, and no
  * backslash, which some Windows tools read as a separator.
  */
-export const entryName = (path: string): string => normalizePath(path.replace(/\\/g, '_'));
+const entryName = (path: string): string => normalizePath(path.replace(/\\/g, '_'));
 
 /** `name (2).md`: the extension kept, so the file still opens as what it is. */
 const numbered = (path: string, n: number): string => {

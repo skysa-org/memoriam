@@ -40,7 +40,7 @@ export type ZipRead =
 	| Readonly<{ ok: false; reason: 'not-zip' | 'zip64' | 'spanned' }>;
 
 /** The largest entry read: far past any passage, and short of filling a tab. */
-export const MAX_ENTRY_BYTES = 8 * 1024 * 1024;
+const MAX_ENTRY_BYTES = 8 * 1024 * 1024;
 
 const CENTRAL_HEADER = 0x02014b50;
 const END_RECORD = 0x06054b50;

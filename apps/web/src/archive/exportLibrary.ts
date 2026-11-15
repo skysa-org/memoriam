@@ -45,7 +45,7 @@ const DOWNLOAD_GRACE_MS = 60_000;
  * again. Its address is let go a minute later: the click only asks for the
  * download, and some browsers have not begun reading when it returns.
  */
-export const save = (parts: readonly Uint8Array<ArrayBuffer>[], filename: string): void => {
+const save = (parts: readonly Uint8Array<ArrayBuffer>[], filename: string): void => {
 	const url = URL.createObjectURL(new Blob([...parts], { type: 'application/zip' }));
 	const link = document.createElement('a');
 	try {

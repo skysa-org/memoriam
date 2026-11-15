@@ -32,7 +32,7 @@ import { ScopeNotGrantedError } from '../oauth/types.js';
  * See skysa-notes' `docs/ARCHITECTURE.md` §6.
  */
 
-export const redirectUri = (origin: string, provider: string): string =>
+const redirectUri = (origin: string, provider: string): string =>
 	`${origin}/api/auth/connect/${provider}/callback`;
 
 /**

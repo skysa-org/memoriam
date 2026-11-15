@@ -54,7 +54,7 @@ export const askToKeep = (storage: StorageApi | undefined = browserStorage()) =>
 	answer(storage?.persist?.bind(storage));
 
 /** Whether to ask now: there is a passage to keep, and no recent answer stands. */
-export const shouldAsk = async (
+const shouldAsk = async (
 	db: MemoriamDatabase,
 	now: number,
 	connectionId: string = LOCAL_CONNECTION_ID

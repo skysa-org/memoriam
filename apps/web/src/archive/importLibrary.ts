@@ -49,7 +49,7 @@ import { readZip } from './readZip.js';
  */
 
 /** A file to import: its path in the library it came from, and its text. */
-export interface Incoming {
+interface Incoming {
 	readonly path: string;
 	readonly text: string;
 }

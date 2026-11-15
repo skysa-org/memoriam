@@ -60,7 +60,7 @@ export type Recorded =
 	/** Its frontmatter is YAML the app does not rewrite, or will not take apart. */
 	| Readonly<{ ok: false; reason: 'unreadable' | 'refused' }>;
 
-export const PACE_KEY = 'practice.pace';
+const PACE_KEY = 'practice.pace';
 
 /** How much one clean pass moves the typist's pace. */
 const PACE_WEIGHT = 0.2;

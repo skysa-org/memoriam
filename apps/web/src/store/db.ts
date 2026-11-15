@@ -20,7 +20,7 @@ import { watchForNewerTab } from './staleTab.js';
  * IndexedDB cannot index a boolean, and sync will need to find dirty rows by
  * index rather than by scanning every one. 0/1 it is.
  */
-export type Flag = 0 | 1;
+type Flag = 0 | 1;
 
 /**
  * The library's rows, every one of them. skysa-notes keys a row by the source
@@ -107,7 +107,7 @@ export interface SyncStateRecord {
 }
 
 /** The kinds of op the queue holds: core's, so a new one is a row the app can store. */
-export type QueuedOperation = SyncOperation;
+type QueuedOperation = SyncOperation;
 
 /** What the remote is owed, in order (`store/queue.ts`). */
 export interface OpQueueRecord {
@@ -174,7 +174,7 @@ export interface CredentialRecord {
 /** The id a credential is kept under until the server says which connection it reaches. */
 export const PENDING_CREDENTIAL_ID = 'pending';
 
-export interface PreferenceRecord {
+interface PreferenceRecord {
 	key: string;
 	value: string;
 }
@@ -190,7 +190,7 @@ export type MemoriamDatabase = Dexie & {
 	credentials: Table<CredentialRecord, string>;
 };
 
-export const DATABASE_NAME = 'memoriam';
+const DATABASE_NAME = 'memoriam';
 
 /** A note's primary key: the connection it belongs to, then its id within it. */
 export type NoteKey = [connectionId: string, id: string];
@@ -199,7 +199,7 @@ export type NoteKey = [connectionId: string, id: string];
 export type FileKey = [connectionId: string, id: string];
 
 /** A collection's primary key: its connection, then its path. */
-export type FolderKey = [connectionId: string, path: string];
+type FolderKey = [connectionId: string, path: string];
 
 export const noteKey = (note: Pick<NoteRecord, 'connectionId' | 'id'>): NoteKey => [
 	note.connectionId,

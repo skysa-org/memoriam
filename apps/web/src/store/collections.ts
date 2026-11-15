@@ -44,7 +44,7 @@ export type Named =
 	| Readonly<{ ok: false; reason: 'exists'; path: string }>;
 
 /** A collection's path for the name the user typed. One level: a name has no `/`. */
-export const collectionPath = (name: string): string =>
+const collectionPath = (name: string): string =>
 	sanitizeFolderName(name, t('library.unnamedCollection'));
 
 /** Every collection there is: the rows, and the folders passages are in. */
