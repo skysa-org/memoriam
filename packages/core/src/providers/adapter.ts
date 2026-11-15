@@ -65,7 +65,7 @@ export const outsideRoot = <T>(path: string, act: (target: string) => Promise<T>
 };
 
 /**
- * Refuses the app folder itself as the entry to delete or move, with a
+ * Refuses the app folder itself as the entry to delete, leave or move, with a
  * `NotFoundError`, as a file written at the root is refused. By either name it
  * goes by: its path, or its id where the ref carries one, since an adapter
  * that goes by id would act on the folder whatever path the ref gave. Google

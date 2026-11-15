@@ -76,6 +76,7 @@ const schedulerShowing = (status: Partial<SchedulerStatus> = {}) => {
 		status: () => said,
 		subscribe: () => () => undefined,
 		syncNow: vi.fn(() => Promise.resolve()),
+		pause: vi.fn(),
 	};
 };
 
@@ -196,11 +197,129 @@ describe('connected', () => {
 		expect(screen.getByRole('button', { name: 'Sync now' })).toHaveProperty('disabled', true);
 		cleanup();
 
+		showSettings({
+			client,
+			scheduler: schedulerShowing({ phase: 'syncing', waiting: true }),
+			connectReturn: holding(),
+		});
+		expect(
+			await screen.findByText(
+				'Waiting for another tab or window of Memoriam to finish syncing. This one syncs after it.'
+			)
+		).toBeTruthy();
+		cleanup();
+
 		const offline = schedulerShowing({ phase: 'offline' });
 		showSettings({ client, scheduler: offline, connectReturn: holding() });
 		await user.click(await screen.findByRole('button', { name: 'Sync now' }));
 		expect(offline.syncNow).toHaveBeenCalledOnce();
 		expect(screen.getByText(/^Offline\./)).toBeTruthy();
+	});
+
+	it('says what a sync is reading, and how far a long one has got', async () => {
+		// Reported in skysa-notes, on a phone: another device's folders moved
+		// was minutes of plain "Syncing…" while the round's pages were read.
+		await bound();
+		const { client } = fakes();
+		const showing = async (progress: SchedulerStatus['progress'], said: string) => {
+			showSettings({
+				client,
+				scheduler: schedulerShowing({ phase: 'syncing', progress }),
+				connectReturn: holding(),
+			});
+			expect(await screen.findByText(said)).toBeTruthy();
+			cleanup();
+		};
+
+		await showing(
+			{ stage: 'receiving', done: 0, total: 0, listing: true },
+			'Checking Dropbox for changes…'
+		);
+		// A few is not worth counting: an edit's sync would flash a number.
+		await showing(
+			{ stage: 'receiving', done: 0, total: 3, listing: true },
+			'Checking Dropbox for changes…'
+		);
+		await showing(
+			{ stage: 'receiving', done: 0, total: 40, listing: true },
+			'Checking Dropbox for changes: 40 changed passages found so far.'
+		);
+		await showing(
+			{ stage: 'receiving', done: 12, total: 40, listing: false, path: 'a.md' },
+			'Receiving passages from Dropbox: 12 of 40.'
+		);
+		await showing({ stage: 'receiving', done: 1, total: 3, listing: false }, 'Syncing…');
+		await showing(
+			{ stage: 'scanning', found: 0, done: 0, listing: true },
+			'Looking for passages in Dropbox…'
+		);
+		await showing(
+			{ stage: 'scanning', found: 25, done: 0, listing: true },
+			'Looking for passages in Dropbox: 25 found so far.'
+		);
+		await showing(
+			{ stage: 'scanning', found: 25, done: 5, listing: false },
+			'Receiving passages from Dropbox: 5 of 25.'
+		);
+		await showing(
+			{ stage: 'uploading', done: 2, total: 30 },
+			'Sending changes to Dropbox: 2 of 30.'
+		);
+	});
+
+	it('pauses a sync under way, and resumes it when asked', async () => {
+		await bound();
+		const { client } = fakes();
+		const user = userEvent.setup();
+		const syncing = schedulerShowing({
+			phase: 'syncing',
+			progress: {
+				stage: 'receiving',
+				done: 12,
+				total: 40,
+				listing: false,
+				path: 'Psalms/23.md',
+			},
+		});
+		showSettings({ client, scheduler: syncing, connectReturn: holding() });
+
+		// A long run's bar, and the file it is on.
+		const bar = await screen.findByRole('progressbar', { name: 'Sync progress' });
+		expect(bar.getAttribute('value')).toBe('12');
+		expect(bar.getAttribute('max')).toBe('40');
+		expect(screen.getByText('Psalms/23.md', { exact: false })).toBeTruthy();
+		await user.click(screen.getByRole('button', { name: 'Pause syncing' }));
+		expect(syncing.pause).toHaveBeenCalledOnce();
+		cleanup();
+
+		const paused = schedulerShowing({ phase: 'paused' });
+		showSettings({ client, scheduler: paused, connectReturn: holding() });
+		expect(
+			await screen.findByText(
+				'Syncing with Dropbox is paused on this device. Your changes are kept here, and sent when you resume it.'
+			)
+		).toBeTruthy();
+		expect(screen.queryByRole('button', { name: 'Pause syncing' })).toBeNull();
+		expect(screen.queryByRole('progressbar')).toBeNull();
+		await user.click(screen.getByRole('button', { name: 'Resume syncing' }));
+		expect(paused.syncNow).toHaveBeenCalledOnce();
+	});
+
+	it('draws no bar for a sync of a few passages', async () => {
+		await bound();
+		const { client } = fakes();
+		showSettings({
+			client,
+			scheduler: schedulerShowing({
+				phase: 'syncing',
+				progress: { stage: 'uploading', done: 1, total: 3, path: 'a.md' },
+			}),
+			connectReturn: holding(),
+		});
+
+		expect(await screen.findByText('Syncing…')).toBeTruthy();
+		expect(screen.queryByRole('progressbar')).toBeNull();
+		expect(screen.getByRole('button', { name: 'Pause syncing' })).toBeTruthy();
 	});
 
 	it('asks for the provider again when it has to be', async () => {
@@ -215,16 +334,42 @@ describe('connected', () => {
 			leave,
 		});
 
-		expect(
-			await screen.findByText(
-				'Dropbox needs to be connected again before your library can sync.'
-			)
-		).toBeTruthy();
+		const said = await screen.findByText(
+			'Dropbox needs to be connected again before your library can sync.'
+		);
+		// In the colour of an error: sync has stopped until it is.
+		expect(said.classList.contains('sync-problem')).toBe(true);
 		await user.click(screen.getByRole('button', { name: 'Connect again' }));
 		await waitFor(() => {
 			expect(leave).toHaveBeenCalled();
 		});
 		expect(startConnect).toHaveBeenCalledWith('dropbox', expect.any(String), '/');
+	});
+
+	it('asks for the provider again for every problem connecting again answers, and for none other', async () => {
+		await bound();
+		const { client } = fakes();
+		const reconnecting: Partial<SchedulerStatus>[] = [
+			{ phase: 'attention', refusal: 'credential_required' },
+			{ phase: 'attention', refusal: 'credential_revoked' },
+			// The provider refused a fresh token too (the engine's `paused`).
+			{ phase: 'attention', error: 'authorization required' },
+		];
+		await reconnecting.reduce(async (prior, status) => {
+			await prior;
+			showSettings({ client, scheduler: schedulerShowing(status), connectReturn: holding() });
+			expect(await screen.findByRole('button', { name: 'Connect again' })).toBeTruthy();
+			cleanup();
+		}, Promise.resolve());
+
+		showSettings({
+			client,
+			scheduler: schedulerShowing({ phase: 'attention', error: 'quota' }),
+			connectReturn: holding(),
+		});
+		const said = await screen.findByText('Sync needs attention: quota');
+		expect(said.classList.contains('sync-problem')).toBe(false);
+		expect(screen.queryByRole('button', { name: 'Connect again' })).toBeNull();
 	});
 
 	it('disconnects on the server, then here, keeping every passage', async () => {

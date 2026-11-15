@@ -440,6 +440,16 @@ modifier, so they never collide with typing during practice.
   starts offline. Navigation falls back to the shell only for `/`.
 - **Updates.** `registerType: 'prompt'`: a new build waits for the user to reload, and never swaps
   in under a pass being typed.
+- **Reload stops the app's requests first** (`sync/beforeUpdate.ts`, from skysa-notes #360).
+  Reload asks the waiting worker to take over, and Chromium lets it only once the worker it
+  replaces has no fetch event in flight. A request that starts while the take-over waits holds it
+  for Chromium's five-minute limit, through Reload pressed again and a reload by hand. A sync keeps
+  requests going, so Reload looked dead. So Reload pauses this tab's sync, as Pause syncing does
+  (§10, "The sync client"), and asks every other tab to pause over a `BroadcastChannel`
+  (`memoriam-update`). It gives them 250 ms, then asks. A pause lasts only until the app is opened
+  again, so syncing starts again by itself after the reload. The prompt says it is updating
+  meanwhile, and after ten seconds what else will do it. A tab still on a build from before this
+  does not listen, and can still hold the take-over to the five minutes.
 - **Brand.** The name, colours, icons and fonts come from a `brand.json`: `apps/web/brand/` by
   default, or the file `MEMORIAM_BRAND` names (`apps/web/brand.ts`). The default icons are drawn by
   `apps/web/brand/draw-icons.mjs`.
@@ -502,15 +512,16 @@ differs.
   wire stub. `contract.test.ts` registers the adapters from one table, each over its stub and,
   given a token, a live account. The stubs share how they answer and record a request
   (`tests/providers/harness.ts`). Beyond skysa-notes' record, the suite asks every adapter about
-  the root: a passage or file written at it, a move onto it, and a delete or move of it, named by
-  its path or by its id, is a `NotFoundError`, and `createFolder('')` answers it as a folder
-  already there.
+  the root: a passage or file written at it, a move onto it, and a delete, move or leave
+  (`leaveFolder`) of it, named by its path or by its id, is a `NotFoundError`, and
+  `createFolder('')` answers it as a folder already there.
 - The fake, the stubs and the store contract reach the apps' tests as `@memoriam/core/testing`
   (`tests/testing.ts`), and never anything the apps ship.
 
 Only the names differ:
 - `APP_FOLDER_NAME` is `memoriam`, and the marker is `.memoriam-app.json`.
-- Google Drive tags the app's folder `appProperties: { memoriam: 'root' }`.
+- Google Drive tags the app's folder `appProperties: { memoriam: 'root' }`, and marks a folder the
+  app has left `memoriamLeft` (below, "Since the port").
 - `PROVIDER_KINDS` has no `webdav`, which skysa-notes deferred indefinitely.
 
 The interface keeps `readBytes` and `createFile`, though nothing here yet writes a file that is not
@@ -530,6 +541,47 @@ drive the engine through the adapter, held back in S1, are restored. Where it di
   `upload`, `move-file` and `delete-file` ops. Nothing in the web app makes one yet. They stay so
   that audio (Phase 3) does not reopen the engine. `files.ts` holds the extension → content type
   map they need.
+
+**Since the port.** Fixes skysa-notes made to its engine and adapters after `fa92ad6`, taken
+here:
+- **A round says it is reading its pages** (skysa-notes #350). Another device's moved folders are
+  one round naming every passage moved, and its pages were read with nothing said. A round now
+  reports `receiving` with `listing` before its first page, and after each page that names more
+  passages how many it has named so far. Once through, it reports `listing: false` with the whole
+  count, even when that is none, so the words never outlive the reading. A scan reports before
+  its first page as well.
+- **Drive lists a round's new folders four at a time** (skysa-notes #354). A folder that arrives
+  in a feed round has its contents listed into the same page, since the feed will not name them,
+  and after collections moved on another device, every folder of them arrives. One request at a
+  time was a wait per folder before the round could say anything. They are now asked a level at a
+  time, four at once (`LISTS_AT_ONCE` in `gdrive/cursor.ts`, as many as writes), and the answers
+  go into the page in the order one at a time put them.
+- **Drive leaves the folders a collection leaves behind** (skysa-notes #356). A collection moved,
+  renamed or deleted on one device stayed on every other device as an empty collection, and came
+  back after a re-scan: under `drive.file` a listing cannot prove a folder empty, so the engine's
+  `rmdir` removed nothing, since trashing the folder could trash what the user put there. Where
+  `listsEverything` is false, `rmdir` now calls the provider's optional `leaveFolder`, past the
+  same gates as a delete. Drive sets a private `appProperties` key (`memoriamLeft`) and touches
+  nothing in the folder. The adapter keeps a left folder in its id tree, but does not report it
+  while nothing the app can see is beneath it (`hideLeftFolders` in `idTree.ts`). A feed page
+  compares the tree before and after it: a folder that becomes hidden is reported deleted, and one
+  that stops being hidden is reported as a folder again. A scan holds left folders back until its
+  last page. `createFolder` at its path takes the mark off. The mark rides in the cursor as an
+  optional fifth element of a tree row, so stored cursors still read, and OneDrive's are
+  unchanged. skysa-notes has not yet measured whether Drive's change feed reports a change to
+  `appProperties` alone.
+- **Drive scans when the change feed runs longer than a scan would** (skysa-notes #362).
+  `drive.file` hides other apps' changes, but Drive still pages through them: after a day away, a
+  phone read 60 empty pages before it found anything, where a scan took a few. A feed round that
+  has read twice the pages a scan would take, plus two (`feedLimit` in `gdrive/cursor.ts`, from
+  the tree's size), resets to a scan. A feed round is read whole before any of it is applied, so
+  nothing read is half kept. The app folder is confirmed once a round, at its first page, rather
+  than before every page (`foundId`).
+- **A deleted passage is never claimed by path** (skysa-notes #362). Scans made common by the
+  above found a mistake only a scan could make. Another device deleted a passage's file and gave
+  its name to another file. A scan never says what was removed, so the passage deleted here was
+  still at the path, was claimed by the newcomer, and its queued delete then removed that file.
+  `noteForEntry` now passes over a passage the user has deleted wherever it stands.
 
 **Merge before a conflict copy.** skysa-notes never merges: on a conflict the remote keeps the
 path, and the local version is written beside it as a conflict copy. Memoriam adds one merge
@@ -634,9 +686,24 @@ differs:
   - an op out of attempts holds the queue (`blocked`), and is tried again after 15 minutes or when
     the user asks;
   - a run that ends after the library was bound or let go (`bindingCount`) is ignored, and asked
-    for again.
+    for again;
+  - a run held up behind another tab's sync says so (`waitForLock`). The lock is a Web Lock, which
+    nothing else here can see. After 5 seconds without it (`SYNC_WAIT_MS`) the status says
+    `waiting`, and Settings says the sync is waiting for another tab or window, until the lock
+    comes. A lock this tab's own work holds, such as a paused run putting its batch away or a
+    re-scan clearing the cursor, is not another tab's: the tab knows which it holds
+    (`underSyncLock`), and asks again 5 seconds later;
+  - the user can pause syncing (`pause`), as skysa-notes' can. That ends the session, which
+    aborts every request the run has out, and makes the next one paused: it publishes `paused` and
+    runs nothing, since every trigger goes through `run`, which refuses while paused. A batch the
+    run was already writing is written whole with its cursor. An op whose request was aborted gets
+    back the attempt counted against it. Sync now or a re-scan resumes it, and so do letting the
+    library go and binding it again, and a reload: the pause is in memory only, so a reload never
+    leaves a device not syncing with nobody there to see it.
 
-  It is started in `main.tsx`, and does nothing while the library is bound to nothing.
+  skysa-notes also says when a run waits on another tab's reads of the database (`heldUp`).
+  Memoriam does not follow its transactions, so only the wait for the lock is said. The scheduler
+  is started in `main.tsx`, and does nothing while the library is bound to nothing.
 - **The account** (`sync/account.ts`). There is one library, so connecting is choosing where it
   syncs.
   - **A connect that comes back** binds the library (`claimConnection`). A library bound
@@ -694,11 +761,21 @@ any of them out. The one Worker serves the app as well, so `/api` and the app sh
   which lets the library go if the server says so (`reconcileAccount`).
 - **Bound**, the section names the provider and account, and says how syncing stands:
   - up to date, and when it last synced;
-  - syncing, offline, or retrying;
-  - what needs attention, with the change that is stuck, or "Connect again" when the provider
-    must be asked again (`reauthorize_required`).
+  - syncing, and what the run is doing. While it reads the provider's pages, it is checking for
+    changes or, on a first sync or a re-scan, looking for passages. From twenty passages
+    (`PROGRESS_FROM` in `sync/progress.ts`) it says how many it has found, received or sent. A
+    run of a few is not counted, so an edit's sync does not flash a number;
+  - paused, or offline, or retrying;
+  - what needs attention, with the change that is stuck, or "Connect again" when connecting the
+    account again is the answer (`needsReconnect` in `sync/runtime.ts`, as skysa-notes': the
+    server or the provider wants the account asked again, or the credential reaches nothing).
+    That sentence is drawn in the colour of an error, since sync has stopped until it is done.
 
-  Sync now runs a sync and tries again a stuck change.
+  Sync now runs a sync and tries again a stuck change. While a sync goes, a long run draws its bar
+  and the file it is on under the line (`RunProgress`), and **Pause syncing** stops it. Paused,
+  Sync now reads **Resume syncing**. skysa-notes opens these from its status line in a dialog,
+  because its line, at the sidebar's foot, has no room. Settings has room, so they are drawn in
+  place.
 - **Disconnect** asks first, then signs this device out on the server and lets go here. Where the
   server will not or cannot answer, the section offers to stop syncing on this device alone
   (`stopSyncingHere`).

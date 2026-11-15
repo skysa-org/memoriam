@@ -46,8 +46,15 @@ import { createTokenSource, type TokenSource } from './tokens.js';
  * Ported from skysa-notes' `sync/scheduler.ts`, less what serves several
  * sources and features Memoriam does not have: the change relay, the
  * clipboard, files read on demand, an import that can be cancelled, a resume
- * to verify, and the wait on another tab.
+ * to verify, and the wait on another tab's reads of the database. A wait on
+ * another tab's sync is said (`waitForLock`).
  */
+
+/**
+ * How long a run waits for another tab or window of the app before it says
+ * so (`SchedulerStatus.waiting`).
+ */
+export const SYNC_WAIT_MS = 5000;
 
 export type SyncPhase =
 	/** No connection: the library is kept on this device only. */
@@ -64,7 +71,14 @@ export type SyncPhase =
 	 * token, the provider refused a fresh one, or an op has failed too often to
 	 * go on retrying. Pulls continue where they can.
 	 */
-	| 'attention';
+	| 'attention'
+	/**
+	 * The user paused it (`pause`): nothing syncs, and changes wait on this
+	 * device, until Sync now, a re-scan, another connection bound, or a
+	 * reload. Not the engine's `paused` outcome, which is an account that
+	 * needs connecting again, and `attention`.
+	 */
+	| 'paused';
 
 /**
  * The op a `blocked` sync is about: the first one out of attempts, which is
@@ -100,6 +114,12 @@ export interface SchedulerStatus {
 	 * and only then (`onProgress` in the engine).
 	 */
 	readonly progress?: SyncProgress;
+	/**
+	 * The run is under way and has waited `SYNC_WAIT_MS` for the sync of this
+	 * library that another tab or window of the app is running, and is waiting
+	 * still. While `syncing`, and only then.
+	 */
+	readonly waiting?: true;
 }
 
 export type SchedulerEvent = 'focus' | 'visibilitychange' | 'online' | 'offline';
@@ -204,6 +224,14 @@ export interface SyncScheduler {
 	 * the run has finished.
 	 */
 	readonly syncNow: () => Promise<void>;
+	/**
+	 * Stop the run under way and start no other until the user asks — Sync now
+	 * or a re-scan — or another connection is bound, or the app is opened
+	 * again: the status says `paused` meanwhile. The run's requests are
+	 * aborted; a batch it was already writing is written whole, its cursor with
+	 * it, so nothing is lost and nothing is applied in part.
+	 */
+	readonly pause: () => void;
 	readonly status: () => SchedulerStatus;
 	/** Called with every status change. Returns the way to unsubscribe. */
 	readonly subscribe: (listener: (status: SchedulerStatus) => void) => () => void;
@@ -303,6 +331,12 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 	const progressMs = options.progressMs ?? 150;
 
 	const current = new Map<'session', Session>();
+	/** The binding as last seen, which `pause` follows again. */
+	const shown = new Map<'state', SyncStateRecord>();
+	/** The connection the user has paused (`pause`), until they ask again. */
+	const pausedFor = new Map<'connection', string>();
+	const isPaused = (connectionId: string): boolean =>
+		pausedFor.get('connection') === connectionId;
 	const generations = new Map<'count', number>([['count', 0]]);
 	const timers = new Map<Timer, () => void>();
 	const unsubscribers = new Set<() => void>();
@@ -321,7 +355,7 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 	 * must not be: it describes a queue that is out of attempts *now*.
 	 */
 	const publish = (next: SchedulerStatus) => {
-		const { stuck: _carried, progress, ...rest } = next;
+		const { stuck: _carried, progress, waiting, ...rest } = next;
 		const stuck = current.get('session')?.stuck.get('op');
 		// Progress is about the run under way and nothing else: carried into
 		// `idle` by a `{ ...status() }`, it would go on counting a run that has
@@ -330,6 +364,7 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 			...rest,
 			...(stuck === undefined ? {} : { stuck }),
 			...(progress === undefined || rest.phase !== 'syncing' ? {} : { progress }),
+			...(waiting === undefined || rest.phase !== 'syncing' ? {} : { waiting }),
 		};
 		statusBox.set('status', full);
 		listeners.forEach((listener) => {
@@ -645,7 +680,9 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 	 * after it — unless it was only a nudge and that run ended backing off.
 	 */
 	const run = (session: Session, asked: 'again' | 'nudged' = 'again'): Promise<void> => {
-		if (!isCurrent(session)) return Promise.resolve();
+		// Every trigger comes through here — the minute, an edit, focus, the
+		// network back — so a pause holds against all.
+		if (!isCurrent(session) || isPaused(session.connectionId)) return Promise.resolve();
 		const inFlight = session.inFlight.get('run');
 		if (inFlight !== undefined) {
 			session.flags.add(asked);
@@ -673,13 +710,14 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 		publish({ ...status(), phase: 'syncing', error: undefined, refusal: undefined });
 		// One engine at a time per connection, across sessions and tabs: a
 		// session ended mid-run, or another tab, may still be at the network.
-		const result = await environment
-			.withLock(lockName(session.connectionId), () =>
-				isCurrent(session)
-					? attempt(session, provider, engine)
-					: Promise.resolve<RunResult>({ kind: 'superseded' })
-			)
-			.catch((error: unknown): RunResult => ({ kind: 'failed', error }));
+		const stopWaiting = waitForLock(session);
+		const result = await underSyncLock(session.connectionId, () => {
+			stopWaiting();
+			return isCurrent(session)
+				? attempt(session, provider, engine)
+				: Promise.resolve<RunResult>({ kind: 'superseded' });
+		}).catch((error: unknown): RunResult => ({ kind: 'failed', error }));
+		stopWaiting();
 		// Whatever it had still to say is about a run that has ended.
 		cancelProgress();
 		if (isCurrent(session)) {
@@ -737,6 +775,69 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 			progressTimer.set('timer', environment.setTimer(flush, progressMs));
 		};
 		flush();
+	};
+
+	// ------------------------------------------------------------ waiting
+
+	/** The run has started, or stopped, waiting on another tab's sync. */
+	const reportWaiting = (session: Session, waiting: boolean) => {
+		const now = status();
+		// Said already, either way.
+		if (!isCurrent(session) || now.phase !== 'syncing' || (now.waiting === true) === waiting) {
+			return;
+		}
+		const { waiting: _was, ...rest } = now;
+		publish(waiting ? { ...rest, waiting } : rest);
+	};
+
+	/** Connections whose sync lock this tab's own work holds (`underSyncLock`). */
+	const heldHere = new Set<string>();
+
+	/** Run `work` holding the connection's sync lock, known here to be this tab's. */
+	const underSyncLock = <T>(connectionId: string, work: () => Promise<T>): Promise<T> =>
+		environment.withLock(lockName(connectionId), async () => {
+			heldHere.add(connectionId);
+			try {
+				return await work();
+			} finally {
+				heldHere.delete(connectionId);
+			}
+		});
+
+	/** Runs that have waited `SYNC_WAIT_MS` for the sync lock, and are waiting still. */
+	const lockWaits = new Set<Session>();
+
+	/**
+	 * Say so once a run has waited `SYNC_WAIT_MS` for its connection's sync
+	 * lock: another tab or window of the app is syncing the library, and this
+	 * one goes after it. A lock this tab's own work holds is not another
+	 * tab's — a run a pause let go of, still putting its batch away; a re-scan
+	 * clearing the cursor — so then it asks again a while later. Returns the way to stop, for when the lock comes, or the run
+	 * gives up.
+	 */
+	const waitForLock = (session: Session): (() => void) => {
+		const timer = new Map<'timer', () => void>();
+		const time = () => {
+			timer.set(
+				'timer',
+				environment.setTimer(() => {
+					timer.delete('timer');
+					if (!isCurrent(session)) return;
+					if (heldHere.has(session.connectionId)) {
+						time();
+						return;
+					}
+					lockWaits.add(session);
+					reportWaiting(session, true);
+				}, SYNC_WAIT_MS)
+			);
+		};
+		time();
+		return () => {
+			timer.get('timer')?.();
+			timer.delete('timer');
+			if (lockWaits.delete(session)) reportWaiting(session, false);
+		};
 	};
 
 	// ------------------------------------------------------------ changes
@@ -808,6 +909,11 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 	};
 
 	const follow = (state: SyncStateRecord | undefined) => {
+		if (state === undefined) shown.delete('state');
+		else shown.set('state', state);
+		// Another connection bound, or none, ends a pause: binding one is what
+		// syncs it.
+		if (state === undefined || !isPaused(state.connectionId)) pausedFor.delete('connection');
 		const active = current.get('session');
 		if (state?.connectionId === active?.connectionId && active !== undefined) return;
 		endSession();
@@ -860,9 +966,16 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 			abort,
 		};
 		current.set('session', session);
-		publish({ phase: 'idle', lastSyncAt: state.lastSyncAt, conflicts: [] });
+		const paused = isPaused(connectionId);
+		publish({ phase: paused ? 'paused' : 'idle', lastSyncAt: state.lastSyncAt, conflicts: [] });
 		watchEdits(session);
+		if (paused) return;
 		void run(session);
+	};
+
+	/** The user asking again: a pause of this session's connection is over. */
+	const resume = (session: Session) => {
+		if (isPaused(session.connectionId)) pausedFor.delete('connection');
 	};
 
 	const nudgeCurrent = (): Promise<void> => {
@@ -900,6 +1013,9 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 				environment.listen('offline', () => {
 					const session = current.get('session');
 					if (session === undefined || session.inFlight.has('run')) return;
+					// Paused says more than offline does, and `online` would not
+					// say it again, since it starts no run.
+					if (isPaused(session.connectionId)) return;
 					cancel('next');
 					publish({
 						...status(),
@@ -922,11 +1038,12 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 		resync: async () => {
 			const session = current.get('session');
 			if (session === undefined) return;
+			resume(session);
 			// Inside the lock every run takes: a run already at the network is
 			// holding a cursor of its own and writes it back when its round
 			// lands. Clearing outside the lock would put that cursor back after
 			// ours went, and the re-scan the user asked for would never happen.
-			await environment.withLock(lockName(session.connectionId), () =>
+			await underSyncLock(session.connectionId, () =>
 				// One transaction: the cursor and the attempts go together, so a
 				// scan that is about to run cannot start against a half-reset queue.
 				db.transaction('rw', db.syncState, db.opQueue, async () => {
@@ -953,8 +1070,31 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 		syncNow: async () => {
 			const session = current.get('session');
 			if (session === undefined) return;
+			resume(session);
 			await released(session);
 			await run(session);
+		},
+
+		pause: () => {
+			const session = current.get('session');
+			if (session === undefined) return;
+			pausedFor.set('connection', session.connectionId);
+			const running = session.inFlight.get('run');
+			const { conflicts } = status();
+			// A session of its own: ending this one aborts every request the run
+			// has out, and the next is made paused, so it runs nothing.
+			endSession();
+			follow(shown.get('state'));
+			const paused = current.get('session');
+			if (paused === undefined) return;
+			// The copies the last sync wrote are still on the device to be seen.
+			if (conflicts.length > 0) publish({ ...status(), conflicts });
+			// An op the run was sending when its request was aborted had an
+			// attempt counted against it, which the user's pause is no evidence
+			// for: given back once the run has let go.
+			void running
+				?.catch(() => undefined)
+				.then(() => (isCurrent(paused) ? released(paused) : undefined));
 		},
 
 		status,

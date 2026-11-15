@@ -26,8 +26,20 @@ export const ROOT_KEY = 'memoriam';
 
 export const ROOT_VALUE = 'root';
 
+/**
+ * The mark on a folder the app has left (`leaveFolder`). A key of its own, so
+ * that setting or clearing it can never touch the app folder's `memoriam`. Set
+ * and cleared by `files.update` with `appProperties`, whose keys are merged —
+ * a key set to `null` is removed and the others are kept — and private to the
+ * OAuth client that set them.
+ * https://developers.google.com/workspace/drive/api/guides/properties
+ */
+export const LEFT_KEY = 'memoriamLeft';
+
+export const LEFT_VALUE = '1';
+
 export const FIELDS =
-	'id,name,mimeType,parents,headRevisionId,modifiedTime,createdTime,size,md5Checksum,trashed';
+	'id,name,mimeType,parents,headRevisionId,modifiedTime,createdTime,size,md5Checksum,trashed,appProperties';
 
 export const PAGE_SIZE = '1000';
 
@@ -61,6 +73,8 @@ export interface DriveFile {
 	/** Absent for folders and for Google's own documents, which have no bytes. */
 	md5Checksum?: string;
 	trashed?: boolean;
+	/** Only this app's; absent where it has set none. */
+	appProperties?: Record<string, string>;
 }
 
 export interface FileList {
@@ -196,6 +210,9 @@ export const toEntry = (file: DriveFile, path: string): RemoteEntry => {
 	};
 };
 
+/** Whether the app has left it (`leaveFolder`). */
+export const isLeft = (file: DriveFile): boolean => file.appProperties?.[LEFT_KEY] !== undefined;
+
 /**
  * A file as the tree takes it. Trashed — explicitly, or with a folder above it
  * — is gone, and so is a name no path can hold. Revisions are the version, so a
@@ -213,6 +230,7 @@ export const treeItemOf = (file: DriveFile): TreeItem => {
 		parent: file.parents?.[0] ?? '',
 		name: file.name,
 		folder,
+		...(folder && isLeft(file) ? { left: true } : {}),
 		version: folder ? '' : (file.headRevisionId ?? ''),
 		modifiedAt: file.modifiedTime ?? '',
 		size: file.size === undefined ? -1 : Number(file.size),

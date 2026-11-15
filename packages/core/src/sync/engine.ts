@@ -135,7 +135,8 @@ export interface SyncEngineOptions {
 	reauthorize?: () => Promise<void>;
 	/**
 	 * Told how far a run has got: a full scan, as notes are found and read; a
-	 * round from a stored cursor, note by note; and a push, op by op. Called
+	 * round from a stored cursor, as its pages are read and then note by note;
+	 * and a push, op by op. Called
 	 * synchronously, as often as every file, so a caller that draws from it
 	 * decides how often to — and whether a run of a few notes is worth showing.
 	 */
@@ -157,14 +158,19 @@ export interface SyncEngineOptions {
  * (`drainRound`), so it knows how many notes it names before it reads the
  * first: `done` counts each as it is decided, read or already held. Another
  * device's import of a thousand notes is one round, and nothing of it shows
- * until all of it is read, so this is what there is to see meanwhile.
+ * until all of it is read, so this is what there is to see meanwhile. While
+ * it is still reading its pages it is `listing`, as a scan is, and `total` is
+ * how many notes the pages read so far name — said before the first page as
+ * none, so a round that takes long over its pages says what it is doing
+ * (2026-10-13: another device's notebooks moved was minutes of plain
+ * "Syncing…" on a phone, before the first note was counted).
  * A push knows its queue before it starts, so it gives a total. `path` is the
  * file just read or decided, or the one about to be sent, for a caller that
  * shows it.
  */
 export type SyncProgress =
 	| { stage: 'scanning'; found: number; done: number; listing: boolean; path?: string }
-	| { stage: 'receiving'; done: number; total: number; path?: string }
+	| { stage: 'receiving'; done: number; total: number; listing: boolean; path?: string }
 	| { stage: 'uploading'; done: number; total: number; path?: string };
 
 export interface SyncEngine {
@@ -260,10 +266,10 @@ export const createSyncEngine = (options: SyncEngineOptions): SyncEngine => {
 
 	/**
 	 * The round under way, for `onProgress`, and none during a scan: how many
-	 * notes it names, and how many of them are decided. Kept here for the
-	 * reason the scan's count is.
+	 * notes it names, how many of them are decided, and whether it is still
+	 * reading its pages. Kept here for the reason the scan's count is.
 	 */
-	const rounds = new Map<'current', { total: number; done: number }>();
+	const rounds = new Map<'current', { total: number; done: number; listing: boolean }>();
 
 	/**
 	 * Notes a pull has read whose batch has not been committed, by remote id.
@@ -300,11 +306,12 @@ export const createSyncEngine = (options: SyncEngineOptions): SyncEngine => {
 
 	const reportRound = (path?: string) => {
 		const round = rounds.get('current');
-		if (round === undefined || round.total === 0) return;
+		if (round === undefined) return;
 		onProgress({
 			stage: 'receiving',
 			done: round.done,
 			total: round.total,
+			listing: round.listing,
 			...(path === undefined ? {} : { path }),
 		});
 	};
@@ -667,11 +674,15 @@ export const createSyncEngine = (options: SyncEngineOptions): SyncEngine => {
 		if (at !== undefined && at !== entry.path) return undefined;
 		const own = byPath.remoteId;
 		if (own !== undefined && batch.live.has(own)) return undefined;
-		// Except a note the user has deleted. Its file went on another device
-		// too, and this is a new one there that took the name: brought back as
-		// that note, it is still deleted here, and its queued delete removes the
-		// other device's note from the remote.
-		if (at === undefined) return batch.deleting.has(byPath.id) ? undefined : byPath;
+		// Nor a note the user has deleted, wherever it stands. Its file went on
+		// another device too, and this is a new one there that took the name:
+		// brought back as that note, it is still deleted here, and its queued
+		// delete removes the other device's note from the remote. A feed reports
+		// the old file gone first, so the batch has removed the note by now; a
+		// scan never says what was removed, so the note is still at the path —
+		// and claimed below, as a file replaced while the cursor was dead.
+		if (batch.deleting.has(byPath.id)) return undefined;
+		if (at === undefined) return byPath;
 		// The user's own rename, not yet pushed: the note is at this path because
 		// they put it here, and its file is still wherever it was. Claimed, it
 		// takes the arriving file's bytes and forgets its own — which the feed
@@ -3370,22 +3381,42 @@ export const createSyncEngine = (options: SyncEngineOptions): SyncEngine => {
 	 */
 	const readRound = async (
 		cursor: string,
-		entries: readonly ChangeEntry[]
+		entries: readonly ChangeEntry[],
+		/** The notes the pages so far name, by remote id, for the count. */
+		named: Set<string>
 	): Promise<{ entries: ChangeEntry[]; cursor: string }> => {
 		const set = await provider.changes(cursor);
 		const all = [...entries, ...set.entries];
-		return set.more ? readRound(set.cursor, all) : { entries: all, cursor: set.cursor };
+		const before = named.size;
+		set.entries.filter(isNoteEntry).forEach((entry) => named.add(entry.remoteId));
+		const round = rounds.get('current');
+		if (round !== undefined && named.size !== before) {
+			rounds.set('current', { ...round, total: named.size });
+			reportRound();
+		}
+		return set.more ? readRound(set.cursor, all, named) : { entries: all, cursor: set.cursor };
 	};
 
-	const drainRound = async (cursor: string): Promise<SyncOutcome> => {
-		const round = await readRound(cursor, []);
-		// Counted as `decideAll` will see them, one entry per file.
+	/** A round's pages, then its decisions, counted as it goes (`rounds`). */
+	const countedRound = async (
+		cursor: string
+	): Promise<{ round: { entries: ChangeEntry[]; cursor: string }; changes: PullChange[] }> => {
+		rounds.set('current', { total: 0, done: 0, listing: true });
+		reportRound();
+		const round = await readRound(cursor, [], new Set());
+		// Counted as `decideAll` will see them, one entry per file. Said even
+		// when it is none, so that what is said is no longer that it is reading.
 		rounds.set('current', {
 			total: deduped(round.entries).filter(isNoteEntry).length,
 			done: 0,
+			listing: false,
 		});
 		reportRound();
-		const changes = await decideAll(round.entries, false).finally(() => {
+		return { round, changes: await decideAll(round.entries, false) };
+	};
+
+	const drainRound = async (cursor: string): Promise<SyncOutcome> => {
+		const { round, changes } = await countedRound(cursor).finally(() => {
 			rounds.delete('current');
 		});
 		await store.applyPull({ changes, cursor: round.cursor });
@@ -3513,6 +3544,8 @@ export const createSyncEngine = (options: SyncEngineOptions): SyncEngine => {
 		/** A scan from the top, counted from nothing. */
 		const scan = (upload = false): Promise<SyncOutcome> => {
 			scans.set('current', { notes: new Set(), settled: 0, reading: 0, listing: true });
+			// Before the first page, which can be long in coming, as a round's is.
+			reportScan();
 			return drainScan(upload).finally(() => {
 				scans.delete('current');
 			});
@@ -3922,10 +3955,12 @@ export const createSyncEngine = (options: SyncEngineOptions): SyncEngine => {
 	 * app. So the op is refused at five gates before it sends anything:
 	 *
 	 * 1. A provider whose listings are not the whole truth about a folder is
-	 *    never asked: `listsEverything` is false on Drive, where the app cannot
-	 *    see what the user put in the folder themselves, so nothing there can be
-	 *    shown to be empty. The directory stays, as it did before this op
-	 *    existed.
+	 *    never asked to delete one: `listsEverything` is false on Drive, where
+	 *    the app cannot see what the user put in the folder themselves, so
+	 *    nothing there can be shown to be empty. There the folder is *left*
+	 *    instead (`leaveFolder`), past the same gates: marked, with nothing in
+	 *    it touched, and hidden on every device while it holds nothing the app
+	 *    can see. A provider that can do neither keeps the directory.
 	 * 2. Without the id recorded when it was queued, nothing: a folder cannot be
 	 *    confirmed as the one this op is about by its path alone.
 	 * 3. A folder row at the path, or a live note or a file row at or under
@@ -3934,7 +3969,8 @@ export const createSyncEngine = (options: SyncEngineOptions): SyncEngine => {
 	 * 4. Nothing at the name on the remote, or something with another id — it was
 	 *    renamed or replaced elsewhere — and the op is about a folder that is
 	 *    already gone.
-	 * 5. Anything at all under it that is a file.
+	 * 5. Anything at all under it that is a file — on Drive, that the app can
+	 *    see, which is all a mark needs: it hides nothing that holds a file.
 	 *
 	 * Known gap (skysa-notes' docs/ARCHITECTURE.md §7): a file written between the walk and the
 	 * delete goes with the folder, into the provider's trash or recycle bin.
@@ -3942,7 +3978,8 @@ export const createSyncEngine = (options: SyncEngineOptions): SyncEngine => {
 	const runRmdir = async (op: SyncOp): Promise<void> => {
 		const { remoteId } = op;
 		const finish = (): Promise<void> => store.completeOp(op.seq, { kind: 'done' });
-		if (!provider.listsEverything) return finish();
+		const remove = provider.listsEverything ? provider.delete : provider.leaveFolder;
+		if (remove === undefined) return finish();
 		// The app folder itself is never a row and never removed (`reconcile`,
 		// `decideFolder`): an op for it could only be a mistake, and the mistake
 		// would take every note the user has.
@@ -3968,7 +4005,7 @@ export const createSyncEngine = (options: SyncEngineOptions): SyncEngine => {
 		}
 		if (!(await holdsNoFile(op.path))) return finish();
 
-		await provider.delete({ remoteId, path: op.path }).catch((error: unknown) => {
+		await remove({ remoteId, path: op.path }).catch((error: unknown) => {
 			if (isNotFoundError(error)) return;
 			throw error;
 		});

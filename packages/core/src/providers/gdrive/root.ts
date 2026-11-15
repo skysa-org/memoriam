@@ -21,7 +21,7 @@ import {
  * The app folder, which every path is walked from (`itemAt`): found by its
  * tag, made where there is none, any other tagged folder folded into it, and
  * confirmed for a stored cursor. Its id is kept between calls, and `changes`
- * forgets it (`forget`).
+ * reads it and forgets it (`foundId`, `forget`).
  */
 export const createAppFolder = (client: DriveClient) => {
 	const { attempt, call, raise, fileUrl, search, childrenOf, named, trash } = client;
@@ -206,12 +206,15 @@ export const createAppFolder = (client: DriveClient) => {
 	const idOf = async (entry: EntryRef): Promise<string | undefined> =>
 		entry.remoteId === '' ? (await itemAt(entry.path))?.id : entry.remoteId;
 
+	/** The id last found or confirmed, unless it has been forgotten since. */
+	const foundId = (): string | undefined => rootBox.get('id');
+
 	/** So the next `rootId` searches again. */
 	const forget = (): void => {
 		rootBox.delete('id');
 	};
 
-	return { rootId, establishRoot, confirmRoot, forget, itemAt, folderIdAt, idOf };
+	return { rootId, establishRoot, confirmRoot, foundId, forget, itemAt, folderIdAt, idOf };
 };
 
 export type AppFolder = ReturnType<typeof createAppFolder>;
