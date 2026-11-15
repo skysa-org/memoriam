@@ -219,6 +219,41 @@ Deploy from a release tag rather than from `main`. Each release's notes say whet
 migration. The security of your instance is the security of the commit you deployed: see
 [`SECURITY.md`](../SECURITY.md).
 
+The D1 migrations come with the server, in the shared kit's `@skysa/server`, which `pnpm install`
+puts at `apps/api/node_modules/@skysa/server/migrations`. `apps/api/wrangler.toml` points
+`migrations_dir` there. A `wrangler.toml` of your own points it at that folder, from wherever your
+file is.
+
+### A database from before the kit
+
+Before the server was the kit's, this repository kept a migration of its own, `0000_init`, which
+made the same two tables the kit's migrations make, under the name of the kit's first. No release
+carried it, but a Worker deployed from `main` in that time has it. Migrated as it is, such a
+database fails at the kit's second migration and changes nothing, since wrangler takes the kit's
+first for the one it applied. Reset it onto the kit's migrations instead: drop its two tables and
+wrangler's record of what it applied, then apply them all.
+
+```bash
+pnpm --filter @memoriam/api exec wrangler d1 execute memoriam --remote \
+  --command "DROP TABLE IF EXISTS grants; DROP TABLE IF EXISTS storage_connections; DROP TABLE IF EXISTS d1_migrations;"
+pnpm --filter @memoriam/api exec wrangler d1 migrations apply memoriam --remote
+```
+
+The database holds the connections to storage accounts and nothing else, so that is what goes. No
+passage is in it, and the reset touches none of the passages in the storage accounts. Each device
+finds its connection gone, as if it had been disconnected from another device, and lets its
+library go, keeping every passage. Connecting again binds the library to the account once more,
+and its first sync merges what the two hold.
+
+Two other things go with it. The refresh tokens it held are dropped, not revoked: each account's
+earlier grant to the app stays listed at its provider until the account's owner removes it there.
+And the record of which devices were revoked goes too, so a revoked device's credential could be
+used to connect again; like any new device, it would have to go through the provider's consent for
+an account it can sign in to.
+
+A local database from before, made by `pnpm db:migrate`, is reset the same way with `--local` in
+place of `--remote`, or by deleting `apps/api/.wrangler/state`.
+
 ## When it will not boot
 
 The Worker refuses to start rather than starting up wrong. It answers every request with

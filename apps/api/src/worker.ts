@@ -1,7 +1,6 @@
-import { type ApiErrorCode, cell } from '@memoriam/core';
+import { cell } from '@skysa/storage';
 
-import { createApp } from './app.js';
-import { parseEnv } from './env.js';
+import { createApp, envWarnings, misconfigured, parseEnv } from './index.js';
 
 /**
  * The default Worker entry: the only module in `apps/api` that reads the
@@ -19,6 +18,12 @@ const cache = cell<AppOrError | undefined>(undefined);
 
 const build = (env: Env): AppOrError => {
 	try {
+		// Once per isolate, as the app is built: settings that boot but do nothing.
+		// Before the parse, so an environment refused for another reason says
+		// these in the same deploy.
+		envWarnings(env).forEach((warning) => {
+			console.warn(`Environment: ${warning}`);
+		});
 		return createApp({ config: parseEnv(env) });
 	} catch (err) {
 		return err instanceof Error ? err : new Error(String(err));
@@ -38,19 +43,7 @@ export default {
 	fetch: (request: Request, env: Env, ctx: ExecutionContext): Response | Promise<Response> => {
 		const app = appFor(env);
 
-		if (app instanceof Error) {
-			// Misconfiguration is an operator problem, not a user one: log the detail
-			// and return something generic.
-			console.error(app.message);
-			return new Response(
-				JSON.stringify({ error: 'server_misconfigured' satisfies ApiErrorCode }),
-				{
-					status: 500,
-					headers: { 'content-type': 'application/json' },
-				}
-			);
-		}
-
+		if (app instanceof Error) return misconfigured(app);
 		return app.fetch(request, env, ctx);
 	},
 } satisfies ExportedHandler<Env>;

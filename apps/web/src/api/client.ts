@@ -31,7 +31,7 @@ const configSchema = z.object({
 		),
 });
 
-export type InstanceConfig = z.infer<typeof configSchema>;
+type InstanceConfig = z.infer<typeof configSchema>;
 
 const connectionSchema = z.object({
 	id: z.string().min(1),
@@ -63,7 +63,7 @@ const grantSchema = z.object({
 	device: z.string().optional(),
 });
 
-export type Grant = z.infer<typeof grantSchema>;
+type Grant = z.infer<typeof grantSchema>;
 
 const grantsSchema = z.object({ grants: z.array(grantSchema) });
 

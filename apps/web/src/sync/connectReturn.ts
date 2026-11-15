@@ -13,7 +13,7 @@ import { cell } from '@memoriam/core';
  * again. It is held here until Settings has shown it.
  */
 
-/** Exactly what the callback can redirect with: `Outcome` in `apps/api/src/routes/connect.ts`. */
+/** Exactly what the callback can redirect with: `Outcome` in the kit's server (`@skysa/server`). */
 const CONNECT_OUTCOMES = ['ok', 'denied', 'failed', 'partial', 'expired'] as const;
 
 export type ConnectOutcome = (typeof CONNECT_OUTCOMES)[number];

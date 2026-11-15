@@ -2,7 +2,7 @@
 # and sets every secret with `wrangler secret put` (see .dev.vars.example).
 name = "memoriam"
 main = "src/worker.ts"
-# No nodejs_compat: the Worker uses only Web Crypto and fetch (skysa-notes'
+# No nodejs_compat: the Worker uses only Web Crypto and fetch (the kit's
 # `docs/ARCHITECTURE.md` §6).
 compatibility_date = "2026-09-14"
 
@@ -19,7 +19,7 @@ run_worker_first = ["/api/*"]
 binding = "DB"
 database_name = "memoriam"
 database_id = "00000000-0000-0000-0000-000000000000"
-migrations_dir = "migrations"
+migrations_dir = "node_modules/@skysa/server/migrations"
 
 [vars]
 # Only what this deployment can actually do. Dropbox, OneDrive and Google
