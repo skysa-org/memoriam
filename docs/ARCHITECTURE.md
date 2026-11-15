@@ -589,7 +589,7 @@ Where it differs:
   A device still hears of another's changes at its next sync, on opening, on focus, on coming into view, and every minute while in view, and that is all it has where there is no relay, or the browser refuses the socket (§9).
 - **A policy's refusal.** The kit's client takes a `not_entitled` answer as a refusal, with the kind of no the policy gave and its reason (`status.denial`).
   Settings says it, with the operator's link ("The gate").
-- **Credentials** are skysa-notes':
+- **Credentials** are the kit's, as skysa-notes has them:
   - `sk1_` and 32 random bytes, made by the device, written down before the browser leaves for the provider (`beginConnect`), and filed under the connection once the server names it;
   - the server only ever sees the credential's SHA-256;
   - kept in IndexedDB, never localStorage.

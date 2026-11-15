@@ -117,7 +117,7 @@ const hasName = (doc: Doc, number: string, name: string): boolean =>
  * `:` between.
  */
 const MARKER =
-	/(?:([Ss]kysa-notes(?:['’]s?)?)(\s*(?:own\s+)?`?(?:docs\/)?ARCHITECTURE(?:\.md)?`?)?|`?(?:docs\/)?(ARCHITECTURE|research)\.md`?|RFC \d+|OpenID Connect Core|APPNOTE\.TXT|\[kit|\b(?:skysa-)?kit(?:['’]s)?\s*(?:own\s+)?`?(?:docs\/)?ARCHITECTURE\.md`?)\s*[,(:]?\s*/gu;
+	/(?:([Ss]kysa-notes(?:['’]s?)?)(\s*(?:own\s+)?`?(?:docs\/)?ARCHITECTURE(?:\.md)?`?)?|`?(?:docs\/)?(ARCHITECTURE|research)\.md`?|RFC \d+|OpenID Connect Core|APPNOTE\.TXT|\[kit|\b(?:skysa-)?kit(?:['’]s)?\s*(?:own\s+)?\[?`?(?:docs\/)?ARCHITECTURE(?:\.md)?`?)\s*[,(:]?\s*/gu;
 type Cited = Doc | 'skysa-notes';
 const docOf = (notes: string | undefined, word: string | undefined): Cited | undefined => {
 	if (notes !== undefined) return 'skysa-notes';
@@ -130,27 +130,23 @@ type Citation = Readonly<{ doc: Cited; number: string; name?: string; exact: boo
 /**
  * Each `§` in a text, with what it cites. One right after a document's name is
  * that document's. One standing alone is its own document's in the docs, and in
- * code the last of this repo's documents named above it, ARCHITECTURE when none
- * is: its number is too loose to check there, and only its name is. Another
- * document's name is that of the `§` right after it and no other, so a file
- * that cites one does not hide what it cites of this repo's after it.
+ * code the last document named above it, which is this repo's ARCHITECTURE when
+ * none is: its number is too loose to check there, and only its name is.
+ * skysa-notes' name alone is not a document's above anything.
  */
 const citations = (file: string, text: string): readonly Citation[] => {
 	const flat = unwrapped(text);
-	const markers = [...flat.matchAll(MARKER)].flatMap((match) =>
-		match[1] !== undefined && match[2] === undefined && /[(:]\s*$/u.test(match[0])
+	const markers = [...flat.matchAll(MARKER)].flatMap((match) => {
+		const alone = match[1] !== undefined && match[2] === undefined;
+		return alone && /[(:]\s*$/u.test(match[0])
 			? []
-			: [{ end: match.index + match[0].length, doc: docOf(match[1], match[3]) }]
-	);
+			: [{ end: match.index + match[0].length, doc: docOf(match[1], match[3]), alone }];
+	});
 	return [...flat.matchAll(/§(\d+(?:\.\d+)*)(?:,? ["“]([^"”]{3,80})["”])?/gu)].flatMap(
 		(match) => {
 			const adjacent = markers.find((marker) => marker.end === match.index);
 			const nearest = markers
-				.filter(
-					(marker) =>
-						marker.end <= match.index &&
-						(marker.doc === 'ARCHITECTURE' || marker.doc === 'research')
-				)
+				.filter((marker) => marker.end <= match.index && !marker.alone)
 				.at(-1);
 			const own = DOCS[file];
 			const doc = adjacent ? adjacent.doc : (own ?? (nearest ? nearest.doc : 'ARCHITECTURE'));
@@ -250,7 +246,10 @@ describe('the docs', () => {
 		expect(ours.filter(({ doc }) => doc === 'ARCHITECTURE').length).toBeGreaterThan(150);
 		expect(ours.filter(({ doc }) => doc === 'research').length).toBeGreaterThan(20);
 		expect(ours.filter(({ name }) => name !== undefined).length).toBeGreaterThan(50);
-		expect(cited.filter(({ doc, exact }) => doc === 'skysa-notes' && exact)).not.toEqual([]);
+		expect(
+			cited.filter(({ doc, exact }) => doc === 'skysa-notes' && exact),
+			'no citation of skysa-notes’ ARCHITECTURE is read: if none is left, this line can go'
+		).not.toEqual([]);
 		expect(layoutPaths(architecture)).toContain('packages/core/src/sync');
 	});
 
@@ -268,6 +267,9 @@ describe('the docs', () => {
 			{ doc: 'skysa-notes', number: '6', exact: true },
 		]);
 		expect(citations('a.ts', `rows as ${NAME} (\`Row\`)\n * (${AT}10, "Files")`)).toEqual([
+			{ doc: 'ARCHITECTURE', number: '10', name: 'Files', exact: false },
+		]);
+		expect(citations('a.ts', `as ${NAME} store does.\n * (${AT}10, "Files")`)).toEqual([
 			{ doc: 'ARCHITECTURE', number: '10', name: 'Files', exact: false },
 		]);
 		expect(citations('a.ts', '`docs/ARCHITECTURE.md` (§3)')).toEqual([
@@ -289,9 +291,10 @@ describe('the docs', () => {
 		expect(citations('a.ts', "The kit's docs/ARCHITECTURE.md §6")).toEqual([]);
 		expect(citations('a.ts', "the kit's own docs/ARCHITECTURE.md §6")).toEqual([]);
 		expect(citations('a.ts', 'skysa-kit `docs/ARCHITECTURE.md` §6')).toEqual([]);
+		expect(citations('a.ts', "The kit's\n[ARCHITECTURE §6](https://…)")).toEqual([]);
 		expect(
-			citations('a.ts', `the kit's docs/ARCHITECTURE.md §7.\n * Then §10, "Push timing"`)
-		).toEqual([{ doc: 'ARCHITECTURE', number: '10', name: 'Push timing', exact: false }]);
+			citations('a.ts', 'APPNOTE.TXT (§4.3.7 local header, §4.3.12 central directory)')
+		).toEqual([]);
 		expect(citations('a.ts', `as ${NAME} (${AT}10, "Push timing")`)).toEqual([
 			{ doc: 'ARCHITECTURE', number: '10', name: 'Push timing', exact: false },
 		]);

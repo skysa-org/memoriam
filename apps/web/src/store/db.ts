@@ -11,9 +11,9 @@ import { watchForNewerTab } from './staleTab.js';
  * call, and every read and write works offline. See docs/ARCHITECTURE.md §7.
  *
  * Rows mirror skysa-notes' (`NoteRecord`, keyed `[connectionId+id]`), so that
- * its sync store was ported onto them unchanged (§10, "The web store"): a
- * "note" here is any markdown file in the library — a passage, or a year's
- * activity.
+ * its sync store could be ported onto them; §10, "The web store", says where it
+ * differs. A "note" here is any markdown file in the library — a passage, or a
+ * year's activity.
  *
  * A version only adds, and what an older build wrote is carried forward by an
  * upgrade.
