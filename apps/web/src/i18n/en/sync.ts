@@ -87,7 +87,10 @@ export const sync = {
 			tooMany: 'Too many codes have been tried from here. Wait a while, and try again.',
 			/** `{label}` is the operator's name for the code, such as "Invite code". */
 			accepted: '{label} accepted on this device until {time}.',
-			/** Opens the field again, where the buttons were shown without a code. */
+			/**
+			 * Opens the field: again, where the buttons were shown without a code,
+			 * and beside Connect again, where a library must be connected again.
+			 */
 			enter: 'Have a code? Enter it',
 			change: 'Use another',
 			changeLabel: 'Use another {label}',

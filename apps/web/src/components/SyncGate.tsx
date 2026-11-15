@@ -1,6 +1,6 @@
 import { type ApiClient, connectCodeHeldUntil, watchConnectCode } from '@skysa/client';
 import { type ConnectGate, MAX_CONNECT_CODE } from '@skysa/protocol';
-import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
+import { type ReactNode, type RefObject, useEffect, useId, useRef, useState } from 'react';
 
 import { formatMoment } from '../i18n/dates.js';
 import { t } from '../i18n/t.js';
@@ -15,6 +15,9 @@ import { askAbout } from '../sync/connectCode.js';
  * Showing them grants nothing: the policy decides at the callback. Each step
  * takes the focus with it, as skysa-notes' does: the control pressed is gone
  * once the step changes, and a focus left on nothing starts again at the top.
+ * Beside Connect again, where a library must be connected again, the code's
+ * line and field without the message or link, never in front of it
+ * (`CodeBeside`).
  */
 
 type Client = Pick<ApiClient, 'checkConnectCode'>;
@@ -74,7 +77,7 @@ const CodeForm = ({
 	label: string;
 	client: Client;
 	onAccepted: () => void;
-	/** Back to the code already held, where there is one. */
+	/** Back to the step the field was opened from, where there is one to go back to. */
 	onCancel: (() => void) | undefined;
 	/** Whether the field takes the focus as it opens: asked for, not there from the first. */
 	focused: boolean;
@@ -152,8 +155,66 @@ const CodeForm = ({
 	);
 };
 
-/** Where the focus goes once a step has changed: a new object each time, so the same place twice moves it twice. */
-type FocusTo = Readonly<{ to: 'buttons' | 'field' | 'change' }>;
+/**
+ * Where the focus goes once a step has changed: a new object each time, so the
+ * same place twice moves it twice. `opener` is the button the field was opened
+ * from, which Cancel goes back to.
+ */
+type FocusTo = Readonly<{ to: 'buttons' | 'field' | 'opener' }>;
+
+/** Moves the focus to where a step said, once the step is drawn. */
+const useStepFocus = (
+	focus: FocusTo | undefined,
+	buttons: RefObject<HTMLDivElement | null>,
+	opener: RefObject<HTMLButtonElement | null>
+): void => {
+	useEffect(() => {
+		if (focus?.to === 'buttons') {
+			// The container, where there is nothing in it to press: not the top of the page.
+			(
+				buttons.current?.querySelector<HTMLElement>('button:not(:disabled), a') ??
+				buttons.current
+			)?.focus();
+		}
+		if (focus?.to === 'opener') opener.current?.focus();
+	}, [focus, buttons, opener]);
+};
+
+/**
+ * The code this device holds, under the operator's label and until when, and
+ * the button that asks for another; where none is held, "Have a code? Enter
+ * it". One button either way, so a hold that ends by the clock, or one another
+ * tab takes or drops, leaves the focus where it was.
+ */
+const CodeLine = ({
+	label,
+	until,
+	opener,
+	onClick,
+}: Readonly<{
+	label: string;
+	until: number | undefined;
+	/** The button Cancel brings the focus back to, where there is one. */
+	opener?: RefObject<HTMLButtonElement | null>;
+	onClick: () => void;
+}>) => (
+	<p className="field-hint">
+		{until !== undefined && (
+			<>{t('sync.gate.code.accepted', { label, time: formatMoment(until) })} </>
+		)}
+		<button
+			ref={opener}
+			type="button"
+			className="button ghost"
+			aria-label={
+				until === undefined ? undefined : t('sync.gate.code.changeLabel', { label })
+			}
+			onClick={onClick}
+		>
+			{until === undefined ? t('sync.gate.code.enter') : t('sync.gate.code.change')}
+		</button>
+	</p>
+);
 
 /**
  * The field and the buttons are never both open, as in skysa-notes' gate: a
@@ -178,16 +239,7 @@ export const SyncGate = ({
 	const [focus, setFocus] = useState<FocusTo | undefined>(undefined);
 	const buttons = useRef<HTMLDivElement>(null);
 	const change = useRef<HTMLButtonElement>(null);
-	useEffect(() => {
-		if (focus?.to === 'buttons') {
-			// The container, where there is nothing in it to press: not the top of the page.
-			(
-				buttons.current?.querySelector<HTMLElement>('button:not(:disabled), a') ??
-				buttons.current
-			)?.focus();
-		}
-		if (focus?.to === 'change') change.current?.focus();
-	}, [focus]);
+	useStepFocus(focus, buttons, change);
 	if (gate === undefined) return children;
 	const held = asked !== undefined && until !== undefined;
 	const required = asked?.required === true;
@@ -197,29 +249,6 @@ export const SyncGate = ({
 	const showing = !fieldOpen && (held || shown);
 	const step = (): ReactNode => {
 		if (asked === undefined) return null;
-		if (held && !changing) {
-			return (
-				<p className="field-hint">
-					{t('sync.gate.code.accepted', {
-						label: asked.label,
-						time: formatMoment(until),
-					})}{' '}
-					<button
-						ref={change}
-						type="button"
-						className="button ghost"
-						aria-label={t('sync.gate.code.changeLabel', { label: asked.label })}
-						onClick={() => {
-							setChanging(true);
-							setShown(false);
-							setFocus({ to: 'field' });
-						}}
-					>
-						{t('sync.gate.code.change')}
-					</button>
-				</p>
-			);
-		}
 		if (fieldOpen) {
 			return (
 				<CodeForm
@@ -233,7 +262,7 @@ export const SyncGate = ({
 						changing
 							? () => {
 									setChanging(false);
-									setFocus({ to: 'change' });
+									setFocus({ to: 'opener' });
 								}
 							: undefined
 					}
@@ -241,19 +270,18 @@ export const SyncGate = ({
 				/>
 			);
 		}
+		// The code held and Use another, or Have a code? Enter it.
 		return (
-			<p className="field-hint">
-				<button
-					type="button"
-					className="button ghost"
-					onClick={() => {
-						setShown(false);
-						setFocus({ to: 'field' });
-					}}
-				>
-					{t('sync.gate.code.enter')}
-				</button>
-			</p>
+			<CodeLine
+				label={asked.label}
+				until={until}
+				opener={change}
+				onClick={() => {
+					if (held) setChanging(true);
+					setShown(false);
+					setFocus({ to: 'field' });
+				}}
+			/>
 		);
 	};
 	return (
@@ -287,6 +315,70 @@ export const SyncGate = ({
 					</div>
 				)
 			)}
+		</>
+	);
+};
+
+/**
+ * The operator's code beside `children`, Connect again, where the library must
+ * be connected again (docs/ARCHITECTURE.md §10, "Connecting"): offered, never
+ * asked for first, even where the gate requires one, since connecting again
+ * stays out from behind the gate. It is how a policy that let the account in
+ * by one code is given another without disconnecting first. No message and no
+ * link: the account was let in once. Closed until asked for, with Cancel back
+ * to where it was opened from; Connect again is hidden while it is open, as
+ * the gate hides its buttons, since a connect sends the code held. Connect
+ * again comes first, so the line under it does not move it from under a
+ * pointer as `/config` answers; where no code is asked for, or `/config` has
+ * not answered, it is drawn alone, as the same button, so the focus stays.
+ */
+export const CodeBeside = ({
+	asked,
+	client,
+	children,
+}: Readonly<{
+	asked: ConnectGate['connectCode'];
+	client: Client;
+	children: ReactNode;
+}>) => {
+	const until = useHeldUntil();
+	const [open, setOpen] = useState(false);
+	const [focus, setFocus] = useState<FocusTo | undefined>(undefined);
+	const buttons = useRef<HTMLDivElement>(null);
+	const opener = useRef<HTMLButtonElement>(null);
+	useStepFocus(focus, buttons, opener);
+	const ask = () => {
+		setOpen(true);
+		setFocus({ to: 'field' });
+	};
+	const step = (code: NonNullable<ConnectGate['connectCode']>): ReactNode => {
+		if (open) {
+			return (
+				<CodeForm
+					label={code.label}
+					client={client}
+					onAccepted={() => {
+						setOpen(false);
+						setFocus({ to: 'buttons' });
+					}}
+					onCancel={() => {
+						setOpen(false);
+						setFocus({ to: 'opener' });
+					}}
+					focused={focus?.to === 'field'}
+				/>
+			);
+		}
+		return <CodeLine label={code.label} until={until} opener={opener} onClick={ask} />;
+	};
+	return (
+		<>
+			{!open && (
+				<div ref={buttons} tabIndex={-1}>
+					{children}
+				</div>
+			)}
+			{asked !== undefined && step(asked)}
 		</>
 	);
 };
