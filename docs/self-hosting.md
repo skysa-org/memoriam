@@ -222,7 +222,9 @@ migration. The security of your instance is the security of the commit you deplo
 The D1 migrations come with the server, in the shared kit's `@skysa/server`, which `pnpm install`
 puts at `apps/api/node_modules/@skysa/server/migrations`. `apps/api/wrangler.toml` points
 `migrations_dir` there. A `wrangler.toml` of your own points it at that folder, from wherever your
-file is.
+file is. A table of your own, for a rate limiter say, goes in a database of your own:
+`wrangler d1 migrations create` against this one would write its migration into `node_modules`,
+where the next install removes it.
 
 ### A database from before the kit
 
@@ -249,6 +251,9 @@ pnpm --filter @memoriam/api exec wrangler d1 execute memoriam --remote \
   --command "DROP TABLE IF EXISTS grants; DROP TABLE IF EXISTS storage_connections; DROP TABLE IF EXISTS d1_migrations;"
 pnpm --filter @memoriam/api exec wrangler d1 migrations apply memoriam --remote
 ```
+
+Run the two one after the other, at a quiet time. Between them the deployed Worker has no tables,
+and answers every request with an error, a connect finishing its callback then included.
 
 The database holds the connections to storage accounts and nothing else, so that is what goes. No
 passage is in it, and the reset touches none of the passages in the storage accounts. Each device
@@ -281,3 +286,8 @@ them, not just the first. The three that catch people:
 | `APP_ORIGIN: Invalid input: expected string, received undefined` | There is no default; set it. (`Invalid URL` instead means it is set but malformed: usually the scheme is missing.) |
 | `SECRETS_KEY: SECRETS_KEY must be base64 of exactly 32 bytes` | Generate one: `openssl rand -base64 32` |
 | `DROPBOX_CLIENT_SECRET: required because ENABLED_PROVIDERS includes "dropbox"` | Register that provider's app, or take it out of `ENABLED_PROVIDERS` |
+
+A setting that boots but does nothing is logged once, as `Environment:` and a line saying why,
+and the Worker starts. `RELAY` is one: the kit's server reads it, but this app runs no change
+relay, so take it out. The setting is read even so, and a value other than `true`, `false`, `1` or
+`0` is refused.

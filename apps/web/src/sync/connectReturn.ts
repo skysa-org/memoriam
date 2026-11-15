@@ -4,7 +4,7 @@ import { cell } from '@memoriam/core';
  * The way back from connecting a storage account (docs/ARCHITECTURE.md §10,
  * "Connecting"). The server's callback sends the browser to the path the app
  * started from with the outcome in its query — `/?connect=ok` — and nothing in
- * the hash, which it never sees (`safeReturnTo` in `apps/api`). Where the app
+ * the hash, which it never sees (`safeReturnTo` in the kit's server). Where the app
  * is lives in the hash, so the outcome is read out of the real query before the
  * router reads the address, the query is put back as it was without it, and the
  * app opens at Settings, where connecting began and where the outcome is shown.
