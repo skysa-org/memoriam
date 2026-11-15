@@ -488,10 +488,23 @@ reference is never read against this file's sections. What follows records only 
 differs.
 
 **The provider layer** (`packages/core/src/providers/`, `marker.ts`, `names/conflicts.ts`):
-- The adapters for Dropbox, OneDrive and Google Drive, and the in-memory fake.
+- The adapters for Dropbox, OneDrive and Google Drive, and the in-memory fake. Drive's is a folder,
+  `providers/gdrive/`, one file per concern: `wire.ts` (endpoints, answers, failures and the
+  requests everything else makes), `root.ts` (the app folder and path walks), `upload.ts`,
+  `cursor.ts` (the scan and the change feed), `duplicates.ts` (two items at one path) and
+  `index.ts` (the provider).
+- What the HTTP adapters share. On the wire, `http.ts`: the injected `fetch` type, the transport
+  each request goes through with its token (`createTransport`), error bodies, and the reading of
+  `Retry-After`. On the contract's side, `adapter.ts`: the options each is made with, the marker
+  written once, `read` as `readBytes` decoded, the root's guard and entry, and `isSelf`.
 - The marker file, and conflict names.
 - The contract suite every adapter passes (`tests/providers/contract.ts`), with each provider's
-  wire stub.
+  wire stub. `contract.test.ts` registers the adapters from one table, each over its stub and,
+  given a token, a live account. The stubs share how they answer and record a request
+  (`tests/providers/harness.ts`). Beyond skysa-notes' record, the suite asks every adapter about
+  the root: a passage or file written at it, a move onto it, and a delete or move of it, named by
+  its path or by its id, is a `NotFoundError`, and `createFolder('')` answers it as a folder
+  already there.
 - The fake, the stubs and the store contract reach the apps' tests as `@memoriam/core/testing`
   (`tests/testing.ts`), and never anything the apps ship.
 

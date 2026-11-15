@@ -1,10 +1,10 @@
 import { basename } from '../../src/paths.js';
-import type { FetchLike } from '../../src/providers/dropbox.js';
 import {
 	createFakeProvider,
 	type FakeProvider,
 	type FakeProviderOptions,
 } from '../../src/providers/fake.js';
+import type { FetchLike } from '../../src/providers/http.js';
 import {
 	type ChangeEntry,
 	ConflictError,
@@ -13,6 +13,7 @@ import {
 	NotFoundError,
 	type RemoteEntry,
 } from '../../src/providers/types.js';
+import { json } from './harness.js';
 import { bodyBytes, bodyText, createFrom } from './wireBody.js';
 
 /**
@@ -90,12 +91,6 @@ const changeMetadata = (entry: ChangeEntry): Record<string, unknown> => {
 	};
 };
 
-const json = (body: unknown, status = 200): Response =>
-	new Response(JSON.stringify(body), {
-		status,
-		headers: { 'content-type': 'application/json' },
-	});
-
 /** The envelope every endpoint-specific Dropbox error arrives in. */
 const failure = (summary: string, error: unknown, status = 409): Response =>
 	json({ error_summary: summary, error }, status);
@@ -123,6 +118,31 @@ const asFailure = (error: unknown): Response => {
 		});
 	}
 	return failure('internal_error/...', { '.tag': 'internal_error' }, 500);
+};
+
+/**
+ * What `files.stone` lets a write name: a `WritePath` or `WritePathOrId`, which
+ * needs a leading slash (or an id, or a namespace) — so not the root, `''`.
+ * Dropbox refuses anything else before the route runs, with a plain-text 400,
+ * and the stub does too rather than letting the fake answer for a path Dropbox
+ * would never have taken.
+ * https://github.com/dropbox/dropbox-api-spec (`files.stone`, `alias WritePath`)
+ */
+const WRITE_PATH = /^(?:\/[\s\S]*|ns:[0-9]+(?:\/.*)?|id:.*)$/u;
+
+/** The path a route writes to, where it is one that does. */
+const writePathOf = (
+	route: string,
+	body: Record<string, unknown>,
+	arg: Record<string, unknown>
+): string | undefined => {
+	const named = (value: unknown) => (typeof value === 'string' ? value : '');
+	if (route === 'files/upload') return named(arg.path);
+	if (route === 'files/create_folder_v2') return named(body.path);
+	if (route === 'files/move_v2') return named(body.to_path);
+	// `DeleteArg.path` is a `WritePathOrId` as well.
+	if (route === 'files/delete_v2') return named(body.path);
+	return undefined;
 };
 
 /** Dropbox accepts an `id:...` wherever it accepts a path. */
@@ -254,7 +274,7 @@ export const createDropboxStub = (options: FakeProviderOptions = {}): DropboxStu
 				reason: { '.tag': 'not_found' },
 			});
 		}
-		await backing.delete(ref);
+		await backing.delete(found);
 		return json({ metadata: metadataOf(found) });
 	};
 
@@ -285,7 +305,7 @@ export const createDropboxStub = (options: FakeProviderOptions = {}): DropboxStu
 				reason: { '.tag': 'conflict', conflict: { '.tag': 'file' } },
 			});
 		}
-		return json({ metadata: metadataOf(await backing.move(ref, to)) });
+		return json({ metadata: metadataOf(await backing.move(found ?? ref, to)) });
 	};
 
 	const routes: Record<
@@ -328,9 +348,19 @@ export const createDropboxStub = (options: FakeProviderOptions = {}): DropboxStu
 			...(rawArg === undefined && content !== '' ? { body } : {}),
 		});
 
-		const route = routes[url.replace(/^https:\/\/[^/]+\/2\//, '')];
+		const name = url.replace(/^https:\/\/[^/]+\/2\//, '');
+		const route = routes[name];
 		if (route === undefined) {
 			return Promise.resolve(failure('unknown_route/...', { '.tag': 'other' }, 400));
+		}
+		const written = writePathOf(name, body, arg);
+		if (written !== undefined && !WRITE_PATH.test(written)) {
+			return Promise.resolve(
+				new Response(
+					`Error in call to API function "${name}": request body: path: '${written}' did not match pattern '${WRITE_PATH.source}'`,
+					{ status: 400, headers: { 'content-type': 'text/plain; charset=utf-8' } }
+				)
+			);
 		}
 		return route(body, arg, bytes);
 	};

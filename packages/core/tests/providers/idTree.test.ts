@@ -1,15 +1,19 @@
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 
 import {
-	applyItem,
+	applyAll,
 	arrivals,
 	nodesOf,
 	pageFrom,
+	readTreeCursor,
 	type Settled,
 	settlePage,
+	treeCursorBase,
 	type TreeItem,
 	type TreeState,
 } from '../../src/providers/idTree.js';
+import { CursorResetError } from '../../src/providers/types.js';
 
 /**
  * The tree an id-based feed is read against, driven directly. OneDrive's tests
@@ -52,9 +56,7 @@ const run = (
 	roundEnds = true
 ): Settled & { next: TreeState; arrived: string[] } => {
 	const page = pageFrom(from);
-	items.forEach((item) => {
-		applyItem(page, item);
-	});
+	applyAll(page, items);
 	const arrived = arrivals(page);
 	const settled = settlePage(page, roundEnds);
 	return {
@@ -410,5 +412,37 @@ describe('an id tree', () => {
 
 			expect(middle.arrived).toEqual(['g']);
 		});
+	});
+});
+
+describe('a cursor read against a tree', () => {
+	const schema = z.object({ ...treeCursorBase, link: z.string() });
+	const written = {
+		v: 1,
+		root: ROOT_ID,
+		nodes: [['f', ROOT_ID, 'Work', true]],
+		pending: [],
+		link: 'https://example.test/next',
+	};
+
+	it('reads back what an adapter wrote', () => {
+		expect(readTreeCursor(schema, JSON.stringify(written), 'demo')).toEqual(written);
+	});
+
+	it('resets on one that is not JSON, not its shape, or not one it accepts', () => {
+		const refused = [
+			'not json',
+			JSON.stringify({ ...written, v: 2 }),
+			JSON.stringify({ ...written, root: '' }),
+			JSON.stringify({ ...written, nodes: [['f']] }),
+		];
+		refused.forEach((cursor) => {
+			expect(() => readTreeCursor(schema, cursor, 'demo')).toThrow(CursorResetError);
+		});
+		expect(() =>
+			readTreeCursor(schema, JSON.stringify(written), 'demo', (read) =>
+				read.link.startsWith('https://graph.microsoft.com/')
+			)
+		).toThrow('demo cursor is not one this adapter wrote');
 	});
 });
