@@ -31,7 +31,7 @@ const configSchema = z.object({
 		),
 });
 
-export type InstanceConfig = z.infer<typeof configSchema>;
+type InstanceConfig = z.infer<typeof configSchema>;
 
 const connectionSchema = z.object({
 	id: z.string().min(1),
@@ -63,7 +63,7 @@ const grantSchema = z.object({
 	device: z.string().optional(),
 });
 
-export type Grant = z.infer<typeof grantSchema>;
+type Grant = z.infer<typeof grantSchema>;
 
 const grantsSchema = z.object({ grants: z.array(grantSchema) });
 
@@ -126,10 +126,11 @@ export interface ApiClientOptions {
  * Either way the credential is spent for ever and the only answer is to throw
  * it away (docs/ARCHITECTURE.md §10, "The sync client").
  *
- * Each is one of core's `API_ERROR_CODES`, the list the server answers from,
- * so a code taken off it does not compile here. skysa-notes' client also reads
- * `not_entitled`, its operator's policy saying no; this server has no policy to
- * say it, and an answer with it is a failure like any other code.
+ * Each is one of core's `API_ERROR_CODES`, the part of the server's list the
+ * app knows, so a code taken off it does not compile here. skysa-notes' client
+ * also reads `not_entitled`, its operator's policy saying no; this app's entry
+ * passes no policy to say it, and an answer with it is a failure like any
+ * other code.
  */
 const REFUSALS = [
 	'credential_required',

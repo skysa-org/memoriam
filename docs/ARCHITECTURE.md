@@ -631,7 +631,7 @@ Where it differs:
 **The sync client** (S4: `apps/web/src/api/client.ts`, `store/credentials.ts`, `sync/{tokens,providers,scheduler,account,runtime}.ts`) is skysa-notes' client, ported.
 Where it differs:
 - **No change relay, and no connect gate.** skysa-notes' server can run a relay, which tells a device as soon as another has pushed, and an operator's gate in front of connecting: a message, a code its policy checks, and the reasons beside a refusal.
-  Memoriam's server has neither.
+  Memoriam's server runs neither ("The server").
   So the client has no relay tickets, no connect code and no gate, and does not read `not_entitled`.
   A device hears of another's changes at its next sync: on opening, on focus, on coming into view, and every minute while in view.
 - **Credentials** are skysa-notes':
@@ -682,7 +682,7 @@ So:
 - **A write that lands after another pass was made** is owed again, as lazily as it was queued.
 - **Hiding the page sends whatever waits**, at once: a phone may not run the page again for hours, and the next device opened should find the practice made here.
 
-**The server** (S5: `apps/api`) is skysa-notes' Worker, ported: Hono on Cloudflare Workers, with D1 through drizzle.
+**The server** (`apps/api`) is the shared kit's: `@skysa/server`, a Hono app on Cloudflare Workers with D1 through Drizzle, built as a library ([kit §6, "Backend"](https://github.com/skysa-org/skysa-kit/blob/main/docs/ARCHITECTURE.md#backend)).
 It holds:
 - the OAuth flows for Dropbox, OneDrive and Google Drive, with PKCE and a signed flow cookie;
 - each connection's refresh token, encrypted at rest (AES-256-GCM);
@@ -691,30 +691,15 @@ It holds:
 It mints access tokens from the refresh token, lists the devices holding a connection, and signs any of them out.
 The one Worker serves the app as well, so `/api` and the app share an origin.
 `docs/self-hosting.md` says how to run one.
-Where it differs:
-- **No entitlement policy.** skysa-notes asks an operator's policy at the callback and at `/token`.
-  Memoriam does not: every account that connects may sync, and there is no `not_entitled` to answer.
-  The rate-limit seam stays, in `apps/api/src/limits.ts` rather than core, and ships `neverLimited`.
-- **No connect gate, connect codes or change relay**, as the client has none ("The sync client").
-- **No `AUTH_MODE` and no WebDAV.**
-- **Routes get what they need once.**
-  `createApp` builds one `RouteDeps` (the config, the rate limiter, the provider `fetch` and the keys) and hands it to every router; a request carries only its database.
-  Each route that acts on a connection mounts `requireBearer` itself, typed `AuthedEnv`, so one that forgot it has no `bearer` to read.
-  A path under `/api/connection` that is not a route answers 404, not 401.
-- **Signing out the last device takes the account with it, in one transaction.**
-  The grant is nulled and the connection no live grant reaches is deleted in one `db.batch` (`revokeGrant` in `apps/api/src/db/connections.ts`).
-  As two statements, a sign-out cut off between them left the row: a sealed refresh token that no credential reaches, and so nothing can use or revoke.
-- **Each provider's settings are named once**, in `OAUTH_ENV` in `apps/api/src/env.ts`, keyed by the flows in `oauth/providers.ts`.
-  A provider added to one and not the other does not compile.
-  The schema, the boot check and the credentials `createApp` is handed all read it.
-  What the providers whose grant carries an ID token do alike is one test (`tests/oauthContract.test.ts`).
-- **One list of error codes.**
-  Every refusal is `{ error }` with a code from core's `API_ERROR_CODES` (`packages/core/src/api.ts`), and goes out through `fail` in `apps/api/src/http.ts`.
-  The client's refusals are a part of that list, so the two ends cannot drift.
-  A test reads the server's source for an error written by hand.
-- **One migration.** The schema starts as skysa-notes' seven migrations leave it, less the two tables nothing reads (`users` and `identities`), in a single `0000_init.sql`.
-- **Tests** run the real drizzle D1 driver over Node's `node:sqlite`, as skysa-notes' do.
-  A contract test checks that the server's answers parse with the web client's own schemas.
+What is this app's:
+- **The Worker entry** (`src/worker.ts`), the only module that reads the environment.
+  It builds the kit's `createApp` with the seams' defaults: every account that connects may sync, and nothing is throttled.
+- **What an operator's own entry imports** (`src/index.ts`): `createApp`, `parseEnv`, `envWarnings` and `misconfigured` from the kit's server, and the rate-limit seam, `RateLimiter`, `RateLimitDecision` and `neverLimited`, from its protocol, as before the kit.
+- **No entitlement policy, connect gate or change relay.**
+  The kit's server can take a policy, with a gate in front of connecting, and run a relay.
+  This app shows no gate and no policy's refusal, and listens for no relay ("The sync client"), so the stock entry passes none of them, and says so at boot where `RELAY` is set.
+- **The migrations are the kit's**, which `wrangler.toml` reaches in `node_modules` (`migrations_dir = "node_modules/@skysa/server/migrations"`).
+  Before the kit this app kept one of its own, `0000_init.sql`, under the kit's first's name; a database made with it is reset onto the kit's (`docs/self-hosting.md`, "A database from before the kit"), which `tests/migrations.test.ts` holds.
 
 **Connecting** (S6) is a section of Settings (`components/SyncSettings.tsx`):
 - **Unbound**, it offers each provider the server has set up (`/config`) and this build can sync with.
@@ -859,23 +844,11 @@ packages/core/         framework-free TypeScript: browser, Node and Workers
     rewards/           activity and its merge, streaks, mastery, badges
     markdown/          frontmatter/ in split, read and write (from skysa-notes), passage files
   tests/               testing.ts is @memoriam/core/testing, the doubles the apps' tests use
-apps/api/              the Worker (S5): OAuth, per-connection credentials, tokens, grants
-  wrangler.toml        the D1 binding, [assets] from ../web/dist
+apps/api/              the Worker over the kit's @skysa/server
+  wrangler.toml        the D1 binding, whose migrations are the kit's; [assets] from ../web/dist
   src/
-    app.ts             createApp(options); reads no environment
-    worker.ts          the default Worker entry, which reads the environment through env.ts
-    context.ts         AppEnv (a request's bindings and db), AuthedEnv (+ bearer), RouteDeps
-    routes/            connect, token, connections
-    oauth/             Dropbox, OneDrive, Google Drive, and what the three share (common.ts)
-    db/                the D1 schema (drizzle), and the writes with a race to get right
-    credentials.ts     the per-connection credential: hash, bearer, grant lookup
-    crypto.ts          AES-GCM over the refresh tokens in D1, with Web Crypto only
-    device.ts          a device's name from its User-Agent, for the devices list
-    limits.ts log.ts   the seam an operator throttles through; the Worker's log
-    flowCookies.ts     the signed OAuth flow cookies (there are no sessions)
-    http.ts            fail(), tooMany, requireSameOrigin, jsonBody
-    json.ts            parseJson (outside JSON checked by a zod schema), formatIssues
-  migrations/          generated by drizzle-kit, applied by wrangler
+    worker.ts          the default Worker entry, the only module that reads the environment
+    index.ts           what an operator's own entry imports: createApp, parseEnv, the rate limiter
 docs/
   ARCHITECTURE.md      this file
   research.md          the evidence
@@ -933,4 +906,4 @@ Phase 3, later:
 - **Contributions:** made under a contributor licence agreement (`CLA-individual.md`, `CLA-entity.md`), checked by `.github/workflows/cla.yml`.
   It grants a licence and is not an assignment: contributors keep ownership.
   The agreements are drafts that have not been reviewed by counsel.
-- **Dependencies:** MIT, Apache-2.0 or ISC licences only.
+- **Dependencies:** MIT, Apache-2.0 or ISC licences only, but for the shared kit's `@skysa/*` packages, which are AGPL-3.0-only like this repository, under the same CLA, and pinned to an exact version.

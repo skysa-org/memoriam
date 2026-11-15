@@ -4,7 +4,7 @@ import { cell } from '@memoriam/core';
  * The way back from connecting a storage account (docs/ARCHITECTURE.md §10,
  * "Connecting"). The server's callback sends the browser to the path the app
  * started from with the outcome in its query — `/?connect=ok` — and nothing in
- * the hash, which it never sees (`safeReturnTo` in `apps/api`). Where the app
+ * the hash, which it never sees (`safeReturnTo` in the kit's server). Where the app
  * is lives in the hash, so the outcome is read out of the real query before the
  * router reads the address, the query is put back as it was without it, and the
  * app opens at Settings, where connecting began and where the outcome is shown.
@@ -13,7 +13,11 @@ import { cell } from '@memoriam/core';
  * again. It is held here until Settings has shown it.
  */
 
-/** Exactly what the callback can redirect with: `Outcome` in `apps/api/src/routes/connect.ts`. */
+/**
+ * What the callback can redirect with: `Outcome` in the kit's server
+ * (`@skysa/server`), but `refused`, which only an operator's entitlement
+ * policy sends, and this app's entry passes none.
+ */
 const CONNECT_OUTCOMES = ['ok', 'denied', 'failed', 'partial', 'expired'] as const;
 
 export type ConnectOutcome = (typeof CONNECT_OUTCOMES)[number];

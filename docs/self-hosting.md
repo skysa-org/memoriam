@@ -6,9 +6,9 @@ Cloudflare account: one Worker serves the app and `/api`, and a D1 database hold
 
 The Worker connects an account through OAuth, keeps its refresh token encrypted, and mints access
 tokens for the devices connected to it. It never sees a passage: those go straight from the browser
-to the storage provider. Ported from skysa-notes' Worker (`docs/ARCHITECTURE.md` §10), it has none
-of skysa-notes' change relay, connect gate, entitlement policy or WebDAV: every device connected to
-an account may sync.
+to the storage provider. It is the shared kit's server behind this app's own entry
+(`docs/ARCHITECTURE.md` §10, "The server"), which runs none of the kit's change relay, connect gate
+or entitlement policy, and no WebDAV: every device connected to an account may sync.
 
 Budget about fifteen minutes, plus however long the provider app registration takes. Dropbox is
 minutes; Google is the longest.
@@ -219,6 +219,62 @@ Deploy from a release tag rather than from `main`. Each release's notes say whet
 migration. The security of your instance is the security of the commit you deployed: see
 [`SECURITY.md`](../SECURITY.md).
 
+The D1 migrations come with the server, in the shared kit's `@skysa/server`, which `pnpm install`
+puts at `apps/api/node_modules/@skysa/server/migrations`. `apps/api/wrangler.toml` points
+`migrations_dir` there. A `wrangler.toml` of your own points it at that folder, from wherever your
+file is. A table of your own, for a rate limiter say, goes in a database of your own:
+`wrangler d1 migrations create` against this one would write its migration into `node_modules`,
+where the next install removes it.
+
+### A database from before the kit
+
+Before the server was the kit's, this repository kept a migration of its own, `0000_init`, which
+made the same two tables the kit's migrations make, under the name of the kit's first. No release
+carried it, but a Worker deployed from `main` in that time has it. Migrated as it is, such a
+database fails at the kit's second migration and changes nothing, since wrangler takes the kit's
+first for the one it applied. Reset it onto the kit's migrations instead: drop its two tables and
+wrangler's record of what it applied, then apply them all.
+
+Check first that it is such a database. The reset drops every connection, so it is for this
+database alone, not for a migration that failed for another reason:
+
+```bash
+pnpm --filter @memoriam/api exec wrangler d1 execute memoriam --remote \
+  --command "SELECT name FROM d1_migrations"
+```
+
+It is one when that lists `0000_init.sql` and nothing else, and `apply` above stopped at
+`0001_connection_per_provider.sql` with `no such table: main.connections`. Then:
+
+```bash
+pnpm --filter @memoriam/api exec wrangler d1 execute memoriam --remote \
+  --command "DROP TABLE IF EXISTS grants; DROP TABLE IF EXISTS storage_connections; DROP TABLE IF EXISTS d1_migrations;"
+pnpm --filter @memoriam/api exec wrangler d1 migrations apply memoriam --remote
+```
+
+Run the two one after the other, at a quiet time. Between them the deployed Worker has no tables,
+and answers every request with an error, a connect finishing its callback then included.
+
+The database holds the connections to storage accounts and nothing else, so that is what goes. No
+passage is in it, and the reset touches none of the passages in the storage accounts. Each device
+finds its connection gone, as if it had been disconnected from another device, and lets its
+library go, keeping every passage. Connecting again binds the library to the account once more,
+and its first sync merges what the two hold.
+
+What a device had not sent yet is forgotten as it lets go, though, as on any disconnect. An edit
+survives, since the device keeps the passage and sends it when it connects again, but a delete or
+a move does not: the account still has the passage where it was, and the first sync brings it back
+there. So before the reset, let each device sync.
+
+Two other things go with it. The refresh tokens it held are dropped, not revoked: each account's
+earlier grant to the app stays listed at its provider until the account's owner removes it there.
+And the record of which devices were revoked goes too, so a revoked device's credential could be
+used to connect again; like any new device, it would have to go through the provider's consent for
+an account it can sign in to.
+
+A local database from before, made by `pnpm db:migrate`, is reset the same way with `--local` in
+place of `--remote`, or by deleting `apps/api/.wrangler/state`.
+
 ## When it will not boot
 
 The Worker refuses to start rather than starting up wrong. It answers every request with
@@ -230,3 +286,8 @@ them, not just the first. The three that catch people:
 | `APP_ORIGIN: Invalid input: expected string, received undefined` | There is no default; set it. (`Invalid URL` instead means it is set but malformed: usually the scheme is missing.) |
 | `SECRETS_KEY: SECRETS_KEY must be base64 of exactly 32 bytes` | Generate one: `openssl rand -base64 32` |
 | `DROPBOX_CLIENT_SECRET: required because ENABLED_PROVIDERS includes "dropbox"` | Register that provider's app, or take it out of `ENABLED_PROVIDERS` |
+
+A setting that boots but does nothing is logged once, as `Environment:` and a line saying why,
+and the Worker starts. `RELAY` is one: the kit's server reads it, but this app runs no change
+relay, so take it out. The setting is read even so, and a value other than `true`, `false`, `1` or
+`0` is refused.

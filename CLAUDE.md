@@ -14,7 +14,8 @@ change.
 - pnpm workspace:
   - `apps/web`: Vite + React + TS, TanStack Router, Dexie, vite-plugin-pwa;
   - `packages/core`: framework-free TS;
-  - `apps/api` arrives with sync: Hono on Cloudflare Workers, ported from skysa-notes.
+  - `apps/api`: the Worker entry over the shared kit's `@skysa/server` (Hono on Cloudflare
+    Workers, D1 through Drizzle).
 - Validation: zod. Tests: Vitest. Scheduling: ts-fsrs.
 - The same ESLint rules and conventions as skysa-notes: functional style, arrow functions, no
   loops, `let` or classes, readonly types, and every user-facing string from `t()`.
@@ -39,7 +40,10 @@ change.
 - Words the user reads come from the catalog, `t('…')` from `apps/web/src/i18n/t.ts`:
   - whole sentences with `{placeholders}`, and `{ one, other }` for a count;
   - never fragments joined in code.
-- Dependencies: MIT, Apache-2.0 or ISC licences only. State why in the pull request.
+- Dependencies: MIT, Apache-2.0 or ISC licences only. State why in the pull request. The shared
+  kit's `@skysa/*` packages are the one exception: AGPL-3.0-only like this repository, under the
+  same CLA, and pinned to an exact version ([skysa-notes' record
+  0018](https://github.com/skysa-org/skysa-notes/blob/main/docs/decisions/0018-the-shared-kit.md)).
 
 ## Working style
 - Work one milestone at a time (`docs/ARCHITECTURE.md` §12). Each one is a pull request with:

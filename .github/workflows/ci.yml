@@ -118,13 +118,13 @@ jobs:
             # catches it locally too.
             - run: pnpm build
 
-            # Three files are generated from sources in this repository and
+            # Two files are generated from sources in this repository and
             # committed: the route tree (written by the router's Vite plugin
-            # during the build above), the Worker's `Env` and runtime types
+            # during the build above), and the Worker's `Env` and runtime types
             # (`cf-typegen`: `wrangler types` from wrangler.toml, the installed
             # workerd, and `.dev.vars.example` for the secrets' names — not a
-            # developer's own `.dev.vars`, so the file is the same everywhere),
-            # and drizzle's migration snapshots (from src/db/schema.ts). Each
+            # developer's own `.dev.vars`, so the file is the same everywhere).
+            # The D1 migrations are the kit's (`@skysa/server`). Each file
             # is regenerated or checked here, so a source change that forgot to
             # regenerate fails now rather than drifting. A wrangler bump fails
             # this too, because the runtime types come with it: run
@@ -133,10 +133,6 @@ jobs:
               run: |
                   set -eu
                   pnpm --filter @memoriam/api run cf-typegen --check
-                  pnpm --filter @memoriam/api exec drizzle-kit check
-                  pnpm --filter @memoriam/api exec drizzle-kit generate
-                  # Untracked files too: a schema change makes `generate`
-                  # write a new migration rather than change an old one.
                   if [ -n "$(git status --porcelain)" ]; then
                     git status --porcelain
                     git diff
