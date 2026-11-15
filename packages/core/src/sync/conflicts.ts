@@ -10,9 +10,10 @@ import { serializePassageFile } from '../markdown/passage.js';
  * `PASSAGE_FORMAT` for any file both sides changed that `mergeFile` gives up
  * on, a passage or a year's activity (docs/ARCHITECTURE.md §10, "Merge before
  * a conflict copy"; the kit's docs/ARCHITECTURE.md §7, "Conflict rule
- * (concrete)"), and writes the copy beside it, under a name it makes from the
- * format's extension. The conflict screen asks too, to give a copy the
- * original's id, and so does an undone delete, to bring the text back as a
+ * (concrete)"), and names the copy from the format's extension. This app's
+ * sync store makes them again as it writes the copy, from the passage as it
+ * stands then (`sync/store.ts`). The conflict screen asks too, to give a copy
+ * the original's id, and so does an undone delete, to bring the text back as a
  * passage of its own.
  */
 

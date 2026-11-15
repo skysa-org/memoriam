@@ -10,17 +10,18 @@ import { watchForNewerTab } from './staleTab.js';
  * The local store. The app boots and renders from here before any network
  * call, and every read and write works offline. See docs/ARCHITECTURE.md §7.
  *
- * Rows mirror skysa-notes' (`NoteRecord`, keyed `[connectionId+id]`) so that
- * sync can be ported onto them unchanged when it arrives (§10): a "note" here
- * is any markdown file in the library — a passage, or a year's activity.
+ * Rows mirror skysa-notes' (`NoteRecord`, keyed `[connectionId+id]`), so that
+ * its sync store was ported onto them unchanged (§10, "The web store"): a
+ * "note" here is any markdown file in the library — a passage, or a year's
+ * activity.
  *
- * Until the first release, version 1 may still change. From then on a version
- * only adds, and what an older build wrote is carried forward by an upgrade.
+ * A version only adds, and what an older build wrote is carried forward by an
+ * upgrade.
  */
 
 /**
- * IndexedDB cannot index a boolean, and sync finds dirty rows by index rather
- * than by scanning every one. 0/1 it is.
+ * IndexedDB cannot index a boolean, and `dirty` is indexed, as it is in
+ * skysa-notes. 0/1 it is.
  */
 type Flag = 0 | 1;
 

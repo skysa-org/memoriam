@@ -8,8 +8,8 @@ import { type ChunkProgress, readProgress, writeProgress } from './codec.js';
 
 /**
  * Two copies of one passage made one, where that can be done without guessing
- * (docs/ARCHITECTURE.md §10): an import over the library, and sync, through
- * `mergeFile`.
+ * (docs/ARCHITECTURE.md §10): for an import over the library, sync (through
+ * `mergeFile`), the conflict screen, and an undone delete.
  *
  * Only progress is merged. Where the words or the other details differ, there
  * is no telling which side changed them without the version both came from,

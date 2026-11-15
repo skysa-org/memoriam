@@ -6,7 +6,7 @@ If a change departs from it, the same pull request amends it.
 
 Memoriam is built on the foundations of skysa-notes (same organisation, same licence).
 It uses skysa-notes' stack, conventions and much of its shell code, ported selectively.
-Where a section says "as skysa-notes", that project's `docs/ARCHITECTURE.md` has the longer reasoning; for sync, the Worker and the build, which moved from it to the shared kit, the kit's has it (§10).
+Where a section says "as skysa-notes", that project's `docs/ARCHITECTURE.md` has the longer reasoning; for sync and the Worker (§10) and the build (§8), which moved from it to the shared kit, the kit's has it.
 
 Each section has an anchor that does not change with its number or its wording, such as `ARCHITECTURE.md#sync`, and its number as well (`#s10`).
 Cite by anchor from now on; a citation such as `§10, "Push timing"` still works, and a test (`apps/web/tests/docs.test.ts`) checks that each one leads somewhere.
@@ -324,7 +324,7 @@ Both keep still under `prefers-reduced-motion`.
 ## 7. Local store and the app
 
 **IndexedDB through Dexie** (`apps/web/src/store/db.ts`):
-- The tables mirror those in skysa-notes' `docs/ARCHITECTURE.md` §7, "IndexedDB schema (Dexie)": `notes` keyed `[connectionId+id]`, `folders`, `prefs`.
+- `notes`, keyed `[connectionId+id]`, and `folders` mirror the tables in skysa-notes' `docs/ARCHITECTURE.md` §7, "IndexedDB schema (Dexie)", and `prefs` its table of that name.
   A "note" is any markdown file in the library: a passage, or a year's activity.
 - Every row has `connectionId = 'local'`, connected or not (§10, "The web store").
 - Each row also keeps its title and source read out of the file, so a list need not parse every file.

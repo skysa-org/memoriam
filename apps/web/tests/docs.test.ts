@@ -43,6 +43,8 @@ const CITING = [
 	'CONTRIBUTING.md',
 	'README.md',
 	'docs/self-hosting.md',
+	'SECURITY.md',
+	'apps/web/brand/README.md',
 	...Object.keys(DOCS),
 ];
 
@@ -110,11 +112,12 @@ const hasName = (doc: Doc, number: string, name: string): boolean =>
  * another (the shared kit's, an RFC, the ZIP format's note), whose sections are
  * not this test's to check. skysa-notes' are checked only for what moved to the
  * kit ("cites the kit, not skysa-notes"). skysa-notes' name without its
- * ARCHITECTURE's is often its code's ("as skysa-notes'"), so it names the
- * document only of a `§` right after it.
+ * ARCHITECTURE's is often its code's ("as skysa-notes' (§10)" is this repo's
+ * §10), so it names the document only of a `§` right after it, with no `(` or
+ * `:` between.
  */
 const MARKER =
-	/(?:([Ss]kysa-notes(?:['’]s?)?)(\s*(?:own\s+)?`?(?:docs\/)?ARCHITECTURE(?:\.md)?`?)?|`?(?:docs\/)?(ARCHITECTURE|research)\.md`?|RFC \d+|OpenID Connect Core|APPNOTE\.TXT|\[kit|(?:the (?:shared )?kit|skysa-kit)['’]s\s*`?(?:docs\/)?ARCHITECTURE\.md`?)\s*[,(:]?\s*/gu;
+	/(?:([Ss]kysa-notes(?:['’]s?)?)(\s*(?:own\s+)?`?(?:docs\/)?ARCHITECTURE(?:\.md)?`?)?|`?(?:docs\/)?(ARCHITECTURE|research)\.md`?|RFC \d+|OpenID Connect Core|APPNOTE\.TXT|\[kit|\b(?:skysa-)?kit(?:['’]s)?\s*(?:own\s+)?`?(?:docs\/)?ARCHITECTURE\.md`?)\s*[,(:]?\s*/gu;
 type Cited = Doc | 'skysa-notes';
 const docOf = (notes: string | undefined, word: string | undefined): Cited | undefined => {
 	if (notes !== undefined) return 'skysa-notes';
@@ -127,21 +130,27 @@ type Citation = Readonly<{ doc: Cited; number: string; name?: string; exact: boo
 /**
  * Each `§` in a text, with what it cites. One right after a document's name is
  * that document's. One standing alone is its own document's in the docs, and in
- * code the last document named above it, which is this repo's ARCHITECTURE when
- * none is: its number is too loose to check there, and only its name is.
+ * code the last of this repo's documents named above it, ARCHITECTURE when none
+ * is: its number is too loose to check there, and only its name is. Another
+ * document's name is that of the `§` right after it and no other, so a file
+ * that cites one does not hide what it cites of this repo's after it.
  */
 const citations = (file: string, text: string): readonly Citation[] => {
 	const flat = unwrapped(text);
-	const markers = [...flat.matchAll(MARKER)].map((match) => ({
-		end: match.index + match[0].length,
-		doc: docOf(match[1], match[3]),
-		alone: match[1] !== undefined && match[2] === undefined,
-	}));
+	const markers = [...flat.matchAll(MARKER)].flatMap((match) =>
+		match[1] !== undefined && match[2] === undefined && /[(:]\s*$/u.test(match[0])
+			? []
+			: [{ end: match.index + match[0].length, doc: docOf(match[1], match[3]) }]
+	);
 	return [...flat.matchAll(/§(\d+(?:\.\d+)*)(?:,? ["“]([^"”]{3,80})["”])?/gu)].flatMap(
 		(match) => {
 			const adjacent = markers.find((marker) => marker.end === match.index);
 			const nearest = markers
-				.filter((marker) => marker.end <= match.index && !marker.alone)
+				.filter(
+					(marker) =>
+						marker.end <= match.index &&
+						(marker.doc === 'ARCHITECTURE' || marker.doc === 'research')
+				)
 				.at(-1);
 			const own = DOCS[file];
 			const doc = adjacent ? adjacent.doc : (own ?? (nearest ? nearest.doc : 'ARCHITECTURE'));
@@ -165,17 +174,18 @@ const citations = (file: string, text: string): readonly Citation[] => {
  * 0018, step 5). Most of its sections hold some of each, and its names for the
  * kit's parts have changed since this repo was ported from it, so a list of
  * those would miss the older ones. What is listed instead is the parts that
- * stayed skysa-notes' own and that this repo cites, by section. One is added
- * here once skysa-notes' document is checked for it; any other citation of it
- * by section fails.
+ * stayed skysa-notes' own and that this repo cites, by section, as its
+ * headings name them. One is added here once skysa-notes' document is checked
+ * for it; any other citation of it by section fails.
  */
 const NOTES_OWN: Readonly<Record<string, readonly string[]>> = {
-	'7': ['indexeddb schema (dexie)'],
+	'7': ['IndexedDB schema (Dexie)'],
 };
 const unlisted = ({ doc, number, name, exact }: Citation): boolean =>
 	doc === 'skysa-notes' &&
 	exact &&
-	(name === undefined || !(NOTES_OWN[topOf(number)] ?? []).some((part) => begins(part, name)));
+	(name === undefined ||
+		!(NOTES_OWN[topOf(number)] ?? []).some((part) => begins(part.toLowerCase(), name)));
 
 /**
  * skysa-notes' name and its ARCHITECTURE, and a section's mark, as the
@@ -276,6 +286,15 @@ describe('the docs', () => {
 			citations('a.ts', `the shared kit's docs/ARCHITECTURE.md §7, "Sync engine"`)
 		).toEqual([]);
 		expect(citations('a.ts', "skysa-kit's docs/ARCHITECTURE.md §7")).toEqual([]);
+		expect(citations('a.ts', "The kit's docs/ARCHITECTURE.md §6")).toEqual([]);
+		expect(citations('a.ts', "the kit's own docs/ARCHITECTURE.md §6")).toEqual([]);
+		expect(citations('a.ts', 'skysa-kit `docs/ARCHITECTURE.md` §6')).toEqual([]);
+		expect(
+			citations('a.ts', `the kit's docs/ARCHITECTURE.md §7.\n * Then §10, "Push timing"`)
+		).toEqual([{ doc: 'ARCHITECTURE', number: '10', name: 'Push timing', exact: false }]);
+		expect(citations('a.ts', `as ${NAME} (${AT}10, "Push timing")`)).toEqual([
+			{ doc: 'ARCHITECTURE', number: '10', name: 'Push timing', exact: false },
+		]);
 		expect(citations('a.ts', `the kit's server; see §10, "Push timing"`)).toEqual([
 			{ doc: 'ARCHITECTURE', number: '10', name: 'Push timing', exact: false },
 		]);

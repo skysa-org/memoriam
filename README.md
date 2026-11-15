@@ -21,9 +21,9 @@ design decisions it led to.
 - Everything is stored locally as markdown, and the app works fully offline.
 - Each passage is a `.md` file, and its progress is kept in the file's own frontmatter. Your
   library stays readable and portable, and you can export it as a zip at any time.
-- It can sync to your own Dropbox, Google Drive or OneDrive. The server it connects through
-  ([`docs/self-hosting.md`](docs/self-hosting.md)) keeps what it needs to reach your account, and
-  never your passages: they go straight from the browser to your storage.
+- Sync to your own Dropbox, Google Drive or OneDrive needs a server, which you can run yourself
+  ([`docs/self-hosting.md`](docs/self-hosting.md)). It keeps what it needs to reach your account,
+  and never your passages: they go straight from the browser to your storage.
 
 **How it is built.** A pnpm workspace:
 - a Vite + React PWA;
