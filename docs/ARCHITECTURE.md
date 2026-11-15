@@ -682,10 +682,12 @@ What is this app's:
     This Connect again is not behind the operator's gate, as the one under a policy's refusal is: the account was let in, and connecting it again is how it comes back.
     Where the gate asks for a code, required or not, "Have a code? Enter it" is beside it (`CodeBeside`), so a policy that let the account in by one code can be given another without disconnecting first (memoriam#45, decided 2026-11-15).
     skysa-notes and skysa-draw reach a new code where a source is added, which this app, with one library, cannot do without letting it go.
-    The field and Connect again are never open together, as in the gate.
-    Both stay through the runs that go on meanwhile, since focus and edits still start one, as a refusal does below;
+    The field and Connect again are never open together, as in the gate;
   - a policy's refusal, by the kind of no it gave, with its reason under it where it gave one, and **Connect again**, behind the operator's gate where there is one ("The gate"), since a policy that let the account in by a code may need another to let it in again.
-    It stays through the runs that go on while refused, so a code half typed into the gate is kept.
+
+  Either stands until a run ends idle or asks for attention for something else (`useStanding`).
+  The kit's scheduler still starts a run on focus and on edits, clearing the refusal as each starts, and its token source lets one go on a failed fetch, so the line keeps saying what stands through the runs, retrying, offline and paused, and a code half typed under it is kept, until the kit keeps a refusal itself (skysa-org/skysa-kit#22).
+  A new connection starts with nothing kept.
 
   Sync now runs a sync and tries again a stuck change.
   While a sync goes, a long run draws its bar and the file it is on under the line (`RunProgress`), and **Pause syncing** stops it.

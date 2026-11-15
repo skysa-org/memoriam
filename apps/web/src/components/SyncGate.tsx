@@ -205,6 +205,22 @@ const HeldCode = ({
 	</p>
 );
 
+/** "Have a code? Enter it", which opens the field. */
+const EnterCode = ({
+	opener,
+	onClick,
+}: Readonly<{
+	/** The button Cancel brings the focus back to, where there is one. */
+	opener?: RefObject<HTMLButtonElement | null>;
+	onClick: () => void;
+}>) => (
+	<p className="field-hint">
+		<button ref={opener} type="button" className="button ghost" onClick={onClick}>
+			{t('sync.gate.code.enter')}
+		</button>
+	</p>
+);
+
 /**
  * The field and the buttons are never both open, as in skysa-notes' gate: a
  * connect sends the code held, never what is in the field, so buttons beside
@@ -274,18 +290,12 @@ export const SyncGate = ({
 			);
 		}
 		return (
-			<p className="field-hint">
-				<button
-					type="button"
-					className="button ghost"
-					onClick={() => {
-						setShown(false);
-						setFocus({ to: 'field' });
-					}}
-				>
-					{t('sync.gate.code.enter')}
-				</button>
-			</p>
+			<EnterCode
+				onClick={() => {
+					setShown(false);
+					setFocus({ to: 'field' });
+				}}
+			/>
 		);
 	};
 	return (
@@ -331,7 +341,10 @@ export const SyncGate = ({
  * by one code is given another without disconnecting first. No message and no
  * link: the account was let in once. Closed until asked for, with Cancel back
  * to where it was opened from; Connect again is hidden while it is open, as
- * the gate hides its buttons, since a connect sends the code held.
+ * the gate hides its buttons, since a connect sends the code held. Where no
+ * code is asked for, or `/config` has not answered, Connect again alone, in
+ * the same place, so it is not drawn again under the focus as the answer
+ * comes.
  */
 export const CodeBeside = ({
 	asked,
@@ -348,16 +361,15 @@ export const CodeBeside = ({
 	const buttons = useRef<HTMLDivElement>(null);
 	const opener = useRef<HTMLButtonElement>(null);
 	useStepFocus(focus, buttons, opener);
-	if (asked === undefined) return children;
 	const ask = () => {
 		setOpen(true);
 		setFocus({ to: 'field' });
 	};
-	const step = (): ReactNode => {
+	const step = (code: NonNullable<ConnectGate['connectCode']>): ReactNode => {
 		if (open) {
 			return (
 				<CodeForm
-					label={asked.label}
+					label={code.label}
 					client={client}
 					onAccepted={() => {
 						setOpen(false);
@@ -372,19 +384,13 @@ export const CodeBeside = ({
 			);
 		}
 		if (until !== undefined) {
-			return <HeldCode label={asked.label} until={until} opener={opener} onChange={ask} />;
+			return <HeldCode label={code.label} until={until} opener={opener} onChange={ask} />;
 		}
-		return (
-			<p className="field-hint">
-				<button ref={opener} type="button" className="button ghost" onClick={ask}>
-					{t('sync.gate.code.enter')}
-				</button>
-			</p>
-		);
+		return <EnterCode opener={opener} onClick={ask} />;
 	};
 	return (
 		<>
-			{step()}
+			{asked !== undefined && step(asked)}
 			{!open && (
 				<div ref={buttons} tabIndex={-1}>
 					{children}

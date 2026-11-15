@@ -768,23 +768,30 @@ describe('connected', () => {
 
 		await user.click(await screen.findByRole('button', { name: 'Have a code? Enter it' }));
 		await user.type(screen.getByRole('textbox', { name: 'Invite code' }), 'INVITE');
-		// The window's focus starts a run, which the provider refuses again.
-		act(() => {
-			scheduler.say({ phase: 'syncing' });
+		// The window's focus starts a run, which the provider refuses again; a
+		// fetch that fails on the way says nothing of it either.
+		const meanwhile: Partial<SchedulerStatus>[] = [
+			{ phase: 'syncing' },
+			reauthorize,
+			{ phase: 'retrying', error: 'Failed to fetch' },
+			{ phase: 'offline' },
+			{ phase: 'paused' },
+		];
+		meanwhile.forEach((status) => {
+			act(() => {
+				scheduler.say(status);
+			});
+			expect(screen.getByRole('textbox', { name: 'Invite code' })).toHaveProperty(
+				'value',
+				'INVITE'
+			);
+			// The line says what stands, in the colour of an error.
+			expect(
+				screen
+					.getByText('Dropbox needs to be connected again before your library can sync.')
+					.classList.contains('sync-problem')
+			).toBe(true);
 		});
-		// Said as it is, and not in the colour of an error.
-		expect(screen.getByText('Syncing…').classList.contains('sync-problem')).toBe(false);
-		expect(screen.getByRole('textbox', { name: 'Invite code' })).toHaveProperty(
-			'value',
-			'INVITE'
-		);
-		act(() => {
-			scheduler.say(reauthorize);
-		});
-		expect(screen.getByRole('textbox', { name: 'Invite code' })).toHaveProperty(
-			'value',
-			'INVITE'
-		);
 		// Connect again stays through a run as well.
 		await user.click(screen.getByRole('button', { name: 'Cancel' }));
 		act(() => {
@@ -802,6 +809,70 @@ describe('connected', () => {
 			scheduler.say({ phase: 'syncing' });
 		});
 		expect(screen.queryByRole('button', { name: 'Connect again' })).toBeNull();
+	});
+
+	it('keeps Connect again through a run without a gate, and lets it go for another connection', async () => {
+		await bound();
+		const scheduler = schedulerSaying({ phase: 'attention', refusal: 'credential_revoked' });
+		showSettings({ client: fakes().client, scheduler, connectReturn: holding() });
+
+		expect(await screen.findByRole('button', { name: 'Connect again' })).toBeTruthy();
+		act(() => {
+			scheduler.say({ phase: 'syncing' });
+		});
+		expect(screen.getByRole('button', { name: 'Connect again' })).toBeTruthy();
+
+		// Another tab connected again and took up a new connection, whose first
+		// run starts at once: nothing kept is about it.
+		await database.transaction('rw', database.syncState, async () => {
+			const state = await database.syncState.get('c1');
+			if (state === undefined) throw new Error('Not bound');
+			await database.syncState.delete('c1');
+			await database.syncState.add({ ...state, connectionId: 'c2' });
+		});
+		await waitFor(() => {
+			expect(screen.queryByRole('button', { name: 'Connect again' })).toBeNull();
+		});
+		expect(screen.getByText('Syncing…')).toBeTruthy();
+	});
+
+	it('keeps Connect again where it is as the server says it has a gate', async () => {
+		await bound();
+		const { client, config } = fakes();
+		const answers = new Map<'answer', () => void>();
+		config.mockReturnValue(
+			new Promise((resolve) => {
+				answers.set('answer', () => {
+					resolve({
+						providers: ['dropbox'],
+						connectGate: {
+							message: 'Sync is for members of the reading group.',
+							action: {
+								label: 'Join the group',
+								url: 'https://operator.example/join',
+							},
+							connectCode: { label: 'Invite code' },
+						},
+					});
+				});
+			})
+		);
+		showSettings({
+			client,
+			scheduler: schedulerShowing({ phase: 'attention', refusal: 'reauthorize_required' }),
+			connectReturn: holding(),
+		});
+
+		const again = await screen.findByRole('button', { name: 'Connect again' });
+		again.focus();
+		await act(async () => {
+			answers.get('answer')?.();
+			await config.mock.results[0]?.value;
+		});
+		expect(screen.getByRole('button', { name: 'Have a code? Enter it' })).toBeTruthy();
+		// The same button, not one drawn again under the focus.
+		expect(screen.getByRole('button', { name: 'Connect again' })).toBe(again);
+		expect(document.activeElement).toBe(again);
 	});
 
 	it('says why a library bound to a provider this app cannot sync with does not', async () => {
@@ -913,7 +984,10 @@ describe('connected', () => {
 		act(() => {
 			scheduler.say({ phase: 'syncing' });
 		});
-		expect(screen.getByText('Syncing…')).toBeTruthy();
+		// The line says what stands.
+		expect(
+			screen.getByText('This account’s access to sync on this server has lapsed.')
+		).toBeTruthy();
 		expect(screen.getByRole('textbox', { name: 'Invite code' })).toHaveProperty(
 			'value',
 			'INVITE'
@@ -925,6 +999,17 @@ describe('connected', () => {
 			'value',
 			'INVITE'
 		);
+
+		// A refusal of another kind is the one kept through the next run.
+		act(() => {
+			scheduler.say({ ...refusal, denial: { code: 'not_allowed' } });
+		});
+		act(() => {
+			scheduler.say({ phase: 'syncing' });
+		});
+		expect(
+			screen.getByText('This account is not allowed to sync on this server.')
+		).toBeTruthy();
 
 		// A run the policy let through: nothing refused is left to say.
 		act(() => {

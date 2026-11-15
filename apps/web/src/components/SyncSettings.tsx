@@ -209,43 +209,43 @@ const statusLine = (
 };
 
 /**
- * A refusal by the server's policy, with its reason, where the status line says
- * it (`statusLine`). Kept through the runs that go on while refused, each of
- * which starts as `syncing`, so the gate under it keeps a code half typed; let
- * go once a run ends any other way. Followed in render, as React has state
- * follow a prop.
+ * A status that stands until something is done about it: the account must be
+ * connected again (`needsReconnect`), or the server's policy refused it.
  */
-const useRefused = (
-	status: SchedulerStatus,
-	syncable: boolean
-): Readonly<{ reason: string | undefined }> | undefined => {
-	const now =
-		!needsReconnect(status) &&
-		syncable &&
-		status.phase === 'attention' &&
-		status.refusal === 'not_entitled';
-	const [refused, setRefused] = useState<Readonly<{ reason: string | undefined }> | undefined>(
-		undefined
-	);
-	const reason = status.denial?.reason;
-	if (now && (refused === undefined || refused.reason !== reason)) setRefused({ reason });
-	if (!now && status.phase !== 'syncing' && refused !== undefined) setRefused(undefined);
-	return now ? { reason } : refused;
-};
+const isStanding = (status: SchedulerStatus, syncable: boolean): boolean =>
+	needsReconnect(status) ||
+	(syncable && status.phase === 'attention' && status.refusal === 'not_entitled');
 
 /**
- * Whether the account must be connected again (`needsReconnect`), kept as
- * `useRefused` keeps a refusal: focus and edits still start runs, each of which
- * starts as `syncing`, and a code half typed beside Connect again would go
- * with it.
+ * The last standing status (`isStanding`), kept through what says nothing of
+ * it: the runs that go on meanwhile, offline, retrying and paused. The kit's
+ * scheduler still starts a run on focus and on edits, clearing the refusal as
+ * each starts, and its token source lets one go on a failed fetch, so what is
+ * shown under it would go with each, and a code half typed with it. Let go
+ * once a run ends idle or asks for attention for something else. Followed in
+ * render, as React has state follow a prop, until the kit keeps a refusal
+ * itself (skysa-org/skysa-kit#22); `Connected` is keyed by its connection, so
+ * another starts with nothing kept.
  */
-const useReconnect = (status: SchedulerStatus): boolean => {
-	const now = needsReconnect(status);
-	const [kept, setKept] = useState(false);
-	if (now && !kept) setKept(true);
-	if (!now && status.phase !== 'syncing' && kept) setKept(false);
-	return now || (kept && status.phase === 'syncing');
+const useStanding = (status: SchedulerStatus, syncable: boolean): SchedulerStatus | undefined => {
+	const now = isStanding(status, syncable);
+	const [kept, setKept] = useState<SchedulerStatus | undefined>(undefined);
+	const says =
+		status.phase === 'idle' || status.phase === 'attention' || status.phase === 'local';
+	if (now && kept !== status) setKept(status);
+	if (!now && says && kept !== undefined) setKept(undefined);
+	if (now) return status;
+	return says ? undefined : kept;
 };
+
+/** Connect again, in a row of its own under what the line says. */
+const ConnectAgain = ({ connect, busy }: Readonly<{ connect: () => void; busy: boolean }>) => (
+	<div className="form-actions">
+		<button type="button" className="button primary" disabled={busy} onClick={connect}>
+			{t('sync.settings.connectAgain')}
+		</button>
+	</div>
+);
 
 interface Props {
 	client?: Client;
@@ -281,25 +281,16 @@ const Refused = ({
 	client: Client;
 	connect: () => void;
 	busy: boolean;
-}>) => {
-	const again = (
-		<div className="form-actions">
-			<button type="button" className="button primary" disabled={busy} onClick={connect}>
-				{t('sync.settings.connectAgain')}
-			</button>
-		</div>
-	);
-	return (
-		<>
-			{reason !== undefined && <p className="field-hint">{reason}</p>}
-			{config.kind !== 'asking' && (
-				<SyncGate gate={answer(config)?.connectGate} client={client}>
-					{again}
-				</SyncGate>
-			)}
-		</>
-	);
-};
+}>) => (
+	<>
+		{reason !== undefined && <p className="field-hint">{reason}</p>}
+		{config.kind !== 'asking' && (
+			<SyncGate gate={answer(config)?.connectGate} client={client}>
+				<ConnectAgain connect={connect} busy={busy} />
+			</SyncGate>
+		)}
+	</>
+);
 
 const Connected = ({
 	bound,
@@ -325,25 +316,14 @@ const Connected = ({
 }>) => {
 	const db = useDb();
 	const status = useSyncStatus(scheduler);
-	const reconnect = useReconnect(status);
 	const syncable = CONNECTABLE.includes(kind);
-	const refused = useRefused(status, syncable);
+	const standing = useStanding(status, syncable);
+	// What the line says: the standing status, where one is kept.
+	const shown = standing ?? status;
+	const reconnect = standing !== undefined && needsReconnect(standing);
 	const [asking, setAsking] = useState(false);
 	const [held, setHeld] = useState<Held | undefined>(undefined);
 	const provider = PROVIDER_LABELS[kind];
-	const asked = reconnect ? answer(config)?.connectGate?.connectCode : undefined;
-	const again = (
-		<button
-			type="button"
-			className="button primary"
-			disabled={busy}
-			onClick={() => {
-				connect(kind);
-			}}
-		>
-			{t('sync.settings.connectAgain')}
-		</button>
-	);
 
 	const disconnect = async () => {
 		setAsking(false);
@@ -370,15 +350,12 @@ const Connected = ({
 			</p>
 			{/* Sync has stopped until the account is connected again: said in the
 			    colour of an error. */}
-			<p
-				className={needsReconnect(status) ? 'field-hint sync-problem' : 'field-hint'}
-				role="status"
-			>
-				{statusLine(status, provider, syncable, now)}
+			<p className={reconnect ? 'field-hint sync-problem' : 'field-hint'} role="status">
+				{statusLine(shown, provider, syncable, now)}
 			</p>
-			{refused !== undefined && (
+			{standing !== undefined && !reconnect && (
 				<Refused
-					reason={refused.reason}
+					reason={standing.denial?.reason}
 					config={config}
 					client={client}
 					connect={() => {
@@ -387,20 +364,23 @@ const Connected = ({
 					busy={busy}
 				/>
 			)}
+			{/* With the operator's code beside it, where their gate asks for one. */}
+			{reconnect && (
+				<CodeBeside asked={answer(config)?.connectGate?.connectCode} client={client}>
+					<ConnectAgain
+						connect={() => {
+							connect(kind);
+						}}
+						busy={busy}
+					/>
+				</CodeBeside>
+			)}
 			{/* A run long enough to count: its bar, and the file it is on. A
 			    few passages' sync is over before a bar could be read. */}
 			{status.phase === 'syncing' && isLongRun(status.progress) && (
 				<RunProgress status={status} label={t('sync.settings.progress')} />
 			)}
-			{/* Where the operator's gate asks for a code, the field beside Connect
-			    again, in a row of their own. */}
-			{asked !== undefined && (
-				<CodeBeside asked={asked} client={client}>
-					<div className="form-actions">{again}</div>
-				</CodeBeside>
-			)}
 			<div className="form-actions">
-				{reconnect && asked === undefined && again}
 				{/* Paused, Sync now is what resumes it, and says so. */}
 				<button
 					type="button"
@@ -583,6 +563,7 @@ export const SyncSettings = ({
 				</>
 			) : (
 				<Connected
+					key={bound.connectionId}
 					bound={bound}
 					kind={bound.provider}
 					client={client}
