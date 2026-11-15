@@ -414,7 +414,7 @@ A command is registered again only when what the palette shows of it changes (it
 ## 8. PWA
 
 - **Generated service worker.** The service worker and the manifest are built by the shared kit's `@skysa/pwa` from what this app hands it (`PwaApp`, made in `apps/web/pwaApp.ts`) and from its brand (below).
-  How they are built is [the kit's §8](https://github.com/skysa-org/skysa-kit/blob/main/docs/ARCHITECTURE.md#pwa-specifics): the shell precached, so the app starts offline; `/api/*` and the storage providers' origins network-only, so none of the worker's caches answers one; nothing inline written into the page (§9); and the checklist a browser applies before it offers to install, which is a test there.
+  How they are built is the kit's ([kit §8, "PWA specifics"](https://github.com/skysa-org/skysa-kit/blob/main/docs/ARCHITECTURE.md#pwa-specifics)): the shell precached, so the app starts offline; `/api/*` and the storage providers' origins network-only, so none of the worker's caches answers one; nothing inline written into the page (§9); and the checklist a browser applies before it offers to install, which is a test there.
 - **One route.** The app has one, `/`, and where in it a link opens is in the hash, which no request carries: the shell answers `/`, and any other path on the origin is left to the network.
   `MEMORIAM_PWA` in `pwaApp.ts` hands that route to the build, and `tests/pwa.app.test.ts` checks every route the router has against it.
   It is no share target.

@@ -4,8 +4,9 @@
 // against them and fails when it is over any line, so growth is a choice
 // someone made in a pull request rather than something found later.
 //
-// Raising one is fine when the growth is wanted; say so in the pull request.
-// Plain Node.
+// Set (2026-11-04) at that day's build plus about five per cent; the largest
+// chunk raised to 135 kB when the engine was split into modules. Raising one
+// is fine when the growth is wanted; say so in the pull request. Plain Node.
 
 import { fileURLToPath, URL } from 'node:url';
 
