@@ -1,4 +1,4 @@
-import { type Chord } from './chord.js';
+import type { Chord } from './chord.js';
 
 /**
  * The things the app can be asked to do, as a list rather than as a pile of

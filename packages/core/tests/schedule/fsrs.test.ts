@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { type ChunkProgress } from '../../src/progress/codec.js';
+import type { ChunkProgress } from '../../src/progress/codec.js';
 import {
 	cardOf,
 	isDue,

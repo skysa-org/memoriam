@@ -40,7 +40,10 @@ Requires Node 22.13 or later and pnpm 10 (`corepack enable`).
 pnpm install
 pnpm dev        # Vite on :5173, and the sync Worker on :8787 (docs/self-hosting.md)
 pnpm verify     # format check, lint, typecheck, tests: run before every commit
+pnpm coverage   # the same tests as one run with coverage, against vitest.config.ts's thresholds
+pnpm knip       # unused files, exports and dependencies (CI reports it; it does not gate yet)
 pnpm build
+pnpm size       # the built web app against its size budget (after pnpm build)
 ```
 
 ## Contributing

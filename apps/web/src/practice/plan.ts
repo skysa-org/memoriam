@@ -6,7 +6,7 @@ import {
 	type Span,
 } from '@memoriam/core';
 
-import { type ShownLine } from '../components/shownPassage.js';
+import type { ShownLine } from '../components/shownPassage.js';
 
 /**
  * What a practice screen needs of a passage: which chunk to learn next, its

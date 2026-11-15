@@ -1,4 +1,4 @@
-import { type Measure } from '@memoriam/core';
+import type { Measure } from '@memoriam/core';
 
 import { t } from '../i18n/t.js';
 

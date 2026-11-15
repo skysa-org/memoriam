@@ -1,4 +1,4 @@
-import { type Catalog } from '../catalog.js';
+import type { Catalog } from '../catalog.js';
 import { badges } from './badges.js';
 import { common } from './common.js';
 import { conflicts } from './conflicts.js';

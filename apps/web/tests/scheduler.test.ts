@@ -15,7 +15,7 @@ import {
 } from '@memoriam/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { type ApiClient } from '../src/api/client.js';
+import type { ApiClient } from '../src/api/client.js';
 import { t } from '../src/i18n/t.js';
 import { bindLibrary, unbindLibrary } from '../src/store/connection.js';
 import { keepCredential } from '../src/store/credentials.js';

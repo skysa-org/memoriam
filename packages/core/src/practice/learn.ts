@@ -1,8 +1,8 @@
 import { addDays, instant, localDay } from '../day.js';
-import { type ChunkProgress } from '../progress/codec.js';
+import type { ChunkProgress } from '../progress/codec.js';
 import { fade, type Faded } from './fade.js';
 import { type PassSummary, summarize, tallyMisses } from './pass.js';
-import { type WordResult } from './typing.js';
+import type { WordResult } from './typing.js';
 
 /**
  * What a pass over a chunk being learnt does to its progress

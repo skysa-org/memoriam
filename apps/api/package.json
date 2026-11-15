@@ -14,7 +14,7 @@
 		"deploy:migrate": "wrangler d1 migrations apply memoriam --remote && wrangler deploy",
 		"typecheck": "tsc -p tsconfig.json --noEmit",
 		"test": "vitest run",
-		"cf-typegen": "wrangler types",
+		"cf-typegen": "wrangler types --env-file ../../.dev.vars.example",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "wrangler d1 migrations apply memoriam --local",
 		"db:migrate:remote": "wrangler d1 migrations apply memoriam --remote"
@@ -23,12 +23,12 @@
 		"@memoriam/core": "workspace:*",
 		"drizzle-orm": "^0.45.2",
 		"hono": "^4.13.8",
-		"zod": "^4.6.5"
+		"zod": "catalog:"
 	},
 	"devDependencies": {
-		"@types/node": "^26.6.1",
+		"@types/node": "catalog:",
 		"drizzle-kit": "^0.31.10",
-		"vitest": "^5.0.1",
+		"vitest": "catalog:",
 		"wrangler": "^4.132.0"
 	}
 }

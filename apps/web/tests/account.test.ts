@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { ROOT } from '@memoriam/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { type ApiClient, type Connection, type Refusal, type Result } from '../src/api/client.js';
+import type { ApiClient, Connection, Refusal, Result } from '../src/api/client.js';
 import {
 	bindingCount,
 	bindLibrary,

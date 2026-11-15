@@ -8,7 +8,7 @@ import {
 	mergeActivity,
 	readActivity,
 } from '../rewards/activity.js';
-import { type MergeInput } from './engine.js';
+import type { MergeInput } from './engine.js';
 
 /**
  * Memoriam's `SyncEngineOptions.merge` (docs/ARCHITECTURE.md §10, "Merge

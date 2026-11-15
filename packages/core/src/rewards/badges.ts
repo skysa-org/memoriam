@@ -1,6 +1,6 @@
 import { addDays } from '../day.js';
 import { daysHeld, type Measure } from './mastery.js';
-import { type Streak } from './streak.js';
+import type { Streak } from './streak.js';
 
 /**
  * Milestone badges (docs/ARCHITECTURE.md §6): for what is learnt and kept,

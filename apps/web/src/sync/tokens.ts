@@ -1,9 +1,9 @@
 import { AuthError } from '@memoriam/core';
 
-import { type AccessToken, type ApiClient, type Refusal } from '../api/client.js';
+import type { AccessToken, ApiClient, Refusal } from '../api/client.js';
 import { updateBinding } from '../store/connection.js';
 import { credentialFor } from '../store/credentials.js';
-import { type MemoriamDatabase } from '../store/db.js';
+import type { MemoriamDatabase } from '../store/db.js';
 
 /**
  * Provider access tokens for one connection, minted by `apps/api` and held in

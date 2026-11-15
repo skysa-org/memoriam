@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { BADGES, earnedBadges, isBadge } from '../../src/rewards/badges.js';
-import { type Measure } from '../../src/rewards/mastery.js';
+import type { Measure } from '../../src/rewards/mastery.js';
 import { NO_STREAK } from '../../src/rewards/streak.js';
 
 const TODAY = '2026-10-13';

@@ -775,6 +775,14 @@ docs/
   self-hosting.md      running the Worker on your own Cloudflare account
 ```
 
+Inside `apps/web/src` the layers point one way, and ESLint's `no-restricted-imports` holds them
+there. `store/` is the data layer: it imports none of `sync/`, `components/`, `routes/`,
+`practice/`, `archive/`, `install/` or `commands/`. `sync/` imports the store, `api/` and `i18n/`,
+and none of the UI or the features above it. Neither `packages/core` nor the Worker may import a
+Node built-in, and the list is Node's own (`module.builtinModules`), not one kept by hand. Source
+files past 600 lines of code draw a warning, which marks the long files ported from skysa-notes
+until they are split.
+
 ## 12. Roadmap
 
 Phase 1 is delivered in milestones, each one pull request with `pnpm verify` green:

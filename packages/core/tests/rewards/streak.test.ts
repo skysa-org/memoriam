@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { addDays, weekday } from '../../src/day.js';
-import { type DayActivity } from '../../src/rewards/activity.js';
+import type { DayActivity } from '../../src/rewards/activity.js';
 import { REPAIR_FLOOR, repairWords, streakOf } from '../../src/rewards/streak.js';
 
 const START = '2026-09-01';

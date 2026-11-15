@@ -1,4 +1,4 @@
-import { type Measure } from '@memoriam/core';
+import type { Measure } from '@memoriam/core';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState } from 'react';
 

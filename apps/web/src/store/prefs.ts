@@ -1,4 +1,4 @@
-import { type MemoriamDatabase } from './db.js';
+import type { MemoriamDatabase } from './db.js';
 
 /**
  * This device's settings. Small enough that a key/value table is the whole

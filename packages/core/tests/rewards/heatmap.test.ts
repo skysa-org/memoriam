@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { weekday } from '../../src/day.js';
-import { type DayActivity } from '../../src/rewards/activity.js';
+import type { DayActivity } from '../../src/rewards/activity.js';
 import { heatmap } from '../../src/rewards/heatmap.js';
 
 const day = (words: number): DayActivity => ({ words, passes: 1, reviews: 0, started: 0, ms: 1 });

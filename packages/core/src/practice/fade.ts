@@ -1,5 +1,5 @@
 import { MAX_LEVEL } from '../progress/codec.js';
-import { type PassSummary } from './pass.js';
+import type { PassSummary } from './pass.js';
 
 /**
  * A chunk's next level on the fade ladder after a pass (docs/ARCHITECTURE.md

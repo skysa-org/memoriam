@@ -1,4 +1,4 @@
-import { type MemoriamDatabase } from './db.js';
+import type { MemoriamDatabase } from './db.js';
 
 /**
  * This device's name for itself: eight characters, made the first time it is

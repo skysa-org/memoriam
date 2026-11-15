@@ -9,7 +9,7 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { type ApiClient, type Connection, type Result } from '../src/api/client.js';
+import type { ApiClient, Connection, Result } from '../src/api/client.js';
 import { SyncKeeper } from '../src/components/SyncKeeper.js';
 import { SyncSettings } from '../src/components/SyncSettings.js';
 import { createAppRouter } from '../src/router.js';
@@ -22,8 +22,8 @@ import {
 } from '../src/store/credentials.js';
 import { createDatabase, db, type MemoriamDatabase, type NoteRecord } from '../src/store/db.js';
 import { createPassage, passageText, rowFor } from '../src/store/passages.js';
-import { type ConnectOutcome } from '../src/sync/connectReturn.js';
-import { type SchedulerStatus } from '../src/sync/scheduler.js';
+import type { ConnectOutcome } from '../src/sync/connectReturn.js';
+import type { SchedulerStatus } from '../src/sync/scheduler.js';
 
 /**
  * Sync on the Settings screen — connecting, how it stands, letting it go —

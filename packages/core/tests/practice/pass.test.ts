@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { median, summarize, tallyMisses } from '../../src/practice/pass.js';
-import { type WordResult } from '../../src/practice/typing.js';
+import type { WordResult } from '../../src/practice/typing.js';
 
 const word = (over: Partial<WordResult> = {}): WordResult => ({
 	missed: false,
