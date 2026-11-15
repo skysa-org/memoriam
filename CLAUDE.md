@@ -18,8 +18,10 @@ change.
   - `apps/api`: the Worker entry over the shared kit's `@skysa/server` (Hono on Cloudflare
     Workers, D1 through Drizzle).
 - Validation: zod. Tests: Vitest. Scheduling: ts-fsrs.
-- The same ESLint rules and conventions as skysa-notes: functional style, arrow functions, no
-  loops, `let` or classes, readonly types, and every user-facing string from `t()`.
+- The shared kit's ESLint rules, TypeScript settings and Prettier's (`@skysa/eslint-config`), the
+  same as skysa-notes': functional style, arrow functions, no loops, `let` or classes, readonly
+  types. This app's own blocks in `eslint.config.js` add its layers and that every user-facing
+  string comes from `t()`.
 - Code ported from skysa-notes keeps its shape; rename `skysa` to `memoriam`. Check the original
   there before reinventing something it already solves.
 

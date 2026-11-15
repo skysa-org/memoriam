@@ -23,39 +23,15 @@ importers:
       '@changesets/cli':
         specifier: ^3.0.3
         version: 3.0.3
-      '@eslint/js':
-        specifier: ^10.0.1
-        version: 10.0.1(eslint@10.12.0(jiti@2.7.0))
+      '@skysa/eslint-config':
+        specifier: 1.1.0
+        version: 1.1.0(@typescript-eslint/eslint-plugin@8.71.2(@typescript-eslint/parser@8.71.2(eslint@10.12.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.12.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.12.0(jiti@2.7.0))(prettier@3.9.10)(typescript@6.0.3)
       '@vitest/coverage-v8':
         specifier: ^5.0.4
         version: 5.0.4(vitest@5.0.4)
       eslint:
-        specifier: ^10.10.0
+        specifier: ^10.12.0
         version: 10.12.0(jiti@2.7.0)
-      eslint-config-prettier:
-        specifier: ^10.1.8
-        version: 10.1.8(eslint@10.12.0(jiti@2.7.0))
-      eslint-plugin-functional:
-        specifier: ^10.0.0
-        version: 10.0.1(eslint@10.12.0(jiti@2.7.0))(typescript@6.0.3)
-      eslint-plugin-jsx-a11y:
-        specifier: ^6.10.2
-        version: 6.10.2(eslint@10.12.0(jiti@2.7.0))
-      eslint-plugin-prefer-arrow-functions:
-        specifier: ^3.10.2
-        version: 3.10.2(eslint@10.12.0(jiti@2.7.0))(typescript@6.0.3)
-      eslint-plugin-react:
-        specifier: ^7.37.5
-        version: 7.37.5(eslint@10.12.0(jiti@2.7.0))
-      eslint-plugin-react-hooks:
-        specifier: ^7.1.1
-        version: 7.1.1(eslint@10.12.0(jiti@2.7.0))
-      eslint-plugin-simple-import-sort:
-        specifier: ^14.0.0
-        version: 14.0.0(eslint@10.12.0(jiti@2.7.0))
-      eslint-plugin-unused-imports:
-        specifier: ^4.4.1
-        version: 4.4.1(@typescript-eslint/eslint-plugin@8.71.2(@typescript-eslint/parser@8.71.2(eslint@10.12.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.12.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.12.0(jiti@2.7.0))
       globals:
         specifier: ^17.12.0
         version: 17.13.0
@@ -63,14 +39,11 @@ importers:
         specifier: ^6.44.1
         version: 6.44.1
       prettier:
-        specifier: ^3.9.6
+        specifier: ^3.9.10
         version: 3.9.10
       typescript:
         specifier: ~6.0.3
         version: 6.0.3
-      typescript-eslint:
-        specifier: ^8.70.0
-        version: 8.71.2(eslint@10.12.0(jiti@2.7.0))(typescript@6.0.3)
       vitest:
         specifier: 'catalog:'
         version: 5.0.4(@types/node@26.6.5)(@vitest/coverage-v8@5.0.4)(jsdom@30.1.2)(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
@@ -1864,6 +1837,16 @@ packages:
   '@sindresorhus/is@7.2.0':
     resolution: {integrity: sha512-P1Cz1dWaFfR4IR+U13mqqiGsLFf1KbayybWwdd2vfctdV6hDpUkgCY0nKOLLTMSoRd/jJNjtbqzf13K8DCCXQw==}
     engines: {node: '>=18'}
+
+  '@skysa/eslint-config@1.1.0':
+    resolution: {integrity: sha512-9ZVvqODQCz7Y9qQlaKG/xVQ7IWWqM4cPUBev1T2Lb43+hDFZEyNJ1G26JrIiYtwuBXUUHV5bOv0Gfjwkqp6ofQ==}
+    peerDependencies:
+      eslint: ^10.12.0
+      prettier: ^3.9.10
+      typescript: ~6.0.3
+    peerDependenciesMeta:
+      prettier:
+        optional: true
 
   '@skysa/protocol@1.1.0':
     resolution: {integrity: sha512-Yor52hnF622nRZfZ3FyGF+IYZJkN8WZaJLGPT+3niPHBiSeoKRBrMDsJqIceKlGjai0/TAqEXiuqiuWg5ARFCA==}
@@ -5620,6 +5603,27 @@ snapshots:
     optional: true
 
   '@sindresorhus/is@7.2.0': {}
+
+  '@skysa/eslint-config@1.1.0(@typescript-eslint/eslint-plugin@8.71.2(@typescript-eslint/parser@8.71.2(eslint@10.12.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.12.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.12.0(jiti@2.7.0))(prettier@3.9.10)(typescript@6.0.3)':
+    dependencies:
+      '@eslint/js': 10.0.1(eslint@10.12.0(jiti@2.7.0))
+      eslint: 10.12.0(jiti@2.7.0)
+      eslint-config-prettier: 10.1.8(eslint@10.12.0(jiti@2.7.0))
+      eslint-plugin-functional: 10.0.1(eslint@10.12.0(jiti@2.7.0))(typescript@6.0.3)
+      eslint-plugin-jsx-a11y: 6.10.2(eslint@10.12.0(jiti@2.7.0))
+      eslint-plugin-prefer-arrow-functions: 3.10.2(eslint@10.12.0(jiti@2.7.0))(typescript@6.0.3)
+      eslint-plugin-react: 7.37.5(eslint@10.12.0(jiti@2.7.0))
+      eslint-plugin-react-hooks: 7.1.1(eslint@10.12.0(jiti@2.7.0))
+      eslint-plugin-simple-import-sort: 14.0.0(eslint@10.12.0(jiti@2.7.0))
+      eslint-plugin-unused-imports: 4.4.1(@typescript-eslint/eslint-plugin@8.71.2(@typescript-eslint/parser@8.71.2(eslint@10.12.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.12.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.12.0(jiti@2.7.0))
+      globals: 17.13.0
+      typescript: 6.0.3
+      typescript-eslint: 8.71.2(eslint@10.12.0(jiti@2.7.0))(typescript@6.0.3)
+    optionalDependencies:
+      prettier: 3.9.10
+    transitivePeerDependencies:
+      - '@typescript-eslint/eslint-plugin'
+      - supports-color
 
   '@skysa/protocol@1.1.0': {}
 
