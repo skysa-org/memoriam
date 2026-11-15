@@ -811,8 +811,8 @@ export const createSyncScheduler = (options: SyncSchedulerOptions): SyncSchedule
 	 * lock: another tab or window of the app is syncing the library, and this
 	 * one goes after it. A lock this tab's own work holds is not another
 	 * tab's — a run a pause let go of, still putting its batch away; a re-scan
-	 * clearing the cursor — so then it asks again a while later. Returns the way to stop, for when the lock comes, or the run
-	 * gives up.
+	 * clearing the cursor — so then it asks again a while later. Returns the
+	 * way to stop, for when the lock comes, or the run gives up.
 	 */
 	const waitForLock = (session: Session): (() => void) => {
 		const timer = cell<(() => void) | undefined>(undefined);

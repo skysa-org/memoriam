@@ -161,7 +161,7 @@ const entryBlock = (chunk: ChunkProgress): Record<string, unknown> =>
 
 /**
  * The `progress` mapping to write: the chunks named in `order` first, in that
- * order, which is the passage's (§3, "Frontmatter details"); then any chunk it
+ * order, which is the passage's (§3, "The `progress` map"); then any chunk it
  * does not name, as they came; then the entries no chunk could be read from.
  */
 export const progressBlock = (progress: Progress, order: readonly string[] = []): ProgressBlock => {

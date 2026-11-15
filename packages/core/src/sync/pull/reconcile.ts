@@ -33,7 +33,8 @@ export const createPullReconcile = (
 		/**
 		 * The provider said the scan may be missing things rather than proving
 		 * them gone. Nothing is deleted: every note and notebook it did not
-		 * return is sent back up instead (§7, "A rescan that uploads").
+		 * return is sent back up instead (skysa-notes' docs/ARCHITECTURE.md §7,
+		 * "A rescan that uploads").
 		 */
 		upload: boolean,
 		/** The unreadable files listed when this page of the scan began. */

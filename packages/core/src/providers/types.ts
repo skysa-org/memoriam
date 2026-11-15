@@ -171,7 +171,7 @@ export interface StorageProvider {
 	 * is there, and whatever the user put in it is there too.
 	 *
 	 * Absent on Dropbox and OneDrive, which delete. On Google Drive the mark is
-	 * a private `appProperties` key (docs/ARCHITECTURE.md §5.1).
+	 * a private `appProperties` key (skysa-notes' docs/ARCHITECTURE.md §5.1).
 	 */
 	readonly leaveFolder?: (entry: EntryRef) => Promise<void>;
 	/**
