@@ -27,6 +27,6 @@
 	"devDependencies": {
 		"@types/node": "catalog:",
 		"vitest": "catalog:",
-		"wrangler": "^4.132.0"
+		"wrangler": "^4.161.0"
 	}
 }
